@@ -6,7 +6,22 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 
 玩家操作的主要粒度是战略和剧情决策，例如北伐、撤军、调遣、谈判与结盟。
 
-## 运行荆州 demo
+## 网页试玩
+
+[打开《异章 · 荆州》](https://altertale-jingzhou.njuhekai.chatgpt.site)，选择起始部署，点击军令即可试玩。界面参考灵溪纪的墨绿、金色与书卷字体，支持手机的战报 / 决策 / 军情切换。
+
+浏览器运行器与 Python 共用 `altertale/data/jingzhou.json`。战报显示刘备已知的消息；“本局纪事 → 保存战报”导出完整推演记录，包含对手隐藏行动，可交给命令行回放校验。当前存档用于导出与校验，刷新页面会重新开始。
+
+本地运行网页版，无需 npm 依赖：
+
+```bash
+python scripts/build_web.py
+python -m http.server 8080 --directory dist
+```
+
+打开 `http://localhost:8080`。修改 `web/` 后重新构建。`dist/` 是生成目录，不另行维护模型副本。测试需要 Node.js 22 或更新版本才能执行浏览器与 Python 的分支一致性检查。
+
+## 命令行荆州 demo
 
 需要 Python 3.11 或更新版本。从仓库根目录运行，无需模型 API 或第三方 Python 包。
 
