@@ -6,6 +6,35 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 
 玩家操作的主要粒度是战略和剧情决策，例如北伐、撤军、调遣、谈判与结盟。
 
+## 运行荆州 demo
+
+需要 Python 3.11 或更新版本。从仓库根目录运行，无需模型 API 或第三方 Python 包。
+
+```bash
+# 扮演刘备，连续选择命令
+python -m altertale play --interactive --scenario zhuge
+
+# 运行基线、留守及假设敏感性对照
+python -m altertale compare
+
+# 回放并核对世界状态、认知和因果记录
+python -m altertale replay artifacts/jingzhou/zhuge.json
+
+# 验证规则、资源守恒、分支、信息限制和回放
+python -m unittest discover -s tests -v
+```
+
+报告保存到 `artifacts/jingzhou/comparison.md`，三组完整记录保存为同目录的 JSON。
+
+默认对照使用相同命令“北伐 → 继续攻城 → 撤军”。也可以改变选择：
+
+```bash
+python -m altertale play --scenario baseline \
+  --choices launch_campaign,reinforce_rear,order_withdrawal
+```
+
+这是人工局部模型的实验结果；来源、假设和限制见 [模型说明](docs/model-notes.md)。
+
 ## 第一个 demo：《异章：荆州》
 
 以《三国演义》的“关羽北伐襄樊—荆州危机—败走麦城”作为局部测试窗口，玩家首先扮演刘备。
@@ -46,6 +75,14 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 
 采用依赖或复制代码之前，检查实现、接口、运行条件和许可证。技术栈与引擎尚未确定。
 
+第一轮检查及实际运行结果见 [代码评估](docs/engine-evaluation.md)。当前运行器使用 Python 标准库，支持从同一 JSON 模型导出 NPC 规划问题给外部 Sabre：
+
+```bash
+python -m altertale compare --sabre-jar /path/to/sabre/build/jar/sabre.jar
+```
+
+Sabre 是单独获取的可选参考引擎，仓库未捆绑其代码或二进制。
+
 ## 当前状态
 
-项目初始化阶段。仓库目前记录项目方向和 demo 规格；尚无可运行游戏或引擎集成。
+首个可运行实验：31 个状态字段、15 个行动/触发器、三个连续玩家决策的默认对照，以及可重复执行的状态和因果记录。当前模型覆盖约 42 天的演示路径，尚未接入语言模型、自动章节抽取或完整战役模拟。
