@@ -1,0 +1,2184 @@
+{
+  "id": "jingzhou",
+  "version": "0.1.0",
+  "title": "异章：荆州",
+  "parameters": {
+    "raid_threshold": 3,
+    "horizon_days": 180,
+    "planning_depth": 2
+  },
+  "facts": {
+    "day": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 1000
+    },
+    "rear_troops": {
+      "type": "int",
+      "initial": 4,
+      "min": 0,
+      "max": 100
+    },
+    "front_troops": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 100
+    },
+    "reserve_troops": {
+      "type": "int",
+      "initial": 8,
+      "min": 0,
+      "max": 100
+    },
+    "lost_troops": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 100
+    },
+    "total_troops": {
+      "type": "int",
+      "initial": 12,
+      "min": 0,
+      "max": 100
+    },
+    "supplies": {
+      "type": "int",
+      "initial": 12,
+      "min": 0,
+      "max": 100
+    },
+    "shu_resources": {
+      "type": "int",
+      "initial": 6,
+      "min": 0,
+      "max": 100
+    },
+    "wu_resources": {
+      "type": "int",
+      "initial": 6,
+      "min": 0,
+      "max": 100
+    },
+    "wei_resources": {
+      "type": "int",
+      "initial": 6,
+      "min": 0,
+      "max": 100
+    },
+    "rear_coordination": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 100
+    },
+    "yizhou_advisory_capacity": {
+      "type": "int",
+      "initial": 3,
+      "min": 0,
+      "max": 100
+    },
+    "wei_pressure": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 100
+    },
+    "siege_progress": {
+      "type": "int",
+      "initial": 0,
+      "min": 0,
+      "max": 100
+    },
+    "campaign_active": {
+      "type": "bool",
+      "initial": false
+    },
+    "campaign_finished": {
+      "type": "bool",
+      "initial": false
+    },
+    "liu_bei_alive": {
+      "type": "bool",
+      "initial": true
+    },
+    "sun_quan_alive": {
+      "type": "bool",
+      "initial": true
+    },
+    "cao_cao_alive": {
+      "type": "bool",
+      "initial": true
+    },
+    "guan_yu_alive": {
+      "type": "bool",
+      "initial": true
+    },
+    "wu_scouted": {
+      "type": "bool",
+      "initial": false
+    },
+    "wu_wei_coordination": {
+      "type": "bool",
+      "initial": false
+    },
+    "fortified": {
+      "type": "bool",
+      "initial": false
+    },
+    "truce_offered": {
+      "type": "bool",
+      "initial": false
+    },
+    "truce": {
+      "type": "bool",
+      "initial": false
+    },
+    "retreat_ordered": {
+      "type": "bool",
+      "initial": false
+    },
+    "fancheng_taken": {
+      "type": "bool",
+      "initial": false
+    },
+    "jingzhou_owner": {
+      "type": "str",
+      "initial": "Shu",
+      "values": [
+        "Shu",
+        "Wu"
+      ]
+    },
+    "guan_yu_location": {
+      "type": "str",
+      "initial": "Jingzhou",
+      "values": [
+        "Jingzhou",
+        "Xiangfan",
+        "Wu_custody"
+      ]
+    },
+    "zhuge_liang_location": {
+      "type": "str",
+      "initial": "Yizhou",
+      "values": [
+        "Yizhou",
+        "Jingzhou"
+      ]
+    },
+    "guan_yu_status": {
+      "type": "str",
+      "initial": "active",
+      "values": [
+        "active",
+        "retreated",
+        "captured"
+      ]
+    }
+  },
+  "actors": {
+    "liu_bei": {
+      "name": "刘备",
+      "initial_knowledge": [
+        "day",
+        "rear_troops",
+        "front_troops",
+        "reserve_troops",
+        "lost_troops",
+        "total_troops",
+        "supplies",
+        "shu_resources",
+        "rear_coordination",
+        "yizhou_advisory_capacity",
+        "wei_pressure",
+        "siege_progress",
+        "campaign_active",
+        "campaign_finished",
+        "liu_bei_alive",
+        "sun_quan_alive",
+        "cao_cao_alive",
+        "guan_yu_alive",
+        "fortified",
+        "truce_offered",
+        "truce",
+        "retreat_ordered",
+        "fancheng_taken",
+        "jingzhou_owner",
+        "guan_yu_location",
+        "zhuge_liang_location",
+        "guan_yu_status"
+      ],
+      "goals": [
+        {
+          "condition": [
+            {
+              "fact": "jingzhou_owner"
+            },
+            "eq",
+            "Shu"
+          ],
+          "weight": 20
+        },
+        {
+          "condition": [
+            {
+              "fact": "guan_yu_status"
+            },
+            "ne",
+            "captured"
+          ],
+          "weight": 10
+        }
+      ]
+    },
+    "sun_quan": {
+      "name": "孙权",
+      "initial_knowledge": [
+        "day",
+        "campaign_active",
+        "campaign_finished",
+        "guan_yu_alive",
+        "guan_yu_status",
+        "guan_yu_location",
+        "jingzhou_owner",
+        "fancheng_taken",
+        "truce",
+        "truce_offered",
+        "sun_quan_alive",
+        "wu_resources",
+        "wu_scouted",
+        "wu_wei_coordination",
+        "wei_pressure"
+      ],
+      "goals": [
+        {
+          "condition": [
+            {
+              "fact": "jingzhou_owner"
+            },
+            "eq",
+            "Wu"
+          ],
+          "weight": 20
+        },
+        {
+          "condition": [
+            {
+              "fact": "wu_scouted"
+            },
+            "eq",
+            true
+          ],
+          "weight": 1
+        },
+        {
+          "requires": [
+            [
+              {
+                "fact": "wu_wei_coordination"
+              },
+              "eq",
+              true
+            ],
+            [
+              {
+                "fact": "jingzhou_owner"
+              },
+              "eq",
+              "Shu"
+            ]
+          ],
+          "weight": 3
+        },
+        {
+          "condition": [
+            {
+              "fact": "truce"
+            },
+            "eq",
+            true
+          ],
+          "weight": 5
+        }
+      ]
+    },
+    "cao_cao": {
+      "name": "曹操",
+      "initial_knowledge": [
+        "day",
+        "campaign_active",
+        "campaign_finished",
+        "guan_yu_alive",
+        "guan_yu_status",
+        "guan_yu_location",
+        "jingzhou_owner",
+        "fancheng_taken",
+        "truce",
+        "truce_offered",
+        "cao_cao_alive",
+        "wei_resources",
+        "wei_pressure",
+        "supplies",
+        "wu_wei_coordination"
+      ],
+      "goals": [
+        {
+          "condition": [
+            {
+              "fact": "wei_pressure"
+            },
+            "ge",
+            2
+          ],
+          "weight": 3
+        },
+        {
+          "condition": [
+            {
+              "fact": "wei_pressure"
+            },
+            "ge",
+            4
+          ],
+          "weight": 6
+        },
+        {
+          "condition": [
+            {
+              "fact": "supplies"
+            },
+            "le",
+            1
+          ],
+          "weight": 10
+        },
+        {
+          "condition": [
+            {
+              "fact": "campaign_finished"
+            },
+            "eq",
+            true
+          ],
+          "weight": 15
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "id": "launch_campaign",
+      "label": "授权关羽北伐，调集前线兵力",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 7,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "guan_yu_location"
+          },
+          "eq",
+          "Jingzhou"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "rear_troops"
+          },
+          "ge",
+          3
+        ],
+        [
+          {
+            "fact": "reserve_troops"
+          },
+          "ge",
+          3
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          2
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "campaign_active",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "guan_yu_location",
+          "operation": "set",
+          "value": "Xiangfan"
+        },
+        {
+          "fact": "rear_troops",
+          "operation": "add",
+          "value": -3
+        },
+        {
+          "fact": "reserve_troops",
+          "operation": "add",
+          "value": -3
+        },
+        {
+          "fact": "front_troops",
+          "operation": "add",
+          "value": 6
+        },
+        {
+          "fact": "supplies",
+          "operation": "add",
+          "value": -2
+        }
+      ],
+      "observers": [
+        "liu_bei"
+      ],
+      "reveals": {
+        "sun_quan": [
+          "campaign_active",
+          "guan_yu_location"
+        ],
+        "cao_cao": [
+          "campaign_active",
+          "guan_yu_location",
+          "supplies"
+        ]
+      },
+      "provenance": [
+        "source_73",
+        "assumption_resources"
+      ]
+    },
+    {
+      "id": "press_attack",
+      "label": "继续攻打樊城，投入粮秣",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 7,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "front_troops"
+          },
+          "ge",
+          4
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "fact": "siege_progress"
+          },
+          "lt",
+          3
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "supplies",
+          "operation": "add",
+          "value": -2
+        },
+        {
+          "fact": "siege_progress",
+          "operation": "add",
+          "value": 1
+        }
+      ],
+      "observers": [
+        "liu_bei"
+      ],
+      "reveals": {
+        "cao_cao": [
+          "supplies"
+        ]
+      },
+      "provenance": [
+        "source_75",
+        "assumption_actions"
+      ]
+    },
+    {
+      "id": "reinforce_rear",
+      "label": "从预备队增援荆州后方",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 7,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "reserve_troops"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "fact": "shu_resources"
+          },
+          "ge",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "reserve_troops",
+          "operation": "add",
+          "value": -2
+        },
+        {
+          "fact": "rear_troops",
+          "operation": "add",
+          "value": 2
+        },
+        {
+          "fact": "shu_resources",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "liu_bei"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_actions"
+      ]
+    },
+    {
+      "id": "fortify_rear",
+      "label": "加强后方戒备与守备协同",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 7,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "fortified"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "shu_resources"
+          },
+          "ge",
+          2
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "fortified",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "shu_resources",
+          "operation": "add",
+          "value": -2
+        }
+      ],
+      "observers": [
+        "liu_bei"
+      ],
+      "reveals": {},
+      "provenance": [
+        "source_73",
+        "assumption_defense"
+      ]
+    },
+    {
+      "id": "offer_truce",
+      "label": "向孙权提出暂缓荆州争端",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 5,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "truce_offered"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "truce"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "shu_resources"
+          },
+          "ge",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "truce_offered",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "shu_resources",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_diplomacy"
+      ]
+    },
+    {
+      "id": "order_withdrawal",
+      "label": "命关羽撤军，放弃本次攻势",
+      "actor": "liu_bei",
+      "kind": "player",
+      "days": 3,
+      "requires": [
+        [
+          {
+            "fact": "liu_bei_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "retreat_ordered"
+          },
+          "eq",
+          false
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "retreat_ordered",
+          "operation": "set",
+          "value": true
+        }
+      ],
+      "observers": [
+        "liu_bei"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_orders"
+      ]
+    },
+    {
+      "id": "scout_jingzhou",
+      "label": "探查荆州后方部署",
+      "actor": "sun_quan",
+      "kind": "npc",
+      "days": 3,
+      "requires": [
+        [
+          {
+            "fact": "sun_quan_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "wu_scouted"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_resources"
+          },
+          "ge",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "wu_scouted",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "wu_resources",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "sun_quan"
+      ],
+      "reveals": {
+        "sun_quan": [
+          "rear_troops",
+          "rear_coordination",
+          "fortified",
+          "jingzhou_owner",
+          "supplies"
+        ]
+      },
+      "provenance": [
+        "source_75",
+        "assumption_information"
+      ]
+    },
+    {
+      "id": "raid_jingzhou",
+      "label": "袭取荆州，切断关羽后方",
+      "actor": "sun_quan",
+      "kind": "npc",
+      "days": 5,
+      "requires": [
+        [
+          {
+            "fact": "sun_quan_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "wu_scouted"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "truce"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_resources"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "sum": [
+              {
+                "fact": "rear_troops"
+              },
+              {
+                "fact": "rear_coordination"
+              },
+              {
+                "fact": "fortified"
+              }
+            ]
+          },
+          "lt",
+          {
+            "parameter": "raid_threshold"
+          }
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          3
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "jingzhou_owner",
+          "operation": "set",
+          "value": "Wu"
+        },
+        {
+          "fact": "lost_troops",
+          "operation": "set",
+          "value": {
+            "sum": [
+              {
+                "fact": "lost_troops"
+              },
+              {
+                "fact": "rear_troops"
+              }
+            ]
+          }
+        },
+        {
+          "fact": "rear_troops",
+          "operation": "set",
+          "value": 0
+        },
+        {
+          "fact": "supplies",
+          "operation": "add",
+          "value": -3
+        },
+        {
+          "fact": "wu_resources",
+          "operation": "add",
+          "value": -2
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {},
+      "provenance": [
+        "source_75",
+        "assumption_defense",
+        "assumption_resources"
+      ]
+    },
+    {
+      "id": "coordinate_with_wei",
+      "label": "落实吴魏军事联动，加大前线压力",
+      "actor": "sun_quan",
+      "kind": "npc",
+      "days": 5,
+      "requires": [
+        [
+          {
+            "fact": "sun_quan_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "wu_scouted"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "wu_wei_coordination"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "truce"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_resources"
+          },
+          "ge",
+          2
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "wu_wei_coordination",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "wei_pressure",
+          "operation": "add",
+          "value": 1
+        },
+        {
+          "fact": "wu_resources",
+          "operation": "add",
+          "value": -2
+        }
+      ],
+      "observers": [
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {
+        "liu_bei": [
+          "wei_pressure"
+        ]
+      },
+      "provenance": [
+        "source_73",
+        "source_75",
+        "assumption_actions"
+      ]
+    },
+    {
+      "id": "accept_truce",
+      "label": "接受暂时停战，将争端留待以后",
+      "actor": "sun_quan",
+      "kind": "npc",
+      "days": 3,
+      "requires": [
+        [
+          {
+            "fact": "sun_quan_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "wu_scouted"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "truce_offered"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "truce"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_wei_coordination"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_resources"
+          },
+          "ge",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "truce",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "wu_resources",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_diplomacy"
+      ]
+    },
+    {
+      "id": "relieve_fancheng",
+      "label": "增援樊城，牵制关羽",
+      "actor": "cao_cao",
+      "kind": "npc",
+      "days": 5,
+      "requires": [
+        [
+          {
+            "fact": "cao_cao_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "wei_pressure"
+          },
+          "lt",
+          4
+        ],
+        [
+          {
+            "fact": "wei_resources"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "wei_pressure",
+          "operation": "add",
+          "value": 2
+        },
+        {
+          "fact": "wei_resources",
+          "operation": "add",
+          "value": -2
+        },
+        {
+          "fact": "supplies",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "cao_cao",
+        "liu_bei"
+      ],
+      "reveals": {
+        "sun_quan": [
+          "wei_pressure"
+        ]
+      },
+      "provenance": [
+        "source_75",
+        "assumption_resources"
+      ]
+    },
+    {
+      "id": "cut_supply",
+      "label": "压迫关羽补给线",
+      "actor": "cao_cao",
+      "kind": "npc",
+      "days": 5,
+      "requires": [
+        [
+          {
+            "fact": "cao_cao_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "wei_pressure"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "fact": "wei_resources"
+          },
+          "ge",
+          1
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          2
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "supplies",
+          "operation": "add",
+          "value": -2
+        },
+        {
+          "fact": "wei_resources",
+          "operation": "add",
+          "value": -1
+        }
+      ],
+      "observers": [
+        "cao_cao",
+        "liu_bei"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_resources"
+      ]
+    },
+    {
+      "id": "withdraw_to_jingzhou",
+      "label": "关羽撤回荆州，结束北伐",
+      "actor": "system",
+      "kind": "trigger",
+      "days": 7,
+      "requires": [
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "retreat_ordered"
+          },
+          "eq",
+          true
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "rear_troops",
+          "operation": "set",
+          "value": {
+            "sum": [
+              {
+                "fact": "rear_troops"
+              },
+              {
+                "fact": "front_troops"
+              }
+            ]
+          }
+        },
+        {
+          "fact": "front_troops",
+          "operation": "set",
+          "value": 0
+        },
+        {
+          "fact": "guan_yu_location",
+          "operation": "set",
+          "value": "Jingzhou"
+        },
+        {
+          "fact": "guan_yu_status",
+          "operation": "set",
+          "value": "retreated"
+        },
+        {
+          "fact": "campaign_active",
+          "operation": "set",
+          "value": false
+        },
+        {
+          "fact": "campaign_finished",
+          "operation": "set",
+          "value": true
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_orders"
+      ]
+    },
+    {
+      "id": "capture_guan_yu",
+      "label": "后方失守且粮秣枯竭，关羽部队溃散被俘",
+      "actor": "system",
+      "kind": "trigger",
+      "days": 2,
+      "requires": [
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Wu"
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "le",
+          1
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "lost_troops",
+          "operation": "set",
+          "value": {
+            "sum": [
+              {
+                "fact": "lost_troops"
+              },
+              {
+                "fact": "front_troops"
+              }
+            ]
+          }
+        },
+        {
+          "fact": "front_troops",
+          "operation": "set",
+          "value": 0
+        },
+        {
+          "fact": "guan_yu_location",
+          "operation": "set",
+          "value": "Wu_custody"
+        },
+        {
+          "fact": "guan_yu_status",
+          "operation": "set",
+          "value": "captured"
+        },
+        {
+          "fact": "campaign_active",
+          "operation": "set",
+          "value": false
+        },
+        {
+          "fact": "campaign_finished",
+          "operation": "set",
+          "value": true
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {},
+      "provenance": [
+        "source_77",
+        "assumption_outcomes"
+      ]
+    },
+    {
+      "id": "take_fancheng",
+      "label": "在压力较低且补给充足时攻克樊城",
+      "actor": "system",
+      "kind": "trigger",
+      "days": 3,
+      "requires": [
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "siege_progress"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "fact": "wei_pressure"
+          },
+          "le",
+          2
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          2
+        ]
+      ],
+      "effects": [
+        {
+          "fact": "fancheng_taken",
+          "operation": "set",
+          "value": true
+        },
+        {
+          "fact": "campaign_active",
+          "operation": "set",
+          "value": false
+        },
+        {
+          "fact": "campaign_finished",
+          "operation": "set",
+          "value": true
+        }
+      ],
+      "observers": [
+        "liu_bei",
+        "sun_quan",
+        "cao_cao"
+      ],
+      "reveals": {},
+      "provenance": [
+        "assumption_outcomes"
+      ]
+    }
+  ],
+  "npc_order": [
+    "sun_quan",
+    "cao_cao"
+  ],
+  "scenarios": {
+    "baseline": {
+      "label": "原著部署的局部抽象基线",
+      "overrides": {},
+      "provenance": [
+        "source_73",
+        "assumption_resources"
+      ]
+    },
+    "zhuge": {
+      "label": "诸葛亮已提前留守荆州",
+      "overrides": {
+        "zhuge_liang_location": "Jingzhou",
+        "rear_coordination": 2,
+        "shu_resources": 4,
+        "yizhou_advisory_capacity": 2
+      },
+      "provenance": [
+        "assumption_intervention",
+        "assumption_defense"
+      ]
+    }
+  },
+  "invariants": [
+    {
+      "condition": [
+        {
+          "sum": [
+            {
+              "fact": "rear_troops"
+            },
+            {
+              "fact": "front_troops"
+            },
+            {
+              "fact": "reserve_troops"
+            },
+            {
+              "fact": "lost_troops"
+            }
+          ]
+        },
+        "eq",
+        {
+          "fact": "total_troops"
+        }
+      ],
+      "description": "部队不可凭空出现或重复调动"
+    },
+    {
+      "condition": [
+        {
+          "sum": [
+            {
+              "fact": "campaign_active"
+            },
+            {
+              "fact": "campaign_finished"
+            }
+          ]
+        },
+        "le",
+        1
+      ],
+      "description": "已结束的战役不可同时仍在进行"
+    },
+    {
+      "when": [
+        {
+          "fact": "campaign_active"
+        },
+        "eq",
+        true
+      ],
+      "condition": [
+        {
+          "fact": "guan_yu_location"
+        },
+        "eq",
+        "Xiangfan"
+      ],
+      "description": "进行中的北伐要求关羽在襄樊前线"
+    },
+    {
+      "when": [
+        {
+          "fact": "guan_yu_status"
+        },
+        "eq",
+        "retreated"
+      ],
+      "condition": [
+        {
+          "fact": "guan_yu_location"
+        },
+        "eq",
+        "Jingzhou"
+      ],
+      "description": "撤回后的关羽必须位于荆州"
+    },
+    {
+      "when": [
+        {
+          "fact": "guan_yu_status"
+        },
+        "eq",
+        "captured"
+      ],
+      "condition": [
+        {
+          "fact": "guan_yu_location"
+        },
+        "eq",
+        "Wu_custody"
+      ],
+      "description": "被俘后的关羽必须位于吴方控制下"
+    }
+  ],
+  "canon_events": [
+    {
+      "id": "canon_raid",
+      "label": "原著袭取荆州的局部条件",
+      "source": "source_75",
+      "requires": [
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Shu"
+        ],
+        [
+          {
+            "fact": "wu_scouted"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "truce"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "wu_resources"
+          },
+          "ge",
+          2
+        ],
+        [
+          {
+            "sum": [
+              {
+                "fact": "rear_troops"
+              },
+              {
+                "fact": "rear_coordination"
+              },
+              {
+                "fact": "fortified"
+              }
+            ]
+          },
+          "lt",
+          {
+            "parameter": "raid_threshold"
+          }
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "ge",
+          3
+        ]
+      ]
+    },
+    {
+      "id": "canon_capture",
+      "label": "关羽失去后方后被俘的局部条件",
+      "source": "source_77",
+      "requires": [
+        [
+          {
+            "fact": "campaign_active"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "campaign_finished"
+          },
+          "eq",
+          false
+        ],
+        [
+          {
+            "fact": "guan_yu_alive"
+          },
+          "eq",
+          true
+        ],
+        [
+          {
+            "fact": "guan_yu_status"
+          },
+          "eq",
+          "active"
+        ],
+        [
+          {
+            "fact": "jingzhou_owner"
+          },
+          "eq",
+          "Wu"
+        ],
+        [
+          {
+            "fact": "supplies"
+          },
+          "le",
+          1
+        ]
+      ]
+    }
+  ],
+  "provenance": [
+    {
+      "id": "source_73",
+      "kind": "source_reference",
+      "edition": "维基文库《三國演義》120回本章节转录；非校勘版本",
+      "chapter": 73,
+      "label": "部署与北伐、吴魏联络、后方戒备",
+      "url": "https://zh.wikisource.org/wiki/三國演義/第073回",
+      "reviewed": "2026-10-05",
+      "note": "章节事件来源；数值、充分条件和新路线不是原文事实。",
+      "revision_id": 2568035,
+      "snapshot_url": "https://zh.wikisource.org/w/index.php?oldid=2568035"
+    },
+    {
+      "id": "source_75",
+      "kind": "source_reference",
+      "edition": "维基文库《三國演義》120回本章节转录；非校勘版本",
+      "chapter": 75,
+      "label": "吕蒙袭取荆州、撤防、前线增援",
+      "url": "https://zh.wikisource.org/wiki/三國演義/第075回",
+      "reviewed": "2026-10-05",
+      "note": "章节事件来源；数值、充分条件和新路线不是原文事实。",
+      "revision_id": 2568039,
+      "snapshot_url": "https://zh.wikisource.org/w/index.php?oldid=2568039"
+    },
+    {
+      "id": "source_77",
+      "kind": "source_reference",
+      "edition": "维基文库《三國演義》120回本章节转录；非校勘版本",
+      "chapter": 77,
+      "label": "关羽被俘的原著事件定位",
+      "url": "https://zh.wikisource.org/wiki/三國演義/第077回",
+      "reviewed": "2026-10-05",
+      "note": "章节事件来源；数值、充分条件和新路线不是原文事实。",
+      "revision_id": 2568041,
+      "snapshot_url": "https://zh.wikisource.org/w/index.php?oldid=2568041"
+    },
+    {
+      "id": "assumption_actions",
+      "kind": "model_assumption",
+      "description": "行动、目标权重和先后顺序是实验设定；每轮吴先于魏，每方最多推进一个行动。"
+    },
+    {
+      "id": "assumption_resources",
+      "kind": "model_assumption",
+      "description": "兵力、粮秣和资源使用抽象单位；时间与耗损均为人工设定，不是原著统计。"
+    },
+    {
+      "id": "assumption_defense",
+      "kind": "model_assumption",
+      "description": "袭取门槛=后方兵力+协同+额外戒备；诸葛亮留守使协同为2；这些是可替换假设。"
+    },
+    {
+      "id": "assumption_information",
+      "kind": "model_assumption",
+      "description": "吴只在侦察或接触受阻后获得后方信息；魏的前线观察简化为可得补给等级。"
+    },
+    {
+      "id": "assumption_diplomacy",
+      "kind": "model_assumption",
+      "description": "停战需要吴自行接受；模型只考虑有限目标，不代表真实谈判成功率。"
+    },
+    {
+      "id": "assumption_orders",
+      "kind": "model_assumption",
+      "description": "第一版假设关羽执行刘备撤军令；道路由地区控制权聚合表示，暂不模拟拒令和行军风险。"
+    },
+    {
+      "id": "assumption_outcomes",
+      "kind": "model_assumption",
+      "description": "后方失守与粮秣枯竭在本模型中足以导致被俘；攻城进度、压力和补给达到门槛时足以攻克樊城。"
+    },
+    {
+      "id": "assumption_intervention",
+      "kind": "model_assumption",
+      "description": "反事实起点发生于北伐前：诸葛亮已从益州完成调遣；资源少2、益州参谋容量少1。行程时间未模拟。"
+    }
+  ]
+}
