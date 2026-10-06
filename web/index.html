@@ -34,6 +34,7 @@
   --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
   --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; color-scheme: dark;
 }
+*, *::before, *::after { box-sizing: border-box; }
 html, body { min-height: 100%; }
 body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.9; }
 button, input, textarea { font: inherit; color: inherit; }
@@ -94,6 +95,32 @@ main { min-width: 0; }
 .primary { font-family: var(--font-ui); font-size: 0.88rem; padding: 0.45rem 1.1rem; border: none; background: var(--indigo); color: var(--paper); border-radius: 3px; }
 .primary:disabled { opacity: 0.5; cursor: default; }
 
+.assess { font-size: 0.95rem; color: var(--muted); margin: 0 0 0.9rem; padding-left: 0.8rem; border-left: 2px solid var(--line); }
+.choice.quiet { background: transparent; border-style: dashed; }
+.policy { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; display: grid; gap: 0.6rem; font-family: var(--font-ui); font-size: 0.85rem; }
+.policy h3 { margin: 0; }
+.policy .hint { margin: 0; color: var(--muted); font-size: 0.8rem; line-height: 1.7; }
+.policy label { color: var(--muted); font-size: 0.8rem; }
+.policy textarea { width: 100%; min-height: 3.8rem; resize: vertical; padding: 0.55rem 0.7rem; border: 1px solid var(--line); background: var(--paper); border-radius: 4px; line-height: 1.7; font-family: var(--font-body); }
+.power { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.power .who { font-weight: 500; min-width: 3.5em; }
+.power .desc { color: var(--muted); font-size: 0.78rem; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.seg button { border: none; background: transparent; padding: 0.25rem 0.7rem; font-size: 0.8rem; color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--indigo); color: var(--paper); }
+.auto { font-family: var(--font-ui); font-size: 0.85rem; background: var(--panel); border-radius: 4px; padding: 0.6rem 0.85rem; margin-top: 0.5rem; }
+.auto h4 { margin: 0 0 0.3rem; font-weight: 500; font-size: 0.72rem; letter-spacing: 0.14em; color: var(--muted); }
+.auto ul { margin: 0; padding-left: 1.1em; display: grid; gap: 0.2rem; }
+.auto b { font-weight: 500; margin-right: 0.5em; }
+.redo-link { background: none; border: none; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 0.78rem; }
+.eta { color: var(--muted); font-size: 0.78rem; }
+.reveals { display: grid; gap: 0.75rem; }
+.reveal { display: grid; gap: 0.15rem; }
+.reveal .where { font-family: var(--font-ui); font-size: 0.72rem; color: var(--seal); letter-spacing: 0.08em; }
+.reveal q { font-style: normal; color: var(--ink); }
+.reveal q::before { content: "「"; } .reveal q::after { content: "」"; }
+.reveal p { color: var(--muted); font-size: 0.92rem; }
 .writing { font-family: var(--font-ui); font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem; }
 .writing .dots::after { content: "……"; display: inline-block; animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.25; } }
@@ -194,19 +221,23 @@ const WORLDS = {
 此设定的连带影响：成都缺少孔明理政，益州钱粮调度较原著吃力；江陵有孔明坐镇，糜芳、士仁受其节制和抚慰，但江陵兵力大半已随关羽北上；关羽对孔明素来尊重，然性情自矜，未必事事听从；孙权、吕蒙知孔明在江陵，偷袭须另作打算。不预设孔明能挽回一切。`
 };
 
-const RULES = `你是《异章：荆州》的说书人兼世界推演者。这是一部以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的互动反事实小说。玩家扮演汉中王刘备，身在成都，每回作出一项决断，你据此写出下一回。
+const RULES = `你是《异章：荆州》的说书人兼世界推演者。这是一部以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的互动反事实小说。玩家扮演汉中王刘备，身在成都，每回发出一道命令（也可以不发令），你据此写出下一回。
 
 写作要求：
 1. 文风仿毛宗岗本《三国演义》：半文半白，章回体。回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。不得出现现代词汇或"玩家""系统""选项"等字样。
-2. 本回可在多地之间切换（"却说……""且说……"），但刘备一方不知道的密谋只可略作伏笔，不点破；完整内容写入 hidden。
-3. 每回结尾把局面推到刘备必须再作决断的时刻，例如新的急报、使者到来、或某人的进言。
+2. 本回可在多地之间切换（"却说……""且说……"）。刘备一方不知道的密谋，要在正文里埋下具体可辨的伏笔（一个细节、一句话、一个反常之处），不点破；并把伏笔原句和真相写入 foreshadow。
+3. 每回结尾把局面推到刘备需要再作决断的时刻，例如新的急报、使者到来、或某人的进言。
 
 推演要求：
-4. 每个人物按自己的目标、性情和所掌握的消息行事，不迎合刘备。刘备的命令要经驿马传递，到达需要时日；命令到时局势可能已变，接令者也可能拖延、曲解或抗命。写出这些摩擦。
-5. 原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。不预设刘备一方必胜或必败。
-6. 胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称；以少胜多必有缘由和代价。
-7. 每回时间推进约十日至一月。全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
-8. choices：给刘备三个下一步决断，方向彼此不同，各有代价，只依据刘备此刻所知，不要暗示哪个是正确答案。`;
+4. 千里之外，刘备无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，会依自己的性情、所知消息和刘备的方略，当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使回成都请示，在此期间只能固守待命，可能贻误战机。自决的结果可好可坏，取决于此人的才能与性格（孔明谨慎周密，关羽勇而自矜，糜芳怯懦）。凡本回前方自行做出的重要决定，写入 autonomous。
+5. 刘备的新命令要经驿马传递，成都至江陵约二十余日；命令未到之前，前方不会照它行事。尚未送达的命令写入 in_transit，送达之回在正文中写出接令的情形；接令者也可能拖延、曲解或抗命。
+6. 每个人物按自己的目标、性情和所掌握的消息行事，不迎合刘备。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
+7. 公正而不刁难：及时、合理、切中要害的决断应当见效，前方得力将帅的自决也应常常有效；坏结果应来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称。
+8. 每回时间推进约十日至一月。全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
+
+决断选项要求（choices）：
+9. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。choices 必须建立在这个判断之上：已失去的城池和兵马不能再当作筹码；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受，否则不要给出。
+10. 三个选项方向彼此不同，各有代价，但至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明是哪项）。选项要具体：派谁、去哪、做什么。只依据刘备此刻所知。`;
 
 const FORMAT = `输出格式（严格遵守）：
 第一行写回目，形如"第三回　七字或八字上句　七字或八字下句"。空一行后写正文，段落之间空一行。
@@ -218,12 +249,16 @@ const FORMAT = `输出格式（严格遵守）：
   "gauges": {"后方": 50, "前线": 50, "孙刘": 50},
   "intel": ["刘备此刻确知或听闻之事，三至六条"],
   "hidden": ["刘备尚不知道的暗线，二至五条"],
+  "foreshadow": [{"line":"本回正文中埋伏笔的原句，照抄，三十字以内","truth":"它暗示的真相，四十字以内"}],
+  "autonomous": [{"who":"关羽","did":"本回未奉成都之令而自行做出的决定及结果，四十字以内"}],
+  "in_transit": [{"order":"刘备尚未送达的命令，二十字以内","eta":"预计送达时间与地点"}],
   "chronicle": "本回纪要，一句，三十字以内",
+  "assessment": "刘备此刻的处境与手中筹码，六十字以内",
   "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
   "ending": null
 }
-说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。choices 正好三项。
-若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内"}，choices 写 []。`;
+说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。foreshadow 一至三条，必须真的出现在本回正文中。autonomous、in_transit 没有则写 []。choices 正好三项。
+若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，choices 写 []。`;
 
 /* ───────── 开局（预写的第一回） ───────── */
 
@@ -272,6 +307,10 @@ const OPENINGS = {
         "吕蒙称病是与孙权定下的计策，精兵已暗中集结",
         "孙权已遣使与曹操往来，愿袭关羽之后以求荆州",
         "司马懿、蒋济正劝曹操许孙权以江南之地"
+      ],
+      foreshadow: [
+        { line: "近闻吕蒙称病还建业，代之者乃一书生陆逊", truth: "吕蒙称病是与孙权定下的计，精兵已藏于商船，伺机白衣渡江" },
+        { line: "孙权所欲者荆州耳，非为曹，亦非为我", truth: "孙权已暗中遣使向曹操示好，愿袭关羽之后以取荆州" }
       ],
       choices: [
         { label: "急令云长围樊勿进，分兵回守江陵", detail: "可固后方；但樊城或功亏一篑，云长未必肯从" },
@@ -324,6 +363,10 @@ const OPENINGS = {
         "孙权已遣使与曹操往来，愿袭关羽之后以求荆州",
         "虞翻与士仁有旧，吴人或从公安下手"
       ],
+      foreshadow: [
+        { line: "竟又调江陵兵三千赴樊城", truth: "吴人细作已探知江陵兵少，吕蒙正在加紧筹划" },
+        { line: "亮已善言抚之，然二人心意难测", truth: "虞翻与士仁有旧，吴人已在暗中与公安往来" }
+      ],
       choices: [
         { label: "授孔明节钺，总督荆州诸军", detail: "后方可固；但云长必有不平，前后军令或生龃龉" },
         { label: "请孔明亲赴江东，稳住孙权", detail: "孔明有江东旧谊；但江陵将无主事之人" },
@@ -334,6 +377,10 @@ const OPENINGS = {
 };
 
 const MAX_TURNS = 12;
+const DELEGATES = ["关羽", "诸葛亮"];
+const POWERS = { "便宜行事": "可自行决定进退、调兵、守城与应对使者", "遇事请示": "大事须遣使回成都请示，其间固守待命" };
+const WAIT_ORDER = "不另发令，由前方依方略与授权自行处置";
+const defaultPolicy = () => ({ text: "", powers: { "关羽": "便宜行事", "诸葛亮": "便宜行事" } });
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
 const API_MODEL = "claude-sonnet-5-5";
@@ -346,6 +393,7 @@ let game = null;          // { start, chapters: [{title, text, state, decision}]
 let busy = false;
 let ctl = null;
 let lastError = null;
+let peek = false;
 let streamText = "";
 let llm = null;           // { kind, call(prompt, onText, signal) -> Promise<string> }
 
@@ -441,7 +489,11 @@ ${recent}
 【当前局势】
 ${JSON.stringify(st)}
 
-【刘备本回的决断】
+【刘备给前方的方略与授权】
+方略：${game.policy.text.trim() || "（未另立方略）"}
+授权：${DELEGATES.map(d => `${d}：${game.policy.powers[d]}`).join("；")}（授权只在此人身处荆州前方或后方时有效）
+
+【刘备本回的命令】
 ${decision}
 
 请写第${cn(n)}回。${last}
@@ -468,6 +520,7 @@ function parseState(jsonText) {
   if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
   s.intel = Array.isArray(s.intel) ? s.intel : [];
   s.hidden = Array.isArray(s.hidden) ? s.hidden : [];
+  for (const k of ["foreshadow", "autonomous", "in_transit"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
   s.choices = Array.isArray(s.choices) ? s.choices.slice(0, 3) : [];
   if (!s.ending && !s.choices.length) throw { code: "no_choices" };
   return s;
@@ -485,6 +538,7 @@ async function decide(decision) {
     const out = splitOutput(raw);
     const state = parseState(out.json);
     current().decision = decision;
+    current().policy = JSON.parse(JSON.stringify(game.policy));
     game.chapters.push({ title: out.title || `第${cn(game.chapters.length + 1)}回`, text: out.text, state });
     delete game.pending;
     save();
@@ -530,6 +584,7 @@ function render() {
     html += `<section class="chapter" id="ch-${i}">
       <div class="chapter-head"><div class="seal">${cn(i + 1)}</div><h2>${esc(c.title.replace(/^第[^回]*回\s*/, ""))}</h2></div>
       <div class="body">${paras(c.text)}</div>
+      ${(c.state.autonomous || []).length ? `<div class="auto"><h4>前方自决</h4><ul>${c.state.autonomous.map(a => `<li><b>${esc(a.who)}</b>${esc(a.did)}</li>`).join("")}</ul></div>` : ""}
       ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
     </section>`;
     if (c.decision) html += `<div class="divider">· · ·</div>`;
@@ -566,15 +621,30 @@ function renderChoices(st) {
   const off = !llm;
   return `<div class="choices">
     <h3>汉中王当如何决断</h3>
+    ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
     <div class="choice-list">
       ${(st.choices || []).map((c, i) => `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></button>`).join("")}
+      <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
     </div>
+    ${renderPolicy(st)}
     <div class="own">
       <label for="ownOrder">或者亲书一道手令（谁去、做什么、怎么做）</label>
       <textarea id="ownOrder" placeholder="例：遣简雍星夜赴江陵，令糜芳将家眷送往成都，另选廖化代守公安。"></textarea>
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off ? "disabled" : ""}>发出手令</button></div>
     </div>
+  </div>`;
+}
+
+function renderPolicy(st) {
+  const fig = n => (st.figures || []).find(f => f.name === n);
+  const active = DELEGATES.filter(n => { const f = fig(n); return f && f.where !== "成都" && f.where !== "已故"; });
+  return `<div class="policy">
+    <h3>方略与授权</h3>
+    <p class="hint">驿马单程二十余日，前方不能事事等你。授权"便宜行事"的人会按自己的判断和你的方略当机立断。方略和授权随下一道命令一并送出。</p>
+    ${active.map(n => `<div class="power"><span class="who">${n}</span><div class="seg" role="group" aria-label="${n}的授权">${Object.keys(POWERS).map(p => `<button type="button" data-who="${n}" data-power="${p}" aria-pressed="${game.policy.powers[n] === p}" title="${POWERS[p]}">${p}</button>`).join("")}</div><span class="desc">${POWERS[game.policy.powers[n]]}</span></div>`).join("")}
+    <label for="policyText">总方略（前方将帅据此自决）</label>
+    <textarea id="policyText" placeholder="例：以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师，孔明可先斩后奏。">${esc(game.policy.text)}</textarea>
   </div>`;
 }
 
@@ -586,6 +656,9 @@ function renderEnding(st) {
     <h3>${esc(e.title)}</h3>
     <p>${esc(e.summary)}</p>
     <h4>与原著对照</h4><p>${esc(e.vs_canon)}</p>
+    ${(e.turning_points || []).length ? `<h4>转折</h4><ol>${e.turning_points.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : ""}
+    <h4>伏笔揭晓</h4>
+    <div class="reveals">${game.chapters.map((c, i) => (c.state.foreshadow || []).map(f => `<div class="reveal"><span class="where">第${cn(i + 1)}回</span><q>${esc(f.line)}</q><p>${esc(f.truth)}</p></div>`).join("")).join("")}</div>
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
   <div class="own"><div class="row"><button class="primary" id="againBtn" type="button">另开一局</button></div></div>`;
@@ -602,10 +675,12 @@ function renderPanel(st) {
       <div class="legend"><span><i style="background:var(--shu)"></i>刘</span><span><i style="background:var(--wu)"></i>孙</span><span><i style="background:var(--wei)"></i>曹</span><span><i style="background:var(--war)"></i>交战</span></div></section>
     <section><h3>大势</h3><div class="gauges">${gauge("后方", "荆州后方")}${gauge("前线", "襄樊前线")}${gauge("孙刘", "孙刘之好")}</div></section>
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
+    ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
     <section><h3>汉中王所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
-    <section class="hidden-box"><h3>暗线</h3>${done
+    <section class="hidden-box"><h3>暗线</h3>${done || peek
       ? `<ul>${(st.hidden || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
-      : `<p>此刻另有 ${(st.hidden || []).length} 条汉中王不知道的暗线，终章揭晓。</p>`}</section>
+      : `<p>此刻另有 ${(st.hidden || []).length} 条汉中王不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
+      ${peek && !done ? `<ul>${game.chapters.flatMap((c, i) => (c.state.foreshadow || []).map(f => `<li>第${cn(i + 1)}回「${esc(f.line)}」：${esc(f.truth)}</li>`)).join("")}</ul>` : ""}</section>
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
 }
 
@@ -649,7 +724,7 @@ function renderIntro() {
 
 function startGame(k) {
   const o = OPENINGS[k];
-  game = { start: k, chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
+  game = { start: k, policy: defaultPolicy(), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
   lastError = null;
   save();
   render();
@@ -659,7 +734,7 @@ function startGame(k) {
 function bindIntro() {
   document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startGame(b.dataset.start));
   const r = $("#resumeBtn");
-  if (r) r.onclick = () => { game = load(); delete game.pending; render(); };
+  if (r) r.onclick = () => { game = load(); delete game.pending; game.policy = game.policy || defaultPolicy(); render(); };
   const sk = $("#saveKey");
   if (sk) {
     try { $("#apiKey").value = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
@@ -676,11 +751,23 @@ function bindStory() {
   document.querySelectorAll("[data-redo]").forEach(b => b.onclick = () => {
     const i = +b.dataset.redo;
     game.chapters = game.chapters.slice(0, i + 1);
+    if (game.chapters[i].policy) game.policy = game.chapters[i].policy;
     delete game.chapters[i].decision;
+    delete game.chapters[i].policy;
     lastError = null;
     save(); render();
     document.getElementById("ch-" + i)?.scrollIntoView({ behavior: "smooth", block: "end" });
   });
+  const pk = $("#peekBtn");
+  if (pk) pk.onclick = () => { peek = true; render(); };
+  const wait = $("#waitBtn");
+  if (wait) wait.onclick = () => decide(WAIT_ORDER);
+  document.querySelectorAll("[data-power]").forEach(b => b.onclick = () => {
+    game.policy.powers[b.dataset.who] = b.dataset.power;
+    save(); render();
+  });
+  const pol = $("#policyText");
+  if (pol) pol.oninput = () => { game.policy.text = pol.value; save(); };
   const own = $("#ownBtn");
   if (own) own.onclick = () => decide($("#ownOrder").value);
   const stop = $("#stopBtn");
@@ -704,7 +791,7 @@ function restart() {
   restartArmed = false;
   $("#restartBtn").textContent = "另开一局";
   if (ctl) ctl.abort();
-  game = null; lastError = null;
+  game = null; lastError = null; peek = false;
   render();
   window.scrollTo(0, 0);
 }
@@ -718,7 +805,7 @@ $("#panelToggle").onclick = () => {
 
 function boot(data) {
   game = (data && data.game) || load();
-  if (game) delete game.pending;
+  if (game) { delete game.pending; game.policy = game.policy || defaultPolicy(); }
   render();
   initLLM();
 }
