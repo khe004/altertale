@@ -1,0 +1,727 @@
+<title>异章·荆州</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap">
+<style>
+/* Layout: a 线装书 page — story column on rice paper, 军情 sidebar like a 题签 slip; indigo cloth accents, one vermilion seal. */
+:root {
+  --paper: #EDEFEA;
+  --panel: #E2E6E1;
+  --ink: #1D2127;
+  --muted: #5D6672;
+  --line: #C9CFCB;
+  --indigo: #2B4A6E;
+  --indigo-soft: #D5DDE6;
+  --seal: #A33A30;
+  --river: #9DB4C8;
+  --shu: #3E7A4D;
+  --wu: #B04A3C;
+  --wei: #3A5D92;
+  --war: #B08A2E;
+  --font-display: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
+  --font-body: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-ui: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
+    --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
+    --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
+  --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
+  --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; color-scheme: dark;
+}
+html, body { min-height: 100%; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.9; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper); border-bottom: 1px solid var(--line); }
+.top-inner { max-width: 72rem; margin: 0 auto; padding: 0.5rem 1rem; display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.brand { font-family: var(--font-display); font-size: 1.6rem; color: var(--indigo); line-height: 1.2; }
+.brand small { font-family: var(--font-ui); font-size: 0.75rem; color: var(--muted); margin-left: 0.5rem; letter-spacing: 0.08em; }
+.top .date { font-family: var(--font-ui); font-size: 0.85rem; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+.ui-btn { font-family: var(--font-ui); font-size: 0.8rem; padding: 0.3rem 0.7rem; border: 1px solid var(--line); background: transparent; border-radius: 3px; color: var(--muted); }
+.ui-btn:hover { color: var(--ink); border-color: var(--muted); }
+#panelToggle { display: none; }
+
+.wrap { max-width: 72rem; margin: 0 auto; padding-inline: 1rem; padding-block: 1.5rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 2.5rem; align-items: start; }
+main { min-width: 0; }
+.story { max-width: 38em; }
+
+/* start screen */
+.intro h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.6rem, 8vw, 4.2rem); color: var(--indigo); line-height: 1.1; margin: 0.5rem 0 0.25rem; text-wrap: balance; }
+.intro .tag { font-size: 1.05rem; color: var(--muted); margin: 0 0 1.5rem; }
+.intro p { margin: 0 0 1rem; }
+.starts { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.start-card { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 1rem 1.1rem; display: grid; gap: 0.35rem; }
+.start-card:hover { border-color: var(--indigo); }
+.start-card .k { font-family: var(--font-ui); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--muted); }
+.start-card strong { font-family: var(--font-display); font-weight: 400; font-size: 1.45rem; color: var(--indigo); line-height: 1.3; }
+.start-card span { font-size: 0.9rem; color: var(--muted); line-height: 1.7; }
+.keybox { font-family: var(--font-ui); font-size: 0.82rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 1rem; margin-top: 1.5rem; display: grid; gap: 0.5rem; }
+.keybox input { padding: 0.35rem 0.5rem; border: 1px solid var(--line); background: var(--paper); border-radius: 3px; width: 100%; max-width: 26rem; }
+
+/* chapters */
+.chapter { margin-bottom: 2.5rem; }
+.chapter-head { display: flex; gap: 0.9rem; align-items: flex-start; margin-bottom: 1rem; }
+.seal { flex: none; width: 2.6rem; height: 2.6rem; border: 2px solid var(--seal); color: var(--seal); border-radius: 3px; display: grid; place-items: center; font-family: var(--font-display); font-size: 1.15rem; line-height: 1; transform: rotate(-4deg); }
+.chapter h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.35rem, 3.6vw, 1.75rem); line-height: 1.45; margin: 0; color: var(--ink); text-wrap: balance; }
+.chapter .body p { margin: 0 0 1em; text-indent: 2em; }
+.decision { font-family: var(--font-ui); font-size: 0.88rem; color: var(--indigo); background: var(--indigo-soft); border-radius: 3px; padding: 0.55rem 0.8rem; margin: 1.25rem 0 0; display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
+.decision b { font-weight: 500; }
+.decision .redo { margin-left: auto; font-size: 0.78rem; background: none; border: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 0; }
+.decision .redo:hover { color: var(--ink); }
+.divider { text-align: center; color: var(--line); letter-spacing: 1em; margin: 0 0 2.5rem; font-size: 0.8rem; }
+
+/* choices */
+.choices { border-top: 2px solid var(--indigo); padding-top: 1rem; margin-top: 0.5rem; }
+.choices h3 { font-family: var(--font-ui); font-weight: 500; font-size: 0.8rem; letter-spacing: 0.14em; color: var(--muted); margin: 0 0 0.75rem; }
+.choice-list { display: grid; gap: 0.6rem; }
+.choice { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 0.7rem 0.9rem; display: grid; gap: 0.15rem; line-height: 1.6; }
+.choice:hover:not(:disabled) { border-color: var(--indigo); }
+.choice b { font-weight: 600; }
+.choice span { font-family: var(--font-ui); font-size: 0.82rem; color: var(--muted); }
+.choice:disabled { opacity: 0.55; cursor: default; }
+.own { margin-top: 0.9rem; display: grid; gap: 0.5rem; }
+.own label { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); }
+.own textarea { width: 100%; min-height: 4.5rem; resize: vertical; padding: 0.6rem 0.75rem; border: 1px solid var(--line); background: var(--paper); border-radius: 4px; line-height: 1.7; }
+.own .row { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.primary { font-family: var(--font-ui); font-size: 0.88rem; padding: 0.45rem 1.1rem; border: none; background: var(--indigo); color: var(--paper); border-radius: 3px; }
+.primary:disabled { opacity: 0.5; cursor: default; }
+
+.writing { font-family: var(--font-ui); font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem; }
+.writing .dots::after { content: "……"; display: inline-block; animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: 0.25; } }
+.notice { font-family: var(--font-ui); font-size: 0.85rem; border: 1px solid var(--seal); color: var(--seal); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 1rem 0; display: grid; gap: 0.5rem; }
+.notice .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+.ending { border: 2px solid var(--seal); border-radius: 4px; padding: 1.1rem 1.25rem; margin: 1rem 0 2rem; }
+.ending .k { font-family: var(--font-ui); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--seal); }
+.ending h3 { font-family: var(--font-display); font-weight: 400; font-size: 1.8rem; margin: 0.2rem 0 0.5rem; color: var(--seal); }
+.ending h4 { font-family: var(--font-ui); font-weight: 500; font-size: 0.82rem; color: var(--muted); margin: 1rem 0 0.25rem; letter-spacing: 0.08em; }
+.ending p { margin: 0; }
+.ending ol { margin: 0; padding-left: 1.4em; font-size: 0.92rem; }
+
+/* sidebar */
+aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 4rem); font-family: var(--font-ui); font-size: 0.85rem; line-height: 1.6; display: grid; gap: 1.1rem; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: 0.25rem; }
+aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted); margin: 0 0 0.4rem; }
+.map svg { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 4px; }
+.legend { display: flex; gap: 0.75rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
+.legend i { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: 0; }
+.gauges { display: grid; gap: 0.45rem; }
+.gauge { display: grid; grid-template-columns: 4.5em 1fr 2em; gap: 0.5rem; align-items: center; }
+.gauge .bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.gauge .bar i { display: block; height: 100%; background: var(--indigo); border-radius: 3px; transition: width 0.6s ease; }
+.gauge .bar i.low { background: var(--seal); }
+.gauge .n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.figures { display: grid; gap: 0.3rem; margin: 0; }
+.fig { display: grid; grid-template-columns: 3.5em minmax(0, 1fr); gap: 0.5rem; }
+.fig dt { font-weight: 500; }
+.fig dd { margin: 0; color: var(--muted); }
+.fig dd b { color: var(--ink); font-weight: 400; }
+.fig.dead dt, .fig.dead dd b { text-decoration: line-through; color: var(--muted); }
+.intel { margin: 0; padding-left: 1.1em; display: grid; gap: 0.25rem; }
+.hidden-box { border: 1px dashed var(--line); border-radius: 4px; padding: 0.6rem 0.75rem; }
+.hidden-box p { margin: 0; color: var(--muted); font-size: 0.8rem; }
+.hidden-box ul { margin: 0.4rem 0 0; padding-left: 1.1em; display: grid; gap: 0.25rem; }
+.chron { margin: 0; padding-left: 1.4em; display: grid; gap: 0.2rem; color: var(--muted); font-size: 0.8rem; }
+
+@media (max-width: 900px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+  #panelToggle { display: inline-block; }
+  aside { position: static; max-height: none; order: -1; border: 1px solid var(--line); border-radius: 4px; padding: 0.9rem; background: var(--panel); }
+  aside.collapsed { display: none; }
+  .map svg { background: var(--paper); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .writing .dots::after { animation: none; }
+  .gauge .bar i { transition: none; }
+}
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <div class="brand">异章·荆州<small>改变一个选择，让故事重新演化</small></div>
+    <span class="date" id="date"></span>
+    <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
+    <button class="ui-btn" id="restartBtn" type="button" hidden>另开一局</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <main id="main"></main>
+  <aside id="panel" class="collapsed" hidden></aside>
+</div>
+
+<script>
+"use strict";
+
+/* ───────── 世界设定 ───────── */
+
+const PLACES = {
+  "成都": [52, 196], "汉中": [78, 84], "上庸": [160, 82], "樊城": [232, 58], "襄阳": [232, 92],
+  "许都": [338, 34], "麦城": [200, 150], "江陵": [232, 176], "公安": [246, 206], "陆口": [306, 208], "建业": [384, 186]
+};
+const FACTION = { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
+
+const WORLD_COMMON = `时间：东汉建安二十四年（公元219年）秋。刘备新取汉中，进位汉中王，坐镇成都。
+关键人物与动机：
+- 刘备（玩家）：汉中王，在成都。志在兴复汉室，倚重兄弟情义；益州新定、汉中初得，兵疲粮紧。
+- 关羽：前将军，假节钺，统荆州之兵北伐，水淹于禁七军，围曹仁于樊城。勇而刚，自矜，轻视东吴，曾拒孙权联姻（"虎女安肯嫁犬子"）。右臂中过毒箭。
+- 关平、廖化、赵累、王甫：随关羽军中。王甫素忧后方。
+- 糜芳：南郡太守，守江陵；士仁（傅士仁）：将军，守公安。二人供应军资不及时，被关羽斥责"还当治之"，心中惶惧。
+- 法正：尚书令，在成都，善奇谋，主张乘曹操之败扩大战果。
+- 孙权：吴王之位未定，欲得荆州全境以保长江，表面仍为盟友，暗中与曹操往来，可能向曹操请降称臣以换取荆州。
+- 吕蒙：守陆口，一心图荆州；与孙权定计"称病还建业"以松懈关羽，伏兵商船之中，可"白衣渡江"偷袭沿江烽火台。
+- 陆逊：年少，名声未显，代吕蒙驻陆口，卑辞致书关羽以骄其心。
+- 虞翻：吴臣，与士仁有旧，善于说降。
+- 曹操：在洛阳，闻于禁败曾议迁都避关羽之锋；司马懿、蒋济劝其结孙权，许以江南之地，使袭关羽之后。
+- 曹仁：守樊城，城中兵粮渐乏；满宠劝其死守。
+- 徐晃：率援军屯宛、阳陵坡一带，伺机解樊城之围。
+- 刘封、孟达：守上庸，与荆州相邻，可援可不援，孟达心怀二意。
+地理与时间：成都至江陵驿马单程约二十余日，至汉中约十日，至上庸约十余日。江陵为荆州根本，公安在江南与之相望；江陵沿江设有烽火台以防吴；麦城为当阳附近小城。`;
+
+const WORLDS = {
+  canon: `【起点：原著部署】
+依《三国演义》（毛宗岗本）第七十三至七十四回之局面：诸葛亮在成都辅佐刘备，荆州由关羽总督，后方江陵由糜芳、公安由士仁把守。`,
+  kongming: `【起点：反事实·孔明留守荆州】
+本局为实验设定：建安十九年刘备入蜀时，改召张飞、赵云入川，而令诸葛亮与关羽同镇荆州。故此时诸葛亮以军师将军身份留守江陵，总理荆州政务、钱粮与后方防务；关羽仍为前将军、假节钺，统北伐之军，军令上不受诸葛亮节制。益州则由法正、黄权、许靖等佐刘备。
+此设定的连带影响：成都缺少孔明理政，益州钱粮调度较原著吃力；江陵有孔明坐镇，糜芳、士仁受其节制和抚慰，但江陵兵力大半已随关羽北上；关羽对孔明素来尊重，然性情自矜，未必事事听从；孙权、吕蒙知孔明在江陵，偷袭须另作打算。不预设孔明能挽回一切。`
+};
+
+const RULES = `你是《异章：荆州》的说书人兼世界推演者。这是一部以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的互动反事实小说。玩家扮演汉中王刘备，身在成都，每回作出一项决断，你据此写出下一回。
+
+写作要求：
+1. 文风仿毛宗岗本《三国演义》：半文半白，章回体。回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。不得出现现代词汇或"玩家""系统""选项"等字样。
+2. 本回可在多地之间切换（"却说……""且说……"），但刘备一方不知道的密谋只可略作伏笔，不点破；完整内容写入 hidden。
+3. 每回结尾把局面推到刘备必须再作决断的时刻，例如新的急报、使者到来、或某人的进言。
+
+推演要求：
+4. 每个人物按自己的目标、性情和所掌握的消息行事，不迎合刘备。刘备的命令要经驿马传递，到达需要时日；命令到时局势可能已变，接令者也可能拖延、曲解或抗命。写出这些摩擦。
+5. 原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。不预设刘备一方必胜或必败。
+6. 胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称；以少胜多必有缘由和代价。
+7. 每回时间推进约十日至一月。全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
+8. choices：给刘备三个下一步决断，方向彼此不同，各有代价，只依据刘备此刻所知，不要暗示哪个是正确答案。`;
+
+const FORMAT = `输出格式（严格遵守）：
+第一行写回目，形如"第三回　七字或八字上句　七字或八字下句"。空一行后写正文，段落之间空一行。
+正文结束后，另起一行只写 ===STATE===，紧接着写一个 JSON 对象，不加代码块标记，字段如下：
+{
+  "date": "建安二十四年九月上旬",
+  "places": {"成都":"刘","汉中":"刘","上庸":"刘","樊城":"曹","襄阳":"曹","许都":"曹","麦城":"刘","江陵":"刘","公安":"刘","陆口":"孙","建业":"孙"},
+  "figures": [{"name":"关羽","where":"樊城外","note":"十二字以内的现状"}],
+  "gauges": {"后方": 50, "前线": 50, "孙刘": 50},
+  "intel": ["刘备此刻确知或听闻之事，三至六条"],
+  "hidden": ["刘备尚不知道的暗线，二至五条"],
+  "chronicle": "本回纪要，一句，三十字以内",
+  "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
+  "ending": null
+}
+说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。choices 正好三项。
+若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内"}，choices 写 []。`;
+
+/* ───────── 开局（预写的第一回） ───────── */
+
+const OPENINGS = {
+  canon: {
+    label: "原著部署",
+    blurb: "孔明在成都，糜芳守江陵，士仁守公安。关羽倾荆州之兵北伐，后方空虚。",
+    title: "第一回　决襄江云长威震华夏　读捷报玄德夜议荆州",
+    text: `建安二十四年秋八月，连日大雨，汉水暴涨。成都汉中王府中，刘备正与诸葛亮、法正议汉中屯田之事，忽报荆州飞骑至。使者满身泥水，伏地呈上关公书信。
+
+刘备拆书视之，不觉拍案而起。原来关公乘秋雨连绵，预备船筏，决襄江之水，于禁所督七军尽没于洪涛之中。于禁乞降，庞德不屈而死。如今关公兵围樊城，曹仁困守孤城，城墙浸水，处处崩塌；梁、郏、陆浑群盗遥受关公印号，许都以南，人心震动。又闻曹操聚众商议，欲迁都以避其锋。
+
+刘备持书遍示众官，笑曰：“吾弟威震华夏矣！”众皆拜贺。法正进曰：“曹操新失七军，中原骚动，此天以中原授大王也。若遣一军出汉中，与云长东西并进，霸业可成。”
+
+孔明独不言，徐徐摇扇。刘备问之。孔明曰：“云长以荆州全军北向，所留江陵者糜芳，公安者士仁耳。前番二人供应军资不及，云长责之曰‘还当治之’，二人至今惶惧。东吴吕蒙屯陆口，久有吞并之心。近闻吕蒙称病还建业，代之者乃一书生陆逊，致书云长，辞极卑下。亮恐其中有诈。”
+
+法正曰：“孙权与曹操世仇，岂肯助之？军师过虑矣。”孔明曰：“孙权所欲者荆州耳，非为曹，亦非为我。”
+
+刘备沉吟良久。窗外秋雨未歇，案上烛火摇动。荆州距成都千里之遥，驿马单程二十余日，今夜所发之令，到得江陵，已是九月中了。刘备起身踱至地图之前，手按江陵，久久不语。
+
+正是：七军覆没惊天下，一纸军书重万钧。`,
+    state: {
+      date: "建安二十四年八月",
+      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
+      figures: [
+        { name: "刘备", where: "成都", note: "汉中王" },
+        { name: "诸葛亮", where: "成都", note: "军师将军，忧荆州后方" },
+        { name: "法正", where: "成都", note: "尚书令，主张乘胜进取" },
+        { name: "关羽", where: "樊城外", note: "水淹七军，围曹仁" },
+        { name: "糜芳", where: "江陵", note: "南郡太守，惧关羽责罚" },
+        { name: "士仁", where: "公安", note: "与关羽有隙" },
+        { name: "曹仁", where: "樊城", note: "困守孤城" },
+        { name: "曹操", where: "洛阳", note: "议迁都避锋" },
+        { name: "孙权", where: "建业", note: "态度不明" },
+        { name: "吕蒙", where: "建业", note: "称病离陆口" },
+        { name: "陆逊", where: "陆口", note: "新任，卑辞致书关羽" }
+      ],
+      gauges: { "后方": 40, "前线": 80, "孙刘": 30 },
+      intel: [
+        "关羽水淹七军，于禁降，庞德死，樊城被围",
+        "曹操曾议迁都",
+        "吕蒙称病还建业，陆逊代守陆口，致书关羽言辞卑下",
+        "糜芳、士仁曾被关羽严责，心怀不安"
+      ],
+      hidden: [
+        "吕蒙称病是与孙权定下的计策，精兵已暗中集结",
+        "孙权已遣使与曹操往来，愿袭关羽之后以求荆州",
+        "司马懿、蒋济正劝曹操许孙权以江南之地"
+      ],
+      choices: [
+        { label: "急令云长围樊勿进，分兵回守江陵", detail: "可固后方；但樊城或功亏一篑，云长未必肯从" },
+        { label: "发益州之兵东出，经秭归增援荆州", detail: "援军需一两月方到；益州新定，粮草吃紧" },
+        { label: "遣使赴东吴修好，许以湘水以东之地", detail: "或可稳住孙权；但须割地，且云长曾辱吴使" }
+      ]
+    }
+  },
+  kongming: {
+    label: "反事实：孔明留守荆州",
+    blurb: "当年入蜀时，孔明没有西去，而是与关羽同镇荆州。此刻他坐镇江陵后方。",
+    title: "第一回　卧龙坐镇江陵城　云长水淹七路军",
+    text: `建安二十四年秋八月，连日大雨，汉水暴涨。成都汉中王府中，刘备正与法正、黄权计议汉中屯田，忽报荆州两路飞骑先后而至。
+
+前一封是关公捷书：关公乘秋雨决襄江之水，于禁七军尽没，于禁乞降，庞德不屈而死；今兵围樊城，曹仁困守孤城，许都震动，曹操议欲迁都以避其锋。刘备大喜，持书遍示众官，众皆拜贺。
+
+后一封却是孔明自江陵所发。刘备拆而读之，书曰：“亮在江陵，闻云长大捷，喜不自胜。然有三事，不敢不陈。其一，吕蒙称病还建业，代者陆逊，卑辞以骄云长，此必有谋。亮已令沿江烽火台加严，昼夜更番，然江陵之兵大半随云长北上，所余不足万人。其二，云长刚而自矜，亮去书劝其留兵守江，云长复书曰‘有军师在后，羽何忧焉’，竟又调江陵兵三千赴樊城。其三，糜芳、士仁前为军资事被云长严责，亮已善言抚之，然二人心意难测。亮受命留镇，不敢专断，愿主公裁之。”
+
+刘备读罢，喜色尽收。法正进曰：“曹操新失七军，中原骚动，正当乘势北进。军师在江陵，东吴必不敢轻动，大王何忧？”黄权曰：“孔明尚且忧之，则江东之谋必深。臣以为荆州之事，宜早作计较。”
+
+刘备踱至地图之前，手按江陵，久久不语。荆州距成都千里之遥，驿马单程二十余日，今夜所发之令，到得江陵，已是九月中了。
+
+正是：一城坐镇卧龙在，千里军书未可期。`,
+    state: {
+      date: "建安二十四年八月",
+      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
+      figures: [
+        { name: "刘备", where: "成都", note: "汉中王" },
+        { name: "诸葛亮", where: "江陵", note: "留守荆州，总理后方" },
+        { name: "法正", where: "成都", note: "尚书令，主张乘胜进取" },
+        { name: "黄权", where: "成都", note: "主张早防东吴" },
+        { name: "关羽", where: "樊城外", note: "水淹七军，又调江陵兵" },
+        { name: "糜芳", where: "江陵", note: "受孔明节制，心意难测" },
+        { name: "士仁", where: "公安", note: "与关羽有隙" },
+        { name: "曹仁", where: "樊城", note: "困守孤城" },
+        { name: "曹操", where: "洛阳", note: "议迁都避锋" },
+        { name: "孙权", where: "建业", note: "态度不明" },
+        { name: "吕蒙", where: "建业", note: "称病离陆口" },
+        { name: "陆逊", where: "陆口", note: "新任，卑辞致书关羽" }
+      ],
+      gauges: { "后方": 55, "前线": 80, "孙刘": 35 },
+      intel: [
+        "关羽水淹七军，于禁降，庞德死，樊城被围",
+        "孔明疑吕蒙称病有诈，已加严沿江烽火",
+        "关羽又从江陵调兵三千北上，江陵守军不足万人",
+        "糜芳、士仁曾被关羽严责，孔明已加安抚"
+      ],
+      hidden: [
+        "吕蒙称病是与孙权定下的计策；因孔明在江陵，吴人正另谋他法",
+        "孙权已遣使与曹操往来，愿袭关羽之后以求荆州",
+        "虞翻与士仁有旧，吴人或从公安下手"
+      ],
+      choices: [
+        { label: "授孔明节钺，总督荆州诸军", detail: "后方可固；但云长必有不平，前后军令或生龃龉" },
+        { label: "请孔明亲赴江东，稳住孙权", detail: "孔明有江东旧谊；但江陵将无主事之人" },
+        { label: "发益州兵东出增援，交孔明调度", detail: "援军需一两月方到；益州钱粮本已吃力" }
+      ]
+    }
+  }
+};
+
+const MAX_TURNS = 12;
+const STORE_KEY = "altertale-jingzhou-v1";
+const KEY_STORE = "altertale-anthropic-key";
+const API_MODEL = "claude-sonnet-5-5";
+const NUMS = "一二三四五六七八九十";
+const cn = n => n <= 10 ? NUMS[n - 1] : n < 20 ? "十" + NUMS[n - 11] : String(n);
+
+/* ───────── 状态 ───────── */
+
+let game = null;          // { start, chapters: [{title, text, state, decision}] }
+let busy = false;
+let ctl = null;
+let lastError = null;
+let streamText = "";
+let llm = null;           // { kind, call(prompt, onText, signal) -> Promise<string> }
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const paras = t => String(t).split(/\n+/).map(s => s.trim()).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join("");
+const current = () => game.chapters[game.chapters.length - 1];
+
+function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(game)); } catch (e) {} }
+function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) { return null; } }
+
+/* ───────── 语言模型 ───────── */
+
+async function initLLM() {
+  if (window.claude && typeof window.claude.use === "function") {
+    try {
+      const sample = await window.claude.use("sample");
+      if (sample) {
+        llm = {
+          kind: "claude",
+          call: async (prompt, onText, signal) => (await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false })).text
+        };
+        render();
+        return;
+      }
+    } catch (e) {}
+  }
+  setupKeyLLM();
+  render();
+}
+
+function setupKeyLLM() {
+  let key = "";
+  try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
+  llm = key ? { kind: "key", call: (p, onText, signal) => callAnthropic(key, p, onText, signal) } : null;
+}
+
+async function callAnthropic(key, prompt, onText, signal) {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST", signal,
+    headers: {
+      "content-type": "application/json", "x-api-key": key,
+      "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({ model: API_MODEL, max_tokens: 6000, stream: true, messages: [{ role: "user", content: prompt }] })
+  });
+  if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", text = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop();
+    for (const line of lines) {
+      if (!line.startsWith("data:")) continue;
+      try {
+        const ev = JSON.parse(line.slice(5));
+        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
+          text += ev.delta.text;
+          onText(text);
+        } else if (ev.type === "error") throw { code: "upstream_error", message: ev.error && ev.error.message };
+      } catch (e) { if (e && e.code) throw e; }
+    }
+  }
+  return text;
+}
+
+/* ───────── 推演 ───────── */
+
+function buildPrompt(decision) {
+  const n = game.chapters.length + 1;
+  const st = { ...current().state };
+  delete st.choices;
+  const chron = game.chapters.map((c, i) => `第${cn(i + 1)}回：${c.state.chronicle || c.title}${c.decision ? `；刘备决断：${c.decision}` : ""}`).join("\n");
+  const recent = game.chapters.slice(-2).map(c => `${c.title}\n${c.text}`).join("\n\n");
+  const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 3 ? "\n故事已近尾声，开始向结局收束。" : "";
+  return `${RULES}
+
+【世界设定】
+${WORLD_COMMON}
+
+${WORLDS[game.start]}
+
+【前情纪要】
+${chron}
+
+【最近原文】
+${recent}
+
+【当前局势】
+${JSON.stringify(st)}
+
+【刘备本回的决断】
+${decision}
+
+请写第${cn(n)}回。${last}
+
+${FORMAT}`;
+}
+
+function splitOutput(raw) {
+  const i = raw.indexOf("===STATE===");
+  const story = (i < 0 ? raw : raw.slice(0, i)).trim();
+  const lines = story.split("\n");
+  const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();
+  return { title, text: lines.join("\n").trim(), json: i < 0 ? null : raw.slice(i + 11) };
+}
+
+function parseState(jsonText) {
+  if (!jsonText) throw { code: "no_state" };
+  const t = jsonText.replace(/```(json)?/g, "");
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  const s = JSON.parse(t.slice(a, b + 1));
+  const prev = current().state;
+  s.places = { ...prev.places, ...(s.places || {}) };
+  s.gauges = { ...prev.gauges, ...(s.gauges || {}) };
+  if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
+  s.intel = Array.isArray(s.intel) ? s.intel : [];
+  s.hidden = Array.isArray(s.hidden) ? s.hidden : [];
+  s.choices = Array.isArray(s.choices) ? s.choices.slice(0, 3) : [];
+  if (!s.ending && !s.choices.length) throw { code: "no_choices" };
+  return s;
+}
+
+async function decide(decision) {
+  decision = decision.trim();
+  if (!decision || busy || !llm) return;
+  busy = true; lastError = null; streamText = "";
+  game.pending = decision;
+  ctl = new AbortController();
+  render();
+  try {
+    const raw = await llm.call(buildPrompt(decision), t => { streamText = t; renderStream(); }, ctl.signal);
+    const out = splitOutput(raw);
+    const state = parseState(out.json);
+    current().decision = decision;
+    game.chapters.push({ title: out.title || `第${cn(game.chapters.length + 1)}回`, text: out.text, state });
+    delete game.pending;
+    save();
+  } catch (e) {
+    if (!e || e.code !== "cancelled") lastError = e || { code: "unknown" };
+  } finally {
+    busy = false; ctl = null; streamText = "";
+    render();
+    if (!lastError) document.getElementById("ch-" + (game.chapters.length - 1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function errorCopy(e) {
+  const c = e && e.code;
+  if (c === "not_granted" || c === "sampling_disabled") return "未获准调用 Claude，故事无法继续。请在本页的权限设置中允许后刷新。";
+  if (c === "rate_limited") return "调用太频繁或已达用量上限，请稍后再试。";
+  if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
+  if (c === "refused") return "Claude 拒绝写这一回。换一种决断试试。";
+  if (c === "http_401") return "API Key 无效，请重新填写。";
+  if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "这一回的局势数据没有写完整，可以重写这一回。";
+  return "驿路不通（连接出错）。可以重试。";
+}
+
+/* ───────── 渲染 ───────── */
+
+function render() {
+  const main = $("#main"), panel = $("#panel");
+  $("#restartBtn").hidden = !game;
+  if (!game) {
+    panel.hidden = true;
+    $("#date").textContent = "";
+    main.innerHTML = renderIntro();
+    bindIntro();
+    return;
+  }
+  const st = current().state;
+  $("#date").textContent = st.date || "";
+  panel.hidden = false;
+  panel.innerHTML = renderPanel(st);
+
+  let html = `<div class="story">`;
+  game.chapters.forEach((c, i) => {
+    html += `<section class="chapter" id="ch-${i}">
+      <div class="chapter-head"><div class="seal">${cn(i + 1)}</div><h2>${esc(c.title.replace(/^第[^回]*回\s*/, ""))}</h2></div>
+      <div class="body">${paras(c.text)}</div>
+      ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
+    </section>`;
+    if (c.decision) html += `<div class="divider">· · ·</div>`;
+  });
+
+  if (busy) {
+    html += `<div class="decision"><span>汉中王令</span><b>${esc(game.pending)}</b></div>
+      <section class="chapter" id="live">
+        <p class="writing" id="writing"><span>驿马奔驰，军情未至<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
+        <div class="body" id="liveBody"></div>
+      </section>`;
+  } else if (st.ending) {
+    html += renderEnding(st);
+  } else {
+    if (lastError) html += `<div class="notice"><span>${esc(errorCopy(lastError))}</span><div class="row"><button class="ui-btn" id="retryBtn" type="button">重写这一回</button></div></div>`;
+    html += renderChoices(st);
+  }
+  html += `</div>`;
+  main.innerHTML = html;
+  bindStory();
+  if (busy) renderStream();
+}
+
+function renderStream() {
+  const body = $("#liveBody");
+  if (!body) return;
+  const { title, text } = splitOutput(streamText);
+  if (!streamText) { body.innerHTML = ""; return; }
+  $("#writing").firstElementChild.innerHTML = `说书人正在落笔<span class="dots"></span>`;
+  body.innerHTML = `<div class="chapter-head"><div class="seal">${cn(game.chapters.length + 1)}</div><h2>${esc(title.replace(/^第[^回]*回\s*/, ""))}</h2></div>${paras(text)}`;
+}
+
+function renderChoices(st) {
+  const off = !llm;
+  return `<div class="choices">
+    <h3>汉中王当如何决断</h3>
+    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
+    <div class="choice-list">
+      ${(st.choices || []).map((c, i) => `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></button>`).join("")}
+    </div>
+    <div class="own">
+      <label for="ownOrder">或者亲书一道手令（谁去、做什么、怎么做）</label>
+      <textarea id="ownOrder" placeholder="例：遣简雍星夜赴江陵，令糜芳将家眷送往成都，另选廖化代守公安。"></textarea>
+      <div class="row"><button class="primary" id="ownBtn" type="button" ${off ? "disabled" : ""}>发出手令</button></div>
+    </div>
+  </div>`;
+}
+
+function renderEnding(st) {
+  const e = st.ending;
+  const hiddenAll = [...new Set(game.chapters.flatMap(c => c.state.hidden || []))];
+  return `<div class="ending">
+    <div class="k">终章 · ${esc(OPENINGS[game.start].label)}</div>
+    <h3>${esc(e.title)}</h3>
+    <p>${esc(e.summary)}</p>
+    <h4>与原著对照</h4><p>${esc(e.vs_canon)}</p>
+    <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
+  </div>
+  <div class="own"><div class="row"><button class="primary" id="againBtn" type="button">另开一局</button></div></div>`;
+}
+
+function renderPanel(st) {
+  const done = !!st.ending;
+  const gauge = (k, label) => {
+    const v = Math.max(0, Math.min(100, Number(st.gauges[k]) || 0));
+    return `<div class="gauge"><span>${label}</span><div class="bar"><i class="${v < 35 ? "low" : ""}" style="width:${v}%"></i></div><span class="n">${v}</span></div>`;
+  };
+  return `
+    <section class="map"><h3>荆襄形势</h3>${renderMap(st.places)}
+      <div class="legend"><span><i style="background:var(--shu)"></i>刘</span><span><i style="background:var(--wu)"></i>孙</span><span><i style="background:var(--wei)"></i>曹</span><span><i style="background:var(--war)"></i>交战</span></div></section>
+    <section><h3>大势</h3><div class="gauges">${gauge("后方", "荆州后方")}${gauge("前线", "襄樊前线")}${gauge("孙刘", "孙刘之好")}</div></section>
+    <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
+    <section><h3>汉中王所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
+    <section class="hidden-box"><h3>暗线</h3>${done
+      ? `<ul>${(st.hidden || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
+      : `<p>此刻另有 ${(st.hidden || []).length} 条汉中王不知道的暗线，终章揭晓。</p>`}</section>
+    <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
+}
+
+function renderMap(places) {
+  const nodes = Object.entries(PLACES).map(([name, [x, y]]) => {
+    const h = places[name] || "争";
+    const color = `var(${FACTION[h] || "--war"})`;
+    const right = x > 360;
+    return `<g><circle cx="${x}" cy="${y}" r="${name === "江陵" ? 7 : 5}" fill="${color}" stroke="var(--paper)" stroke-width="1.5"/>
+      <text x="${right ? x - 9 : x + 9}" y="${y + 4}" font-size="11" fill="var(--ink)" text-anchor="${right ? "end" : "start"}">${name}</text></g>`;
+  }).join("");
+  return `<svg viewBox="0 0 400 236" role="img" aria-label="荆襄形势图">
+    <path d="M10,222 C90,222 160,198 232,190 S290,214 330,206 S372,196 398,194" fill="none" stroke="var(--river)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M70,98 C120,96 180,96 226,80 C242,118 262,166 290,202" fill="none" stroke="var(--river)" stroke-width="2.5" stroke-linecap="round"/>
+    <text x="22" y="236" font-size="9" fill="var(--muted)">长江</text>
+    <text x="118" y="112" font-size="9" fill="var(--muted)">汉水</text>
+    ${nodes}
+  </svg>`;
+}
+
+function renderIntro() {
+  const saved = load();
+  return `<div class="intro story">
+    <h1>异章·荆州</h1>
+    <p class="tag">建安二十四年秋，关羽水淹七军，威震华夏。三个月后，荆州易主，关羽死于麦城。</p>
+    <p>这一回，你是汉中王刘备，远在成都。每一回你下一道命令，驿马要走二十多天才能送到荆州。关羽、孔明、糜芳、孙权、吕蒙、曹操，各有各的打算，没人会照着剧本走。</p>
+    <p>选一个起点：</p>
+    <div class="starts">
+      ${Object.entries(OPENINGS).map(([k, o]) => `<button class="start-card" type="button" data-start="${k}"><span class="k">${k === "canon" ? "起点一" : "起点二"}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
+    </div>
+    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(OPENINGS[saved.start].label)}，已到第${cn(saved.chapters.length)}回）</button></p>` : ""}
+    ${window.claude ? "" : `<div class="keybox">
+      <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
+      <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+      <div><button class="ui-btn" id="saveKey" type="button">保存 Key</button> <span id="keyMsg"></span></div>
+    </div>`}
+  </div>`;
+}
+
+/* ───────── 交互 ───────── */
+
+function startGame(k) {
+  const o = OPENINGS[k];
+  game = { start: k, chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
+  lastError = null;
+  save();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function bindIntro() {
+  document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startGame(b.dataset.start));
+  const r = $("#resumeBtn");
+  if (r) r.onclick = () => { game = load(); delete game.pending; render(); };
+  const sk = $("#saveKey");
+  if (sk) {
+    try { $("#apiKey").value = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
+    sk.onclick = () => {
+      try { localStorage.setItem(KEY_STORE, $("#apiKey").value.trim()); } catch (e) {}
+      setupKeyLLM();
+      $("#keyMsg").textContent = llm ? "已保存" : "已清除";
+    };
+  }
+}
+
+function bindStory() {
+  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => decide(current().state.choices[+b.dataset.choice].label));
+  document.querySelectorAll("[data-redo]").forEach(b => b.onclick = () => {
+    const i = +b.dataset.redo;
+    game.chapters = game.chapters.slice(0, i + 1);
+    delete game.chapters[i].decision;
+    lastError = null;
+    save(); render();
+    document.getElementById("ch-" + i)?.scrollIntoView({ behavior: "smooth", block: "end" });
+  });
+  const own = $("#ownBtn");
+  if (own) own.onclick = () => decide($("#ownOrder").value);
+  const stop = $("#stopBtn");
+  if (stop) stop.onclick = () => ctl && ctl.abort();
+  const retry = $("#retryBtn");
+  if (retry) retry.onclick = () => decide(game.pending || "");
+  const again = $("#againBtn");
+  if (again) again.onclick = restart;
+  const kb = $("#keyBtn");
+  if (kb) kb.onclick = () => { game = null; render(); window.scrollTo(0, 0); };
+}
+
+let restartArmed = false;
+function restart() {
+  if (game && !current().state.ending && !restartArmed) {
+    restartArmed = true;
+    $("#restartBtn").textContent = "再点一次确认";
+    setTimeout(() => { restartArmed = false; $("#restartBtn").textContent = "另开一局"; }, 3000);
+    return;
+  }
+  restartArmed = false;
+  $("#restartBtn").textContent = "另开一局";
+  if (ctl) ctl.abort();
+  game = null; lastError = null;
+  render();
+  window.scrollTo(0, 0);
+}
+
+$("#restartBtn").onclick = restart;
+$("#panelToggle").onclick = () => {
+  const p = $("#panel");
+  p.classList.toggle("collapsed");
+  $("#panelToggle").setAttribute("aria-expanded", String(!p.classList.contains("collapsed")));
+};
+
+function boot(data) {
+  game = (data && data.game) || load();
+  if (game) delete game.pending;
+  render();
+  initLLM();
+}
+window.claude?.hot?.snapshot?.(() => ({ game: busy ? null : game }));
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+</script>
