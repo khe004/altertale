@@ -336,6 +336,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const st = { ...cur };
     for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered", "canon"]) delete st[k];
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
+    const budget = n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限：小事交前方依方略处置，只在大事上停下请${ev.player}决断；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
     const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。终章按此刻实际的兵力和已下达的命令收束，不得为了收束而调来未奉命的人马；没有打完的仗可以以相持、对峙或局势未定作结。" : "";
     const now = parseDate(cur.date, yearOf(cur.date));
     const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
@@ -381,7 +382,7 @@ ${decision}
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
 ${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
 
-请推演第${cn(n)}回，推演到下一个需要${ev.player}决断的时刻，在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。${last}
+请推演第${cn(n)}回，推演到下一个需要${ev.player}决断的时刻，在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。${budget}${last}
 
 ${simFormat(g)}`;
   };
@@ -447,28 +448,46 @@ ${simFormat(g)}`;
 
   const GENERIC = new Set(["军师", "主公", "丞相", "大王", "陛下", "君侯", "皇叔"]);
   const aliases = name => { const c = card(name); return [name, ...(c ? c.titles.flatMap(t => String(t[2]).split("、")) : [])].filter(a => a && !GENERIC.has(a)); };
+  // 各人最后一次出现在名单里的地点与时间（名单每回只列八至十二人，缺席者沿用旧位置）
+  const lastSeen = g => {
+    const nodes = routeNodes(era(g)), out = {};
+    for (const c of g.chapters) {
+      const t = parseDate(c.state.date, yearOf(c.state.date));
+      for (const f of c.state.figures || []) {
+        const w = nodes.find(n => f.where && String(f.where).startsWith(n));
+        if (w) out[f.name] = { w, t }; else delete out[f.name];
+      }
+    }
+    return out;
+  };
   // 坐镇者此刻仍在驻地，才受约束；奉命调走之后不再算
   const postsOf = g => {
-    const all = startOf(g).posts || era(g).posts || {}, figs = g.chapters[g.chapters.length - 1].state.figures || [];
-    return Object.fromEntries(Object.entries(all).filter(([k, v]) => { const f = figs.find(x => x.name === k); return f && v.some(n => String(f.where).startsWith(n)); }));
+    const all = startOf(g).posts || era(g).posts || {}, seen = lastSeen(g);
+    return Object.fromEntries(Object.entries(all).filter(([k, v]) => seen[k] && v.includes(seen[k].w)));
   };
 
   E.checkSim = function (g, s, decision) {
     const ev = era(g), prev = g.chapters[g.chapters.length - 1].state, problems = [];
     const nodes = routeNodes(ev), at = w => nodes.find(n => w && String(w).startsWith(n));
-    const t0 = parseDate(prev.date, yearOf(prev.date)), t1 = parseDate(s.date, yearOf(prev.date));
-    const days = t0 != null && t1 != null ? t1 - t0 : null;
-    const before = Object.fromEntries((prev.figures || []).map(f => [f.name, at(f.where)]));
-    const said = [g.policy && g.policy.text, ...g.chapters.map(c => c.decision), decision].filter(Boolean).join("\n");
-    const posts = postsOf(g);
+    const y = yearOf(prev.date), t1 = parseDate(s.date, y), tPrev = parseDate(prev.date, y);
+    const seen = lastSeen(g), posts = postsOf(g);
+    // 每道命令（含方略）下达的时间
+    const orders = [{ text: g.policy && g.policy.text, t: parseDate(g.chapters[0].state.date, y) },
+      ...g.chapters.map(c => ({ text: c.decision, t: parseDate(c.state.date, y) })), { text: decision, t: tPrev }].filter(o => o.text);
     for (const f of s.figures || []) {
-      const a = before[f.name], b = at(f.where);
-      if (!a || !b || a === b) continue;
+      const from = seen[f.name], b = at(f.where);
+      if (!from || !b || from.w === b) continue;
+      const a = from.w, days = t1 != null && from.t != null ? t1 - from.t : null;
       const need = travelDays(ev, a, b, "信使");
       if (days != null && need != null && need > days) problems.push(`${f.name}从${a}到${b}最快也要${need}日，本回只过了${days}日，到不了`);
       const post = posts[f.name];
-      if (post && post.includes(a) && !post.includes(b) && !aliases(f.name).some(x => said.includes(x)))
-        problems.push(`${f.name}坐镇${post.join("、")}，${ev.player}从未下令调他，他却离任到了${b}`);
+      if (!post || post.includes(b)) continue;
+      const call = orders.find(o => aliases(f.name).some(x => o.text.includes(x)));
+      if (!call) { problems.push(`${f.name}坐镇${post.join("、")}，${ev.player}从未下令调他，他却离任到了${b}`); continue; }
+      // 奉召：召令从前方送到驻地，再赶到目的地
+      const go = travelDays(ev, b, a, "信使") + travelDays(ev, a, b, "轻兵");
+      if (t1 != null && call.t != null && Number.isFinite(go) && call.t + go > t1)
+        problems.push(`${f.name}坐镇${a}，召令送到再赶到${b}最快要${go}日，最早${fmtDate(call.t + go)}才到，本回末只到${s.date}`);
     }
     return problems;
   };
