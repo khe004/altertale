@@ -97,8 +97,8 @@ ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 }
 
 async function runGame(start, strategy, n) {
-  const tag = `${start}/${strategy}/${n}`;
-  const file = path.join(OUT, `${start}-${strategy}-${n}.json`);
+  const tag = `${start}/${strategy}/${ROLES.sim.model}/${n}`;
+  const file = path.join(OUT, `${start}-${strategy}-${ROLES.sim.model}-${n}.json`);
   const o = G.OPENINGS[start];
   const g = { start, policy: G.defaultPolicy(), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
   g.policy.text = STRATEGIES[strategy].policy;
@@ -149,5 +149,5 @@ function summarize(r) {
   console.log(`\n== 用量（${results.length} 局，${turns} 回） ==`);
   for (const [role, u] of Object.entries(usage))
     console.log(`${role}（${u.servedBy.join(", ") || u.model}，effort ${u.effort}）: ${u.calls} 次调用，输入 ${u.input} + 缓存写 ${u.cacheWrite} + 缓存读 ${u.cacheRead}，输出 ${u.output}（其中思考 ${u.thinking}）tokens，耗时 ${Math.round(u.seconds)} 秒，约 $${u.usd.toFixed(2)}`);
-  fs.writeFileSync(path.join(OUT, "usage.json"), JSON.stringify({ games: results.length, turns, usage }, null, 1));
+  fs.writeFileSync(path.join(OUT, `usage-${ROLES.sim.model}.json`), JSON.stringify({ games: results.length, turns, usage }, null, 1));
 })();

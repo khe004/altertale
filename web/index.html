@@ -127,6 +127,26 @@ main { min-width: 0; }
 .usage tr:first-child td { color: var(--muted); }
 .usage .sub td { text-align: left; color: var(--muted); font-size: 0.72rem; padding-top: 0; }
 .note { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.72rem; }
+.report h4 { font-family: var(--font-ui); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.14em; color: var(--muted); margin: 0.9rem 0 0.3rem; }
+.report ol, .report ul { margin: 0; padding-left: 1.3em; font-size: 0.93rem; }
+.report li { margin-bottom: 0.2rem; }
+.rp-top { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.rp-top h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.8rem; color: var(--indigo); margin: 0; }
+.rp-top .ui-btn { margin-left: auto; }
+.rp-verdict { border-left: 3px solid var(--seal); background: var(--panel); padding: 0.4rem 0.8rem; margin: 0.8rem 0 0.4rem; border-radius: 0 3px 3px 0; }
+.rp-m { color: var(--muted); font-size: 0.85rem; font-family: var(--font-ui); }
+.rp-ch { border-top: 1px solid var(--line); padding-block: 1rem; }
+.rp-ch header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.4rem 0.9rem; }
+.rp-no { font-family: var(--font-display); font-size: 1.3rem; color: var(--seal); }
+.rp-date { font-family: var(--font-ui); font-size: 0.88rem; }
+.rp-places { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-left: auto; }
+.rp-pl { font-family: var(--font-ui); font-size: 0.72rem; border-radius: 2px; padding: 0 0.35rem; color: var(--paper); }
+.rp-g { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.rp-g b { color: var(--ink); font-weight: 500; }
+.rp-d { font-size: 0.72rem; margin-left: 0.15rem; } .rp-d.up { color: var(--shu); } .rp-d.down { color: var(--seal); }
+.rp-ev li.dark { color: var(--muted); }
+.rp-ev .when { font-family: var(--font-ui); font-size: 0.78rem; color: var(--muted); margin-right: 0.4rem; }
+.rp-ev em { font-style: normal; font-family: var(--font-ui); font-size: 0.68rem; color: var(--seal); border: 1px solid var(--seal); border-radius: 2px; padding: 0 0.2rem; margin-left: 0.35rem; }
 .eta { color: var(--muted); font-size: 0.78rem; }
 .reveals { display: grid; gap: 0.75rem; }
 .reveal { display: grid; gap: 0.15rem; }
@@ -242,9 +262,9 @@ const SIM_RULES = `你是《异章：荆州》的世界推演者。这是以《�
 3. 每个人物按自己的目标、性情和此刻所知行事，不迎合刘备。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
 4. 公正而不刁难：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称。
 5. 前后一致：先核对事件记录与当前局势再推演。人物移动和行军需要时日，不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。
-6. 本回时间推进约十日至一月，写出其间三至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及刘备在本回末是否已得知（known）。
+6. 本回时间推进约二十日至一月，写出其间四至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及刘备在本回末是否已得知（known）。
 7. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-8. 全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
+8. 全局约在五至六回内收束（时间约到建安二十五年春），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
 
 决断选项（choices）：
 9. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。choices 必须建立在这个判断之上；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受，否则不要给出。
@@ -424,7 +444,7 @@ const OPENINGS = {
   }
 };
 
-const MAX_TURNS = 12;
+const MAX_TURNS = 6;
 const DELEGATES = ["关羽", "诸葛亮"];
 const POWERS = { "便宜行事": "可自行决定进退、调兵、守城与应对使者", "遇事请示": "大事须遣使回成都请示，其间固守待命" };
 const WAIT_ORDER = "不另发令，由前方依方略与授权自行处置";
@@ -443,6 +463,7 @@ let ctl = null;
 let lastError = null;
 let peek = false;
 let narrating = -1;
+let showReport = false;
 let streamText = "";
 let llm = null;           // { kind, call(prompt, onText, signal) -> Promise<string> }
 
@@ -532,7 +553,7 @@ function buildSimPrompt(g, decision) {
   const st = { ...g.chapters[g.chapters.length - 1].state };
   for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices"]) delete st[k];
   const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n刘备命令：${c.decision}` : ""}`).join("\n\n");
-  const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 3 ? "\n局势已近收束，开始走向结局。" : "";
+  const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 1 ? "\n局势已近收束，本回要把各条线推向决战或定局。" : "";
   return `${SIM_RULES}
 
 【世界设定】
@@ -735,6 +756,11 @@ function render() {
   panel.innerHTML = renderPanel(st);
 
   const done = !!st.ending;
+  if (showReport && done) {
+    main.innerHTML = renderReport();
+    $("#backBtn").onclick = () => { showReport = false; render(); window.scrollTo(0, 0); };
+    return;
+  }
   let html = `<div class="story">`;
   game.chapters.forEach((c, i) => {
     const known = (c.state.events || []).filter(e => e.known !== false || done);
@@ -823,7 +849,39 @@ function renderEnding(st) {
     <div class="reveals">${game.chapters.map((c, i) => (c.state.foreshadow || []).map(f => `<div class="reveal"><span class="where">第${cn(i + 1)}回</span><q>${esc(f.line)}</q><p>${esc(f.truth)}</p></div>`).join("")).join("")}</div>
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
-  <div class="own"><div class="row"><button class="primary" id="againBtn" type="button">另开一局</button></div></div>`;
+  <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button><button class="primary" id="againBtn" type="button">另开一局</button></div></div>`;
+}
+
+/* 战报：终局后把每回的全部事件（含暗线）、自决、伏笔、选项与命令按回列出 */
+function renderReport() {
+  const FC = { "刘": "shu", "孙": "wu", "曹": "wei", "争": "war" };
+  const keys = ["江陵", "公安", "麦城", "樊城"];
+  const chs = game.chapters, end = current().state.ending;
+  const chapter = (c, i) => {
+    const s = c.state, prev = chs[i - 1];
+    const delta = k => {
+      const d = prev ? s.gauges[k] - prev.state.gauges[k] : 0;
+      return d ? `<span class="rp-d ${d > 0 ? "up" : "down"}">${d > 0 ? "+" : ""}${d}</span>` : "";
+    };
+    const evs = s.events || [];
+    return `<article class="rp-ch">
+      <header><span class="rp-no">第${cn(i + 1)}回</span><span class="rp-date">${esc(s.date)}</span>
+        <span class="rp-places">${keys.map(k => `<span class="rp-pl" style="background:var(--${FC[s.places[k]] || "war"})">${k}·${esc(s.places[k])}</span>`).join("")}</span></header>
+      <div class="rp-g">后方 <b>${s.gauges["后方"]}</b>${delta("后方")}　前线 <b>${s.gauges["前线"]}</b>${delta("前线")}　孙刘 <b>${s.gauges["孙刘"]}</b>${delta("孙刘")}</div>
+      ${i > 0 && evs.length ? `<h4>本回事件<span class="rp-m">　${evs.length} 条，当时汉中王得知 ${evs.filter(e => e.known !== false).length} 条</span></h4>
+      <ol class="rp-ev">${evs.map(e => `<li class="${e.known === false ? "dark" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b><span class="rp-m">@${esc(e.where)}</span> ${esc(e.what)}${e.why ? `<span class="rp-m">（${esc(e.why)}）</span>` : ""} → ${esc(e.result)}${e.known === false ? "<em>暗</em>" : ""}</li>`).join("")}</ol>` : ""}
+      ${(s.autonomous || []).length ? `<h4>前方自决</h4><ul>${s.autonomous.map(a => `<li><b>${esc(a.who)}</b> ${esc(a.did)}</li>`).join("")}</ul>` : ""}
+      ${(s.foreshadow || []).length ? `<h4>伏笔</h4><ul>${s.foreshadow.map(f => `<li>「${esc(f.line)}」<span class="rp-m"> → ${esc(f.truth)}</span></li>`).join("")}</ul>` : ""}
+      ${(s.choices || []).length ? `<h4>当时的选项</h4><ul>${s.choices.map(o => `<li><b>${esc(o.label)}</b><span class="rp-m">　${esc(o.detail)}</span></li>`).join("")}</ul>` : ""}
+      ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b></div>` : ""}
+    </article>`;
+  };
+  return `<div class="story report">
+    <div class="rp-top"><h2>战报 · ${esc(OPENINGS[game.start].label)}</h2><button class="ui-btn" id="backBtn" type="button">回到故事</button></div>
+    <p class="rp-verdict">结局「${esc(end.title)}」　${esc(end.summary)}</p>
+    <p class="rp-m">灰色带“暗”字的事件，是那一回结束时汉中王还不知道的。</p>
+    ${chs.map(chapter).join("")}
+  </div>`;
 }
 
 function renderPanel(st) {
@@ -939,6 +997,8 @@ function bindStory() {
   if (stop) stop.onclick = () => ctl && ctl.abort();
   const retry = $("#retryBtn");
   if (retry) retry.onclick = () => decide(game.pending || "");
+  const rb = $("#reportBtn");
+  if (rb) rb.onclick = () => { showReport = true; render(); window.scrollTo(0, 0); };
   const again = $("#againBtn");
   if (again) again.onclick = restart;
   const kb = $("#keyBtn");
@@ -956,7 +1016,7 @@ function restart() {
   restartArmed = false;
   $("#restartBtn").textContent = "另开一局";
   if (ctl) ctl.abort();
-  game = null; lastError = null; peek = false;
+  game = null; lastError = null; peek = false; showReport = false;
   render();
   window.scrollTo(0, 0);
 }
