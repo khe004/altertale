@@ -155,11 +155,14 @@ ${ev.cast.filter(n => card(n) && card(n).floor).map(n => `- ${n}：${card(n).flo
   const CANON_FINAL = ["已发生", "变形发生", "失效"];
   E.CANON_STATUS = ["已发生", "变形发生", "失效", "未到时"];
 
-  // 只把尚未了结的原著事件交给推演核对；已发生、变形发生的只列名字，省提示词
-  const isDone = x => x && (x.status === "已发生" || x.status === "变形发生");
+  // 只把尚未了结、且已临近的原著事件交给推演核对；已了结的（含失效）只列名字，省提示词，也不再把局势往回拉。
+  // after：前置事件；前置尚未发生时，此事还远，只列名字，不要求核对
+  const isDone = x => x && CANON_FINAL.includes(x.status);
+  const happened = x => x && (x.status === "已发生" || x.status === "变形发生");
+  const isNear = (c, cs) => (c.after || []).every(id => happened(cs[id]));
   const openCanon = g => {
     const cs = g.chapters[g.chapters.length - 1].state.canon || {};
-    return era(g).canonEvents.filter(c => !isDone(cs[c.id]));
+    return era(g).canonEvents.filter(c => !isDone(cs[c.id]) && isNear(c, cs));
   };
   // 背景大事只取原著时间在开局之后、当前之后约四个月内、尚未了结的；开局以前的视为已经发生
   const bgDay = b => (b.year - 219) * 360 + (b.month - 1) * 30 + 15;
@@ -174,9 +177,10 @@ ${ev.cast.filter(n => card(n) && card(n).floor).map(n => `- ${n}：${card(n).flo
     const ev = era(g), cs = g.chapters[g.chapters.length - 1].state.canon || {};
     const done = ev.canonEvents.filter(c => isDone(cs[c.id]));
     const open = openCanon(g);
-    return `原著事件池（逐条核对前提：前提仍在，倾向于照原著或变形发生；前提不成立，就不得照搬，至多以弱化的形式发生）：
-${done.length ? `已了结：${done.map(c => `${c.name}（${cs[c.id].status}）`).join("、")}。\n` : ""}待核对：
-${open.map(c => `- [${c.id}] ${c.name}（${c.ref}）。前提：${c.pre}。原著结果：${c.result}。当前：${cs[c.id] ? cs[c.id].status + (cs[c.id].note ? "，" + cs[c.id].note : "") : "未到时"}`).join("\n") || "（无）"}`;
+    const far = ev.canonEvents.filter(c => !isDone(cs[c.id]) && !isNear(c, cs));
+    return `原著事件池：这是${ev.player}照原著行事时的默认走向，不是必经之路。逐条核对前提：前提仍在，倾向于照原著或变形发生；前提不成立，就不得照搬，至多以弱化的形式发生。${ev.player}的选择绕开了某事（没有走那条路、那个人已不在那里、那座城已经不必打），此事就写"失效"，依赖它的后续也随之改写；不得为了让原著事件发生而设阻、拖延，把局势拉回原路。"若绕开"是此事不发生时的可能走向，供参考。
+${done.length ? `已了结（不再核对）：${done.map(c => `${c.name}（${cs[c.id].status}）`).join("、")}。\n` : ""}待核对：
+${open.map(c => `- [${c.id}] ${c.name}（${c.ref}）。前提：${c.pre}。原著结果：${c.result}。${c.bypass ? `若绕开：${c.bypass}。` : ""}当前：${cs[c.id] ? cs[c.id].status + (cs[c.id].note ? "，" + cs[c.id].note : "") : "未到时"}`).join("\n") || "（无）"}${far.length ? `\n尚远（前置之事未发生，本回不必核对）：${far.map(c => c.name).join("、")}` : ""}`;
   }
 
   function backgroundText(g) {
@@ -223,14 +227,14 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 4. 公正而不刁难（本局基调另有规定的，以基调为准）：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、城防、地利、时机、人心相称。按演义的笔法，第一档名将临阵几乎无人能当；他们落败，要有中计、伏兵、泄密、断粮、军心离散或众寡悬殊这类明确的原因，并在事件里写出来。
 5. 前后一致：先核对事件记录与当前局势再推演。人物不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。粮草按日消耗，每回更新各部 grain；粮尽必有后果（逃散、哗变、被迫出战或撤退）。硬攻坚城旷日持久；城池易手须写明门是怎么开的。
 6. 敌方主动：每回先替各方（${ev.rivals}）谋划（写入 plans），按其目标与所知行动，再写事件。得知援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；玩家一方可以用计诱其误判。
-7. 本回时间推进约${ev.turnSpan[0]}日至${ev.turnSpan[1] === 30 ? "一月" : ev.turnSpan[1] + "日"}，写出其间四至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${ev.player}在本回末是否已得知（known）。
+7. 每回推演到下一个需要${ev.player}亲自决断的时刻为止：一场仗分出胜负、局面出现转折、有人来请命，或者久无变化。奇袭急进可能只有十来日，相持可以数月；限在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间。写出其间三至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${ev.player}在本回末是否已得知（known）。
 8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-9. 全局约在${cnBig(ev.maxTurns - 1)}至${cnBig(ev.maxTurns)}回内收束（时间约到${ev.endBy}），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（${ev.decisive}），本回即为终章。原著的结局是：${ev.baseline || "（见原著）"}。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。
+9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照，不是进度：${ev.player}走得快，局势就快，不得为了凑回数或贴近原著时间而拖延、添设阻碍；也不要原地相持。一旦出现决定性结局（${ev.decisive}），本回即为终章，哪怕这才是第二回。原著的结局是：${ev.baseline || "（见原著）"}（约在${ev.endBy}）。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。
 
 谋士进言与决断选项：
 10. 先写 assessment，冷静判断${ev.player}此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
 11. 再写 counsel：${ev.player}身边的谋士各自进言，二至三条，各用其口吻，按人物卡的进言风格与才智。只有此刻与${ev.player}同在${seat}的人能当面进言（how 写"面陈"）；身在外地者只能以书信进言，how 写明发信的时间与地点，信件按驿程表在路上耽搁，所言只能依据他发信时所知。谋士之间可以意见相左。
-12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（counsel 的 choice 写对应选项的序号，从1起），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
+12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（counsel 的 choice 写对应选项的序号，从1起），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。谋士献的是险计、急计（如奇袭、直取）时，选项照原样保留它的锋芒，不得缩成稳妥的小动作；${ev.player}选了它，按兵力、时机、内应、人心与对方的准备如实判定成败，不预设失败。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
   }
 
   function simFormat(g) {
@@ -332,7 +336,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const st = { ...cur };
     for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered", "canon"]) delete st[k];
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
-    const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。终章按此刻实际的兵力和已下达的命令收束，不得为了收束而调来未奉命的人马；没有打完的仗可以以相持、对峙或局势未定作结。" : n >= ev.maxTurns - 1 ? "\n局势已近收束，本回要把各条线推向决战或定局。" : "";
+    const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。终章按此刻实际的兵力和已下达的命令收束，不得为了收束而调来未奉命的人马；没有打完的仗可以以相持、对峙或局势未定作结。" : "";
     const now = parseDate(cur.date, yearOf(cur.date));
     const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
     const ad = adOf(cur.date);
@@ -377,7 +381,7 @@ ${decision}
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
 ${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
 
-请推演第${cn(n)}回，本回时间推进约${ev.turnSpan[0]}日至${ev.turnSpan[1]}日${span}。${last}
+请推演第${cn(n)}回，推演到下一个需要${ev.player}决断的时刻，在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。${last}
 
 ${simFormat(g)}`;
   };

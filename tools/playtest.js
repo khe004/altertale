@@ -75,7 +75,9 @@ function claude(prompt, role) {
 }
 
 const STRATEGIES = {
-  prudent: { policy: "", player: "你是一个认真、明智的玩家，目标是让结局与原著（荆州失守、关羽败走麦城）不同。根据局势判断最好的一步。" },
+  prudent: { policy: "", player: "你是一个认真、明智的玩家，目标是打得比原著更好、更快。根据局势判断最好的一步。" },
+  // 脚本：前几回依次下 --script 给的命令（用 | 分隔），之后按 prudent 打
+  script: { policy: "", player: null },
   delegate: { policy: "以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师；留守之将可先斩后奏，不必请示。", player: null },
   greedy: { policy: "", player: "你是一个贪功的玩家，一心乘胜北伐、扩大战果，认为东吴不足为虑，很少考虑后方。" },
   canon: { policy: "", player: null },  // 回归测试：照演义，刘备在成都不知前方变故，从不另发令
@@ -89,9 +91,15 @@ async function playerMove(strategy, g) {
   // 原著回归：有标 canon 的选项就选它，否则照演义不另发令
   if (strategy === "canon") { const c = (st.choices || []).find(x => x.canon); return c ? c.label : E.WAIT_ORDER; }
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
+  if (strategy === "script") {
+    const script = arg("script", "").split("|").filter(Boolean), k = g.chapters.length - 1;
+    if (k < script.length) return script[k];
+    strategy = "prudent";
+  }
   const single = strategy === "single";
   const events = (st.events || []).filter(e => e.known !== false).map(e => `${e.date} ${e.who}（${e.where}）${e.what}，${e.result}`);
-  const prompt = `你在玩一个三国策略游戏，扮演汉中王刘备（身在成都，信使到江陵要十余日，到樊城约半月）。
+  const ev = E.era(g);
+  const prompt = `你在玩一个三国策略游戏，扮演${ev.player}（${ev.playerTitle}，此刻身在${E.seatOf(g)}；${ev.name}：${ev.tagline}）。
 ${STRATEGIES[strategy].player}
 
 时间：${st.date}
@@ -144,8 +152,9 @@ async function playEra(g, strategy, tag, result, write) {
 }
 
 async function runGame(start, strategy, n) {
-  const tag = `${ERA}/${start}/${strategy}/${SIM_TAG}/${n}`;
-  const file = path.join(OUT, `${ERA}-${start}-${strategy}-${SIM_TAG}-${n}.json`);
+  const label = strategy + (arg("label") ? "-" + arg("label") : "");
+  const tag = `${ERA}/${start}/${label}/${SIM_TAG}/${n}`;
+  const file = path.join(OUT, `${ERA}-${start}-${label}-${SIM_TAG}-${n}.json`);
   const g = E.newGame(ERA, start);
   g.policy.text = STRATEGIES[strategy].policy;
   const result = { era: ERA, start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
@@ -192,8 +201,8 @@ function canonReport(r) {
 
 function summarize(r) {
   const last = r.game.chapters[r.game.chapters.length - 1].state;
-  const guan = (last.figures || []).find(f => f.name === "关羽");
-  return `${r.start}/${r.strategy}/${r.n}: ${r.game.chapters.length}回 ${last.date} 江陵:${last.places["江陵"]} 公安:${last.places["公安"]} 关羽:${guan ? guan.where : "?"} ` +
+  const keys = E.era(r.game).reportPlaces.map(k => `${k}:${last.places[k]}`).join(" ");
+  return `${r.start}/${r.strategy}/${r.n}: ${E.era(r.game).name} ${r.game.chapters.length}回 ${last.date} ${keys} ` +
     (last.ending ? `终章「${last.ending.title}」${last.ending.summary}` : r.error ? `出错：${r.error}` : "未到终章");
 }
 
