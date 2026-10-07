@@ -22,13 +22,33 @@ const core = script.slice(0, script.indexOf("function errorCopy"));
 const G = new Function(`${core}
 return { OPENINGS, WAIT_ORDER, MAX_TURNS, defaultPolicy, buildSimPrompt, parseSim, cn };`)();
 
-function claude(prompt, model) {
+// Token usage per role, filled from the CLI's JSON result.
+const usage = {};
+function track(role, r) {
+  const u = usage[role] || (usage[role] = { calls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, usd: 0 });
+  const t = r.usage || {};
+  u.calls++;
+  u.input += t.input_tokens || 0;
+  u.cacheWrite += t.cache_creation_input_tokens || 0;
+  u.cacheRead += t.cache_read_input_tokens || 0;
+  u.output += t.output_tokens || 0;
+  u.usd += r.total_cost_usd || 0;
+}
+
+function claude(prompt, model, role) {
   return new Promise((resolve, reject) => {
-    const p = spawn("claude", ["-p", "--model", model, "--tools", ""], { cwd: OUT });
+    const p = spawn("claude", ["-p", "--model", model, "--tools", "", "--output-format", "json"], { cwd: OUT });
     let out = "", err = "";
     p.stdout.on("data", d => (out += d));
     p.stderr.on("data", d => (err += d));
-    p.on("close", code => (code === 0 ? resolve(out) : reject(new Error(err.trim() || "exit " + code))));
+    p.on("close", code => {
+      if (code !== 0) return reject(new Error(err.trim() || "exit " + code));
+      try {
+        const r = JSON.parse(out);
+        track(role, r);
+        resolve(r.result || "");
+      } catch (e) { reject(new Error("bad CLI output: " + out.slice(0, 200))); }
+    });
     p.stdin.end(prompt);
   });
 }
@@ -57,7 +77,7 @@ ${events.join("\n") || "（无）"}
 ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 
 可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。`;
-  return (await claude(prompt, arg("player-model", "haiku"))).trim().split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
+  return (await claude(prompt, arg("player-model", "haiku"), "player")).trim().split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
 }
 
 async function runGame(start, strategy, n) {
@@ -73,7 +93,7 @@ async function runGame(start, strategy, n) {
       const decision = await playerMove(strategy, g);
       let state = null;
       for (let attempt = 0; attempt < 2 && !state; attempt++) {
-        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision), arg("model", "sonnet"))); }
+        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision), arg("model", "sonnet"), "sim")); }
         catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
       }
       if (!state) throw new Error("simulation output unparseable twice");
@@ -109,4 +129,9 @@ function summarize(r) {
     while (queue.length) results.push(await queue.shift()());
   }));
   console.log("\n== 汇总 ==\n" + results.map(summarize).join("\n"));
+  const turns = results.reduce((n, r) => n + r.game.chapters.length - 1, 0);
+  console.log(`\n== 用量（${results.length} 局，${turns} 回） ==`);
+  for (const [role, u] of Object.entries(usage))
+    console.log(`${role}: ${u.calls} 次调用，输入 ${u.input} + 缓存写 ${u.cacheWrite} + 缓存读 ${u.cacheRead}，输出 ${u.output} tokens，约 $${u.usd.toFixed(2)}`);
+  fs.writeFileSync(path.join(OUT, "usage.json"), JSON.stringify({ games: results.length, turns, usage }, null, 1));
 })();
