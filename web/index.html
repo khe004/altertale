@@ -114,6 +114,13 @@ main { min-width: 0; }
 .auto ul { margin: 0; padding-left: 1.1em; display: grid; gap: 0.2rem; }
 .auto b { font-weight: 500; margin-right: 0.5em; }
 .redo-link { background: none; border: none; padding: 0; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; font-size: 0.78rem; }
+.events { font-family: var(--font-ui); font-size: 0.84rem; margin-top: 0.6rem; }
+.events summary { cursor: pointer; color: var(--muted); font-size: 0.78rem; letter-spacing: 0.08em; }
+.events ul { margin: 0.5rem 0 0; padding-left: 0; list-style: none; display: grid; gap: 0.35rem; }
+.events li { display: block; line-height: 1.65; }
+.events .when { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 0.5em; }
+.events em { font-style: normal; font-size: 0.72rem; color: var(--seal); border: 1px solid var(--seal); border-radius: 2px; padding: 0 0.25em; margin-left: 0.4em; }
+.forces .fig { grid-template-columns: 5em minmax(0, 1fr); }
 .eta { color: var(--muted); font-size: 0.78rem; }
 .reveals { display: grid; gap: 0.75rem; }
 .reveal { display: grid; gap: 0.15rem; }
@@ -221,44 +228,50 @@ const WORLDS = {
 此设定的连带影响：成都缺少孔明理政，益州钱粮调度较原著吃力；江陵有孔明坐镇，糜芳、士仁受其节制和抚慰，但江陵兵力大半已随关羽北上；关羽对孔明素来尊重，然性情自矜，未必事事听从；孙权、吕蒙知孔明在江陵，偷袭须另作打算。不预设孔明能挽回一切。`
 };
 
-const RULES = `你是《异章：荆州》的说书人兼世界推演者。这是一部以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的互动反事实小说。玩家扮演汉中王刘备，身在成都，每回发出一道命令（也可以不发令），你据此写出下一回。
+const SIM_RULES = `你是《异章：荆州》的世界推演者。这是以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的反事实推演。刘备（玩家）身在成都，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。
 
-写作要求：
-1. 文风仿毛宗岗本《三国演义》：半文半白，章回体。回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。不得出现现代词汇或"玩家""系统""选项"等字样。
-2. 本回可在多地之间切换（"却说……""且说……"）。刘备一方不知道的密谋，要在正文里埋下具体可辨的伏笔（一个细节、一句话、一个反常之处），不点破；并把伏笔原句和真相写入 foreshadow。
-3. 每回结尾把局面推到刘备需要再作决断的时刻，例如新的急报、使者到来、或某人的进言。
+推演原则：
+1. 千里之外，刘备无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，依自己的性情、所知消息和刘备的方略当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使回成都请示，其间只能固守待命，可能贻误战机。自决的结果取决于此人的才能与性格（孔明谨慎周密，关羽勇而自矜，糜芳怯懦）。前方自行做出的重要决定写入 autonomous。
+2. 刘备的新命令经驿马传递，成都至江陵约二十余日，至上庸约十余日；送达之前前方不会照它行事。未送达的命令写入 in_transit。接令者也可能拖延、曲解或抗命。
+3. 每个人物按自己的目标、性情和此刻所知行事，不迎合刘备。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
+4. 公正而不刁难：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称。
+5. 前后一致：先核对事件记录与当前局势再推演。人物移动和行军需要时日，不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。
+6. 本回时间推进约十日至一月，写出其间三至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及刘备在本回末是否已得知（known）。
+7. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
+8. 全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
 
-推演要求：
-4. 千里之外，刘备无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，会依自己的性情、所知消息和刘备的方略，当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使回成都请示，在此期间只能固守待命，可能贻误战机。自决的结果可好可坏，取决于此人的才能与性格（孔明谨慎周密，关羽勇而自矜，糜芳怯懦）。凡本回前方自行做出的重要决定，写入 autonomous。
-5. 刘备的新命令要经驿马传递，成都至江陵约二十余日；命令未到之前，前方不会照它行事。尚未送达的命令写入 in_transit，送达之回在正文中写出接令的情形；接令者也可能拖延、曲解或抗命。
-6. 每个人物按自己的目标、性情和所掌握的消息行事，不迎合刘备。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
-7. 公正而不刁难：及时、合理、切中要害的决断应当见效，前方得力将帅的自决也应常常有效；坏结果应来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称。
-8. 每回时间推进约十日至一月。全局约在八至十二回内收束；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
+决断选项（choices）：
+9. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。choices 必须建立在这个判断之上；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受，否则不要给出。
+10. 三个选项方向彼此不同，各有代价，但至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。选项要具体：派谁、去哪、做什么。只依据刘备此刻所知。`;
 
-决断选项要求（choices）：
-9. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。choices 必须建立在这个判断之上：已失去的城池和兵马不能再当作筹码；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受，否则不要给出。
-10. 三个选项方向彼此不同，各有代价，但至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明是哪项）。选项要具体：派谁、去哪、做什么。只依据刘备此刻所知。`;
-
-const FORMAT = `输出格式（严格遵守）：
-第一行写回目，形如"第三回　七字或八字上句　七字或八字下句"。空一行后写正文，段落之间空一行。
-正文结束后，另起一行只写 ===STATE===，紧接着写一个 JSON 对象，不加代码块标记，字段如下：
+const SIM_FORMAT = `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
 {
-  "date": "建安二十四年九月上旬",
+  "date": "本回末的时间，如 建安二十四年九月下旬",
+  "events": [{"date":"九月中旬","who":"关羽","where":"樊城外","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
+  "autonomous": [{"who":"关羽","did":"未奉成都之令而自行做出的决定及结果，四十字以内"}],
+  "in_transit": [{"order":"刘备尚未送达的命令，二十字以内","eta":"预计送达时间与地点"}],
   "places": {"成都":"刘","汉中":"刘","上庸":"刘","樊城":"曹","襄阳":"曹","许都":"曹","麦城":"刘","江陵":"刘","公安":"刘","陆口":"孙","建业":"孙"},
+  "forces": [{"name":"关羽本部","where":"樊城外","troops":"约三万","note":"十二字以内"}],
   "figures": [{"name":"关羽","where":"樊城外","note":"十二字以内的现状"}],
   "gauges": {"后方": 50, "前线": 50, "孙刘": 50},
   "intel": ["刘备此刻确知或听闻之事，三至六条"],
   "hidden": ["刘备尚不知道的暗线，二至五条"],
-  "foreshadow": [{"line":"本回正文中埋伏笔的原句，照抄，三十字以内","truth":"它暗示的真相，四十字以内"}],
-  "autonomous": [{"who":"关羽","did":"本回未奉成都之令而自行做出的决定及结果，四十字以内"}],
-  "in_transit": [{"order":"刘备尚未送达的命令，二十字以内","eta":"预计送达时间与地点"}],
+  "foreshadow": [{"line":"伏笔细节，三十字以内","truth":"真相，四十字以内"}],
   "chronicle": "本回纪要，一句，三十字以内",
   "assessment": "刘备此刻的处境与手中筹码，六十字以内",
   "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
   "ending": null
 }
-说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。foreshadow 一至三条，必须真的出现在本回正文中。autonomous、in_transit 没有则写 []。choices 正好三项。
+说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列刘备一方各部及刘备已知的敌军，兵力用约数。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。autonomous、in_transit 没有则写 []。choices 正好三项。
 若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，choices 写 []。`;
+
+const NARRATE_RULES = `你是《异章：荆州》的说书人。推演者已经定下本回发生的事，你把它写成一回章回小说。
+
+1. 文风仿毛宗岗本《三国演义》：半文半白，章回体，回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。不得出现现代词汇或"玩家""系统""选项"等字样。
+2. 只写已定之事：不得增加改变局势的新事件，不得改动任何事件的结果、时间、地点和人物去向；可以补充场面、对白、心理与细节。
+3. known 为 false 的事件，刘备一方并不知道：可以"却说……"切去写一个侧影，但不点破其谋。
+4. 把每条伏笔的 line 化作正文中一个具体可辨的细节，不点破 truth。
+5. 结尾落到刘备需要再作决断的时刻。`;
 
 /* ───────── 开局（预写的第一回） ───────── */
 
@@ -297,6 +310,20 @@ const OPENINGS = {
         { name: "陆逊", where: "陆口", note: "新任，卑辞致书关羽" }
       ],
       gauges: { "后方": 40, "前线": 80, "孙刘": 30 },
+      forces: [
+        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", note: "粮草吃紧" },
+        { name: "江陵守军", where: "江陵", troops: "数千", note: "糜芳统领" },
+        { name: "公安守军", where: "公安", troops: "数千", note: "士仁统领" },
+        { name: "上庸军", where: "上庸", troops: "约万人", note: "刘封、孟达" },
+        { name: "益州诸军", where: "成都", troops: "可调两三万", note: "集结需月余" },
+        { name: "曹仁", where: "樊城", troops: "数千", note: "城坏粮乏" },
+        { name: "徐晃援军", where: "宛", troops: "万余", note: "正在集结" }
+      ],
+      events: [
+        { date: "八月", who: "关羽", where: "樊城", what: "决襄江之水淹于禁七军，进围樊城", why: "乘秋雨北伐", result: "于禁降，庞德死，曹操议迁都", known: true },
+        { date: "八月", who: "吕蒙", where: "陆口", what: "称病还建业，陆逊代之，卑辞致书关羽", why: "骄关羽之心", result: "关羽渐轻东吴", known: true },
+        { date: "八月", who: "孙权", where: "建业", what: "遣使暗通曹操，愿袭关羽之后", why: "欲得荆州全境", result: "曹操君臣议以江南许之", known: false }
+      ],
       intel: [
         "关羽水淹七军，于禁降，庞德死，樊城被围",
         "曹操曾议迁都",
@@ -352,6 +379,21 @@ const OPENINGS = {
         { name: "陆逊", where: "陆口", note: "新任，卑辞致书关羽" }
       ],
       gauges: { "后方": 55, "前线": 80, "孙刘": 35 },
+      forces: [
+        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", note: "粮草吃紧" },
+        { name: "江陵守军", where: "江陵", troops: "不足万人", note: "孔明节制，烽火加严" },
+        { name: "公安守军", where: "公安", troops: "数千", note: "士仁统领" },
+        { name: "上庸军", where: "上庸", troops: "约万人", note: "刘封、孟达" },
+        { name: "益州诸军", where: "成都", troops: "可调两三万", note: "集结需月余，钱粮吃力" },
+        { name: "曹仁", where: "樊城", troops: "数千", note: "城坏粮乏" },
+        { name: "徐晃援军", where: "宛", troops: "万余", note: "正在集结" }
+      ],
+      events: [
+        { date: "八月", who: "关羽", where: "樊城", what: "决襄江之水淹于禁七军，进围樊城", why: "乘秋雨北伐", result: "于禁降，庞德死，曹操议迁都", known: true },
+        { date: "八月", who: "吕蒙", where: "陆口", what: "称病还建业，陆逊代之，卑辞致书关羽", why: "骄关羽之心", result: "关羽渐轻东吴", known: true },
+        { date: "八月", who: "诸葛亮", where: "江陵", what: "加严沿江烽火，劝关羽留兵守江", why: "疑吕蒙称病有诈", result: "关羽不听，反调江陵兵三千北上", known: true },
+        { date: "八月", who: "孙权", where: "建业", what: "遣使暗通曹操，愿袭关羽之后", why: "欲得荆州全境", result: "因孔明在江陵，吴人另谋他法", known: false }
+      ],
       intel: [
         "关羽水淹七军，于禁降，庞德死，樊城被围",
         "孔明疑吕蒙称病有诈，已加严沿江烽火",
@@ -394,6 +436,7 @@ let busy = false;
 let ctl = null;
 let lastError = null;
 let peek = false;
+let narrating = -1;
 let streamText = "";
 let llm = null;           // { kind, call(prompt, onText, signal) -> Promise<string> }
 
@@ -464,90 +507,145 @@ async function callAnthropic(key, prompt, onText, signal) {
   return text;
 }
 
-/* ───────── 推演 ───────── */
+/* ───────── 推演：只出事实 ───────── */
 
-function buildPrompt(decision) {
-  const n = game.chapters.length + 1;
-  const st = { ...current().state };
-  delete st.choices;
-  const chron = game.chapters.map((c, i) => `第${cn(i + 1)}回：${c.state.chronicle || c.title}${c.decision ? `；刘备决断：${c.decision}` : ""}`).join("\n");
-  const recent = game.chapters.slice(-2).map(c => `${c.title}\n${c.text}`).join("\n\n");
-  const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 3 ? "\n故事已近尾声，开始向结局收束。" : "";
-  return `${RULES}
+const evLine = e => `[${e.date || ""}] ${e.who || ""}@${e.where || ""}：${e.what || ""}${e.result ? " → " + e.result : ""}${e.known === false ? "（刘备不知）" : ""}`;
+
+function buildSimPrompt(g, decision) {
+  const n = g.chapters.length + 1;
+  const st = { ...g.chapters[g.chapters.length - 1].state };
+  for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices"]) delete st[k];
+  const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n刘备命令：${c.decision}` : ""}`).join("\n\n");
+  const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 3 ? "\n局势已近收束，开始走向结局。" : "";
+  return `${SIM_RULES}
 
 【世界设定】
 ${WORLD_COMMON}
 
-${WORLDS[game.start]}
+${WORLDS[g.start]}
 
-【前情纪要】
-${chron}
-
-【最近原文】
-${recent}
+【事件记录】
+${log}
 
 【当前局势】
 ${JSON.stringify(st)}
 
 【刘备给前方的方略与授权】
-方略：${game.policy.text.trim() || "（未另立方略）"}
-授权：${DELEGATES.map(d => `${d}：${game.policy.powers[d]}`).join("；")}（授权只在此人身处荆州前方或后方时有效）
+方略：${g.policy.text.trim() || "（未另立方略）"}
+授权：${DELEGATES.map(d => `${d}：${g.policy.powers[d]}`).join("；")}（授权只在此人身处荆州时有效）
 
 【刘备本回的命令】
 ${decision}
 
-请写第${cn(n)}回。${last}
+请推演第${cn(n)}回。${last}
 
-${FORMAT}`;
+${SIM_FORMAT}`;
 }
 
-function splitOutput(raw) {
-  const i = raw.indexOf("===STATE===");
-  const story = (i < 0 ? raw : raw.slice(0, i)).trim();
-  const lines = story.split("\n");
-  const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();
-  return { title, text: lines.join("\n").trim(), json: i < 0 ? null : raw.slice(i + 11) };
-}
-
-function parseState(jsonText) {
-  if (!jsonText) throw { code: "no_state" };
-  const t = jsonText.replace(/```(json)?/g, "");
+function parseSim(g, raw) {
+  const t = String(raw || "").replace(/```(json)?/g, "");
   const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a < 0 || b < a) throw { code: "no_state" };
   const s = JSON.parse(t.slice(a, b + 1));
-  const prev = current().state;
-  s.places = { ...prev.places, ...(s.places || {}) };
-  s.gauges = { ...prev.gauges, ...(s.gauges || {}) };
+  const prev = g.chapters[g.chapters.length - 1].state;
+  const places = { ...prev.places };
+  for (const [k, v] of Object.entries(s.places || {})) if (k in PLACES && v in FACTION) places[k] = v;
+  s.places = places;
+  const gauges = { ...prev.gauges };
+  for (const k of Object.keys(gauges)) {
+    const v = Number((s.gauges || {})[k]);
+    if (Number.isFinite(v)) gauges[k] = Math.max(0, Math.min(100, Math.round(v)));
+  }
+  s.gauges = gauges;
   if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
-  s.intel = Array.isArray(s.intel) ? s.intel : [];
-  s.hidden = Array.isArray(s.hidden) ? s.hidden : [];
-  for (const k of ["foreshadow", "autonomous", "in_transit"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
-  s.choices = Array.isArray(s.choices) ? s.choices.slice(0, 3) : [];
+  if (!Array.isArray(s.forces) || !s.forces.length) s.forces = prev.forces || [];
+  for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "in_transit"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
+  if (!s.events.length) throw { code: "no_state" };
+  s.choices = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label).slice(0, 3) : [];
   if (!s.ending && !s.choices.length) throw { code: "no_choices" };
+  s.date = s.date || prev.date;
   return s;
 }
+
+/* ───────── 说书：把已定之事写成文字 ───────── */
+
+function buildNarratePrompt(g, i) {
+  const s = g.chapters[i].state, prev = g.chapters[i - 1];
+  const tail = prev && prev.text ? prev.text.split(/\n+/).filter(Boolean).slice(-2).join("\n") : "";
+  return `${NARRATE_RULES}
+
+【上一回结尾】
+${tail || "（无）"}
+
+【刘备上一回的命令】
+${(prev && prev.decision) || "（无）"}
+
+【本回时间】${s.date}
+
+【本回已定之事】（按时间先后）
+${JSON.stringify(s.events)}
+
+【前方自决】
+${JSON.stringify(s.autonomous)}
+
+【必须埋下的伏笔】
+${JSON.stringify(s.foreshadow)}
+
+【本回结尾刘备面对的局面】
+${s.assessment || s.chronicle || ""}${s.ending ? `\n本回为终章，结局：${s.ending.title}。${s.ending.summary}` : ""}
+
+请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，空一行后写正文，段落之间空一行。只输出回目和正文。`;
+}
+
+function splitStory(raw) {
+  const lines = String(raw).trim().split("\n");
+  const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();
+  return { title, text: lines.join("\n").trim() };
+}
+
+/* ───────── 一回的流程：先推演、存档，再说书 ───────── */
 
 async function decide(decision) {
   decision = decision.trim();
   if (!decision || busy || !llm) return;
-  busy = true; lastError = null; streamText = "";
+  busy = "sim"; lastError = null;
   game.pending = decision;
   ctl = new AbortController();
   render();
   try {
-    const raw = await llm.call(buildPrompt(decision), t => { streamText = t; renderStream(); }, ctl.signal);
-    const out = splitOutput(raw);
-    const state = parseState(out.json);
+    const state = parseSim(game, await llm.call(buildSimPrompt(game, decision), () => {}, ctl.signal));
     current().decision = decision;
     current().policy = JSON.parse(JSON.stringify(game.policy));
-    game.chapters.push({ title: out.title || `第${cn(game.chapters.length + 1)}回`, text: out.text, state });
+    game.chapters.push({ title: `第${cn(game.chapters.length + 1)}回`, text: "", state });
     delete game.pending;
     save();
   } catch (e) {
+    busy = false; ctl = null;
     if (!e || e.code !== "cancelled") lastError = e || { code: "unknown" };
-  } finally {
-    busy = false; ctl = null; streamText = "";
     render();
-    if (!lastError) document.getElementById("ch-" + (game.chapters.length - 1))?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+  busy = false;
+  await narrate(game.chapters.length - 1);
+}
+
+async function narrate(i) {
+  if (busy || !llm) return;
+  busy = "narrate"; narrating = i; lastError = null; streamText = "";
+  ctl = new AbortController();
+  render();
+  try {
+    const out = splitStory(await llm.call(buildNarratePrompt(game, i), t => { streamText = t; renderStream(); }, ctl.signal));
+    if (!out.text) throw { code: "empty_completion" };
+    game.chapters[i].title = out.title || game.chapters[i].title;
+    game.chapters[i].text = out.text;
+    save();
+  } catch (e) {
+    if (!e || e.code !== "cancelled") lastError = { ...(e || {}), narrate: true };
+  } finally {
+    busy = false; ctl = null; streamText = ""; narrating = -1;
+    render();
+    if (!lastError) document.getElementById("ch-" + i)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
@@ -558,7 +656,8 @@ function errorCopy(e) {
   if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
   if (c === "refused") return "Claude 拒绝写这一回。换一种决断试试。";
   if (c === "http_401") return "API Key 无效，请重新填写。";
-  if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "这一回的局势数据没有写完整，可以重写这一回。";
+  if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "推演结果不完整，可以重新推演这一回。";
+  if (c === "empty_completion") return "说书人没写出东西。";
   return "驿路不通（连接出错）。可以重试。";
 }
 
@@ -579,42 +678,49 @@ function render() {
   panel.hidden = false;
   panel.innerHTML = renderPanel(st);
 
+  const done = !!st.ending;
   let html = `<div class="story">`;
   game.chapters.forEach((c, i) => {
+    const known = (c.state.events || []).filter(e => e.known !== false || done);
+    const head = `<div class="chapter-head"><div class="seal">${cn(i + 1)}</div><h2>${esc(c.title.replace(/^第[^回]*回\s*/, ""))}</h2></div>`;
+    const body = c.text ? `${head}<div class="body">${paras(c.text)}</div>`
+      : busy === "narrate" && narrating === i
+        ? `<p class="writing" id="writing"><span>军情已定，说书人正在构思<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">先不写了</button></p><div class="body" id="liveBody">${head}</div>`
+        : `${head}<div class="notice"><span>${lastError && lastError.narrate && i === game.chapters.length - 1 ? esc(errorCopy(lastError)) + " " : ""}这一回的事已经定下，还没写成文字。下面的军情就是本回发生的事。</span><div class="row"><button class="ui-btn" type="button" data-narrate="${i}" ${busy || !llm ? "disabled" : ""}>写成这一回</button></div></div>`;
     html += `<section class="chapter" id="ch-${i}">
-      <div class="chapter-head"><div class="seal">${cn(i + 1)}</div><h2>${esc(c.title.replace(/^第[^回]*回\s*/, ""))}</h2></div>
-      <div class="body">${paras(c.text)}</div>
+      ${body}
+      ${i > 0 && known.length ? `<details class="events" ${c.text ? "" : "open"}><summary>本回军情 · ${known.length} 条</summary><ul>${known.map(e => `<li class="${e.known === false ? "secret" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.known === false ? `<em>暗</em>` : ""}</li>`).join("")}</ul></details>` : ""}
       ${(c.state.autonomous || []).length ? `<div class="auto"><h4>前方自决</h4><ul>${c.state.autonomous.map(a => `<li><b>${esc(a.who)}</b>${esc(a.did)}</li>`).join("")}</ul></div>` : ""}
       ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
     </section>`;
     if (c.decision) html += `<div class="divider">· · ·</div>`;
   });
 
-  if (busy) {
+  if (busy === "sim") {
     html += `<div class="decision"><span>汉中王令</span><b>${esc(game.pending)}</b></div>
       <section class="chapter" id="live">
-        <p class="writing" id="writing"><span>驿马奔驰，军情未至<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
-        <div class="body" id="liveBody"></div>
+        <p class="writing" id="writing"><span>驿马奔驰，各方正在行动<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
       </section>`;
+  } else if (busy) {
   } else if (st.ending) {
     html += renderEnding(st);
   } else {
-    if (lastError) html += `<div class="notice"><span>${esc(errorCopy(lastError))}</span><div class="row"><button class="ui-btn" id="retryBtn" type="button">重写这一回</button></div></div>`;
+    if (lastError && !lastError.narrate) html += `<div class="notice"><span>${esc(errorCopy(lastError))}</span><div class="row"><button class="ui-btn" id="retryBtn" type="button">重新推演</button></div></div>`;
     html += renderChoices(st);
   }
   html += `</div>`;
   main.innerHTML = html;
   bindStory();
-  if (busy) renderStream();
+  if (busy === "narrate") renderStream();
 }
 
 function renderStream() {
   const body = $("#liveBody");
   if (!body) return;
-  const { title, text } = splitOutput(streamText);
-  if (!streamText) { body.innerHTML = ""; return; }
+  if (!streamText) return;
+  const { title, text } = splitStory(streamText);
   $("#writing").firstElementChild.innerHTML = `说书人正在落笔<span class="dots"></span>`;
-  body.innerHTML = `<div class="chapter-head"><div class="seal">${cn(game.chapters.length + 1)}</div><h2>${esc(title.replace(/^第[^回]*回\s*/, ""))}</h2></div>${paras(text)}`;
+  body.innerHTML = `<div class="chapter-head"><div class="seal">${cn(narrating + 1)}</div><h2>${esc(title.replace(/^第[^回]*回\s*/, ""))}</h2></div>${paras(text)}`;
 }
 
 function renderChoices(st) {
@@ -674,6 +780,7 @@ function renderPanel(st) {
     <section class="map"><h3>荆襄形势</h3>${renderMap(st.places)}
       <div class="legend"><span><i style="background:var(--shu)"></i>刘</span><span><i style="background:var(--wu)"></i>孙</span><span><i style="background:var(--wei)"></i>曹</span><span><i style="background:var(--war)"></i>交战</span></div></section>
     <section><h3>大势</h3><div class="gauges">${gauge("后方", "荆州后方")}${gauge("前线", "襄樊前线")}${gauge("孙刘", "孙刘之好")}</div></section>
+    ${(st.forces || []).length ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.note ? `，${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
     ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
     <section><h3>汉中王所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
@@ -758,6 +865,7 @@ function bindStory() {
     save(); render();
     document.getElementById("ch-" + i)?.scrollIntoView({ behavior: "smooth", block: "end" });
   });
+  document.querySelectorAll("[data-narrate]").forEach(b => b.onclick = () => narrate(+b.dataset.narrate));
   const pk = $("#peekBtn");
   if (pk) pk.onclick = () => { peek = true; render(); };
   const wait = $("#waitBtn");
