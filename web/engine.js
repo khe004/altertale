@@ -337,7 +337,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered", "canon"]) delete st[k];
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
     const budget = n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限，只在决断时刻停下；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
-    const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。终章按此刻实际的兵力和已下达的命令收束，不得为了收束而调来未奉命的人马；没有打完的仗可以以相持、对峙或局势未定作结。" : "";
+    const last = n >= ev.maxTurns ? `\n本回为终章，给出 ending。从此刻一直推演到本时代定局（${ev.decisive}）为止，不受上面的日数限制，可以跨越数月乃至一年以上；其间不再请${ev.player}决断，前方按此刻的兵力、已下达的命令、方略与各人性格行事，不得调来未奉命的人马。事件可以多写几条，按时间先后把这段路走完。` : "";
     const now = parseDate(cur.date, yearOf(cur.date));
     const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
     const ad = adOf(cur.date);
@@ -382,7 +382,7 @@ ${decision}
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
 ${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
 
-请推演第${cn(n)}回，推演到下一个需要${ev.player}决断的时刻，在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。${budget}${last}
+请推演第${cn(n)}回${n >= ev.maxTurns ? "（终章）。" : `，推演到下一个需要${ev.player}决断的时刻，`}${n >= ev.maxTurns ? "" : `在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。`}${budget}${last}
 
 ${simFormat(g)}`;
   };
