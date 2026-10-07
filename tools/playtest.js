@@ -21,11 +21,12 @@ const html = fs.readFileSync(path.join(ROOT, "web/index.html"), "utf8");
 const script = html.slice(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
 const core = script.slice(0, script.indexOf("function errorCopy"));
 const G = new Function(`${core}
-return { OPENINGS, WAIT_ORDER, MAX_TURNS, defaultPolicy, buildSimPrompt, parseSim, cn };`)();
+return { OPENINGS, WAIT_ORDER, MAX_TURNS, defaultPolicy, buildRoutePrompt, parseRoutes, scheduleOrders, buildSimPrompt, parseSim, cn };`)();
 
 // Model, effort and token usage per role, filled from the CLI's JSON result.
 const ROLES = {
   sim: { model: arg("model", "sonnet"), effort: arg("effort", "") },
+  route: { model: arg("route-model", "haiku"), effort: arg("route-effort", "low") },
   player: { model: arg("player-model", "haiku"), effort: arg("player-effort", "") }
 };
 const SIM_TAG = ROLES.sim.model + (ROLES.sim.effort ? "-" + ROLES.sim.effort : "");
@@ -74,6 +75,7 @@ const STRATEGIES = {
   prudent: { policy: "", player: "你是一个认真、明智的玩家，目标是让结局与原著（荆州失守、关羽败走麦城）不同。根据局势判断最好的一步。" },
   delegate: { policy: "以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师；留守之将可先斩后奏，不必请示。", player: null },
   greedy: { policy: "", player: "你是一个贪功的玩家，一心乘胜北伐、扩大战果，认为东吴不足为虑，很少考虑后方。" },
+  single: { policy: "", player: "你是一个认真的普通玩家，目标是让结局与原著不同，但每回只能从给出的选项里选一个。" },
   random: { policy: "", player: null }
 };
 
@@ -81,8 +83,9 @@ async function playerMove(strategy, g) {
   const st = g.chapters[g.chapters.length - 1].state;
   if (strategy === "delegate") return G.WAIT_ORDER;
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
+  const single = strategy === "single";
   const events = (st.events || []).filter(e => e.known !== false).map(e => `${e.date} ${e.who}（${e.where}）${e.what}，${e.result}`);
-  const prompt = `你在玩一个三国策略游戏，扮演汉中王刘备（身在成都，命令要二十多天才能送到荆州）。
+  const prompt = `你在玩一个三国策略游戏，扮演汉中王刘备（身在成都，信使到江陵要十余日，到樊城约半月）。
 ${STRATEGIES[strategy].player}
 
 时间：${st.date}
@@ -90,11 +93,18 @@ ${STRATEGIES[strategy].player}
 ${events.join("\n") || "（无）"}
 刘备所知：${(st.intel || []).join("；")}
 处境：${st.assessment || "（无）"}
+谋士进言：
+${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
 可选决断：
 ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 
-可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。`;
-  return (await claude(prompt, "player")).trim().split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
+${single ? "只能从上面选一个，只输出它的序号。" : "可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。"}`;
+  const out = (await claude(prompt, "player")).trim();
+  if (single) {
+    const k = Number((out.match(/\d/) || ["1"])[0]) - 1;
+    return (st.choices[k] || st.choices[0]).label;
+  }
+  return out.split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
 }
 
 async function runGame(start, strategy, n) {
@@ -108,16 +118,18 @@ async function runGame(start, strategy, n) {
   try {
     while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < G.MAX_TURNS + 1) {
       const decision = await playerMove(strategy, g);
+      const routes = decision === G.WAIT_ORDER ? [] : G.parseRoutes(await claude(G.buildRoutePrompt(g, decision), "route"));
+      const orders = G.scheduleOrders(g, routes);
       let state = null;
       for (let attempt = 0; attempt < 2 && !state; attempt++) {
-        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision), "sim")); }
+        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision, orders), "sim"), orders); }
         catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
       }
       if (!state) throw new Error("simulation output unparseable twice");
       g.chapters[g.chapters.length - 1].decision = decision;
       g.chapters.push({ title: `第${G.cn(g.chapters.length + 1)}回`, text: "", state });
       write();
-      console.log(`[${tag}] 第${G.cn(g.chapters.length)}回 ${state.date} | 江陵:${state.places["江陵"]} 公安:${state.places["公安"]} | ${state.chronicle}${state.ending ? " | 终章：" + state.ending.title : ""}`);
+      console.log(`[${tag}] 第${G.cn(g.chapters.length)}回 ${state.date} | 江陵:${state.places["江陵"]} 公安:${state.places["公安"]} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? " | 终章：" + state.ending.title : ""}`);
     }
   } catch (e) {
     result.error = String(e.message || e);

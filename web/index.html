@@ -21,6 +21,8 @@
   --wu: #B04A3C;
   --wei: #3A5D92;
   --war: #B08A2E;
+  --mount: #9A9384;
+  --mount-fill: #D9D4C7;
   --font-display: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
   --font-body: "Noto Serif SC", "Songti SC", "SimSun", serif;
   --font-ui: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -29,13 +31,13 @@
   :root:not([data-theme="light"]) {
     --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
     --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
-    --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; color-scheme: dark;
+    --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
   --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
-  --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; color-scheme: dark;
+  --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { min-height: 100%; }
@@ -150,6 +152,14 @@ main { min-width: 0; }
 .rp-ev li.dark { color: var(--muted); }
 .rp-ev .when { font-family: var(--font-ui); font-size: 0.78rem; color: var(--muted); margin-right: 0.4rem; }
 .rp-ev em { font-style: normal; font-family: var(--font-ui); font-size: 0.68rem; color: var(--seal); border: 1px solid var(--seal); border-radius: 2px; padding: 0 0.2rem; margin-left: 0.35rem; }
+.counsel { display: grid; gap: 0.5rem; margin: 0 0 1rem; }
+.counsel h4 { margin: 0; font-family: var(--font-ui); font-weight: 500; font-size: 0.72rem; letter-spacing: 0.14em; color: var(--muted); }
+.cs { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 0.75rem; align-items: baseline; }
+.cs .who { font-family: var(--font-ui); font-weight: 500; font-size: 0.88rem; display: grid; line-height: 1.4; }
+.cs .who small { font-weight: 400; font-size: 0.7rem; color: var(--muted); }
+.cs p { margin: 0; font-size: 0.95rem; }
+.choice .by { font-style: normal; font-family: var(--font-ui); font-weight: 400; font-size: 0.72rem; color: var(--indigo); border: 1px solid var(--indigo); border-radius: 2px; padding: 0 0.3rem; margin-left: 0.5rem; vertical-align: 0.1em; }
+.grain { margin-left: 0.5em; color: var(--muted); }
 .eta { color: var(--muted); font-size: 0.78rem; }
 .reveals { display: grid; gap: 0.75rem; }
 .reveal { display: grid; gap: 0.15rem; }
@@ -228,9 +238,87 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 
 const PLACES = {
   "成都": [52, 196], "汉中": [78, 84], "上庸": [160, 82], "樊城": [232, 58], "襄阳": [232, 92],
-  "许都": [338, 34], "麦城": [200, 150], "江陵": [232, 176], "公安": [246, 206], "陆口": [306, 208], "建业": [384, 186]
+  "许都": [338, 34], "秭归": [120, 198], "夷陵": [176, 189], "麦城": [200, 150], "江陵": [232, 176],
+  "公安": [246, 206], "陆口": [306, 208], "建业": [384, 186]
 };
 const FACTION = { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
+
+// 驿程表：[甲, 乙, 甲→乙天数(信使, 轻兵, 大军), 乙→甲天数, 说明]。水路顺流快、逆流慢；大军另加集结约十日。
+const ROUTES = [
+  ["成都", "秭归", [8, 12, 30], [12, 20, 45], "长江顺流出三峡；逆流上溯极慢"],
+  ["秭归", "夷陵", [1, 2, 4], [1, 3, 6], "峡口"],
+  ["夷陵", "江陵", [1, 2, 4], [2, 3, 6], "长江"],
+  ["江陵", "公安", [1, 1, 2], [1, 1, 2], "隔江相望"],
+  ["江陵", "麦城", [1, 2, 4], [1, 2, 4], "经当阳，陆路"],
+  ["麦城", "襄阳", [2, 3, 8], [2, 3, 8], "陆路，近荆山"],
+  ["襄阳", "樊城", [1, 1, 1], [1, 1, 1], "隔汉水"],
+  ["成都", "汉中", [6, 10, 30], [6, 10, 30], "金牛道，翻大巴山"],
+  ["汉中", "上庸", [6, 10, 25], [6, 10, 25], "山路"],
+  ["上庸", "襄阳", [3, 5, 12], [5, 8, 20], "汉水顺流，经武当山下"],
+  ["江陵", "陆口", [3, 4, 8], [4, 6, 12], "长江顺流东下；吴人西上为逆流"],
+  ["陆口", "建业", [6, 10, 25], [10, 15, 35], "长江"],
+  ["樊城", "洛阳", [3, 6, 15], [3, 6, 15], "陆路"],
+  ["洛阳", "许都", [2, 4, 8], [2, 4, 8], "陆路"]
+];
+const TIERS = ["信使", "轻兵", "大军"];
+const MUSTER = { "大军": 10 };
+const ROUTE_NODES = [...new Set(ROUTES.flatMap(r => [r[0], r[1]]))];
+const TRAVEL_TEXT = `驿程表（天数依次为 信使 / 轻兵精锐 / 大军；大军出发前另需集结约十日。信使只能传令；轻兵是数百至两三千人的精骑或轻舟，少带辎重，能战而难久战；大军上万、带粮草辎重）：
+${ROUTES.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；${b}→${a}：${r.join(" / ")} 日（${note}）`).join("\n")}
+未列出的两地，按上表各段相加。`;
+
+function travelDays(from, to, tier) {
+  const t = TIERS.indexOf(tier);
+  if (t < 0 || !ROUTE_NODES.includes(from) || !ROUTE_NODES.includes(to)) return null;
+  const dist = { [from]: 0 }, done = new Set();
+  for (;;) {
+    let u = null;
+    for (const n of ROUTE_NODES) if (!done.has(n) && dist[n] != null && (u == null || dist[n] < dist[u])) u = n;
+    if (u == null) return null;
+    if (u === to) return dist[u];
+    done.add(u);
+    for (const [a, b, f, r] of ROUTES) {
+      const step = a === u ? [b, f[t]] : b === u ? [a, r[t]] : null;
+      if (step && (dist[step[0]] == null || dist[u] + step[1] < dist[step[0]])) dist[step[0]] = dist[u] + step[1];
+    }
+  }
+}
+
+// 日期：建安纪年，每月按三十日、每旬十日计
+const CN_D = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+function cnNum(s) {
+  if (s === "正") return 1;
+  if (s === "冬") return 11;
+  if (s === "腊") return 12;
+  if (!s.includes("十")) return CN_D[s] || 0;
+  const [a, b] = s.split("十");
+  return (a ? CN_D[a] : 1) * 10 + (b ? CN_D[b] : 0);
+}
+const cnBig = n => n <= 10 ? NUMS[n - 1] : (n >= 20 ? NUMS[Math.floor(n / 10) - 1] : "") + "十" + (n % 10 ? NUMS[n % 10 - 1] : "");
+function parseDate(str, year) {
+  const m = /(?:建安([一二三四五六七八九十]+)年)?\s*闰?([正冬腊一二三四五六七八九十]+)月\s*(上旬|中旬|下旬|初|中|末|底)?/.exec(str || "");
+  if (!m) return null;
+  const y = m[1] ? cnNum(m[1]) : year;
+  const mo = cnNum(m[2]);
+  if (!y || !mo) return null;
+  const d = { "上旬": 5, "初": 5, "中旬": 15, "中": 15, "下旬": 25, "末": 28, "底": 28 }[m[3]] ?? 15;
+  return (y - 24) * 360 + (mo - 1) * 30 + d;
+}
+function fmtDate(n) {
+  const y = 24 + Math.floor(n / 360), r = n - (y - 24) * 360, mo = Math.floor(r / 30) + 1, d = r - (mo - 1) * 30;
+  return `建安${cnBig(y)}年${mo === 1 ? "正" : cnBig(mo)}月${d <= 10 ? "上旬" : d <= 20 ? "中旬" : "下旬"}`;
+}
+const yearOf = str => { const m = /建安([一二三四五六七八九十]+)年/.exec(str || ""); return m ? cnNum(m[1]) : 24; };
+
+const TITLES = `人物关系与称谓（须合建安二十四年时的官爵与亲属关系，不得用后来的封号、官职与谥号，如"武侯""丞相诸葛亮""昭烈""先主""后主""蜀汉""吴王孙权"）：
+- 刘备：汉中王（本年七月进位），臣下称"大王""主公"，关羽、张飞称"兄长"。国号仍为汉。
+- 诸葛亮：军师将军，称"军师""孔明"，此时未封侯、未任丞相。
+- 关羽：前将军、假节钺，汉寿亭侯，称"关将军""君侯""云长"。关平是关羽义子（演义），称关羽"父亲"。
+- 刘封：刘备义子，称刘备"父王"，称关羽、张飞"叔父"。
+- 张飞：右将军；赵云：翊军将军；黄忠：后将军；马超：左将军；法正：尚书令、护军将军；黄权：偏将军。
+- 糜芳：南郡太守，糜竺之弟，已故糜夫人之兄，刘备的内兄。
+- 孙权：吴侯（尚未封王），臣下称"主公"；吕蒙字子明，陆逊字伯言。
+- 曹操：魏王，称"魏王"；曹仁：征南将军。`;
 
 const WORLD_COMMON = `时间：东汉建安二十四年（公元219年）秋。刘备新取汉中，进位汉中王，坐镇成都。
 关键人物与动机：
@@ -238,38 +326,51 @@ const WORLD_COMMON = `时间：东汉建安二十四年（公元219年）秋。�
 - 关羽：前将军，假节钺，统荆州之兵北伐，水淹于禁七军，围曹仁于樊城。勇而刚，自矜，轻视东吴，曾拒孙权联姻（"虎女安肯嫁犬子"）。右臂中过毒箭。
 - 关平、廖化、赵累、王甫：随关羽军中。王甫素忧后方。
 - 糜芳：南郡太守，守江陵；士仁（傅士仁）：将军，守公安。二人供应军资不及时，被关羽斥责"还当治之"，心中惶惧。
-- 法正：尚书令，在成都，善奇谋，主张乘曹操之败扩大战果。
-- 孙权：吴王之位未定，欲得荆州全境以保长江，表面仍为盟友，暗中与曹操往来，可能向曹操请降称臣以换取荆州。
+- 法正：尚书令，在成都，善奇谋，主张乘曹操之败扩大战果。黄权：在成都，持重谨慎，常泼冷水而多中。
+- 孙权：吴侯，欲得荆州全境以保长江，表面仍为盟友，暗中与曹操往来，可能向曹操称臣以换取荆州。
 - 吕蒙：守陆口，一心图荆州；与孙权定计"称病还建业"以松懈关羽，伏兵商船之中，可"白衣渡江"偷袭沿江烽火台。
 - 陆逊：年少，名声未显，代吕蒙驻陆口，卑辞致书关羽以骄其心。
 - 虞翻：吴臣，与士仁有旧，善于说降。
-- 曹操：在洛阳，闻于禁败曾议迁都避关羽之锋；司马懿、蒋济劝其结孙权，许以江南之地，使袭关羽之后。
+- 曹操：魏王，在洛阳，闻于禁败曾议迁都避关羽之锋；司马懿、蒋济劝其结孙权，许以江南之地，使袭关羽之后。
 - 曹仁：守樊城，城中兵粮渐乏；满宠劝其死守。
 - 徐晃：率援军屯宛、阳陵坡一带，伺机解樊城之围。
 - 刘封、孟达：守上庸，与荆州相邻，可援可不援。上庸山郡新附，二人都不愿冒险远援。刘封是刘备义子，刚猛；孟达原是刘璋旧部，与刘封不和。孟达此时并无叛意，只是自保优先。
-地理与时间：成都至江陵驿马单程约二十余日，至汉中约十日，至上庸约十余日。江陵为荆州根本，公安在江南与之相望；江陵沿江设有烽火台以防吴；麦城为当阳附近小城。荆州将士的家眷大多在江陵，少数在公安。
+${TITLES}
+各方立场底线（任何推演与选项都不得违背）：
+- 刘备以汉室宗亲、讨伐曹贼为立身之本，绝不与曹操结盟、称臣或议和。对东吴可以结盟、议和、割地；对曹营可用离间、诈降、散布假消息等计谋，这只是用计，不是联曹。
+- 关羽重义而骄，绝不降吴降曹（"玉可碎而不可改其白"）。张飞、赵云亦然。
+- 孙权一切以保江东、取荆州为先，可以向曹操称臣受封，也可以与刘备结盟或背盟。
+- 曹操以汉相、魏王自居，可以拉拢孙权，视刘备为必除之敌。
+地理：江陵为荆州根本，公安在江南与之相望；江陵沿江设有烽火台以防吴；麦城是当阳附近的小城。荆州将士的家眷大多在江陵，少数在公安。秦岭在汉中之北，大巴山横亘汉中与成都之间，巫山三峡隔开益州与荆州，武当山在上庸与襄阳之间，荆山在当阳、麦城西北，关羽若从麦城西走入蜀，必经荆山山路。
+${TRAVEL_TEXT}
 水陆形势：关羽水军强盛，水淹七军后船队控制汉水（沔水），襄阳与樊城之间的水路被隔断；撤军时可乘船顺汉水南下，粮草辎重也多走水路。曹军于禁所部已覆没，徐晃援军多为新募之卒，长于陆战而无水军，难以在水上截击。（史书补充：徐晃解樊城之围后，赵俨主张不追，留关羽去与孙权相斗，曹操也令勿追。）
+城防与粮草：
+- 江陵是大城坚城，长年囤积军资，又逢秋收，粮草充足，缺的是兵（大半已随关羽北上）。公安是中等城池，粮足。麦城是小城，难以久守。樊城是坚城，但被水浸、城墙多处崩坏，城中粮乏。襄阳是坚城。
+- 关羽收于禁降卒数万，人多粮少，拖不起；曹仁城中粮乏；徐晃援军靠后方转运。
+- 坚城难以硬攻：强攻须数倍兵力，旷日持久且伤亡惨重（曹仁以数千残兵守坏城，关羽数月不能下）。大城失陷多因"开门"：守将投降、内应、诈城、粮尽兵溃。推演中若有城池易手，必须写明门是怎么开的。
 演义人物设定（人物言行、才智与武艺一律按《三国演义》，不按史书）：
 - 诸葛亮：神机妙算，算无遗策，能预判敌谋、预设锦囊、伏兵、火攻、疑兵。演义中他少有失算，偶有失误也多出在用人上；不要按史书"奇谋为短"来写他。
-- 吕蒙、陆逊、司马懿都是第一流的谋士，计谋周密；但遇到诸葛亮这样的对手，诡计可能被识破、反遭其制。
+- 吕蒙、陆逊、司马懿都是第一流的谋士，计谋周密，主动进取；但遇到诸葛亮这样的对手，诡计可能被识破、反遭其制。
 - 关羽骄矜，重义，轻视东吴；张飞暴躁，常鞭挞士卒；赵云谨慎忠勇；糜芳怯懦，士仁庸碌。
+- 谋士：诸葛亮料事如神；法正善出奇谋，偏爱进取冒险；黄权持重谨慎，常泼冷水而多中；许靖名士，长于礼仪外交而短于军略。
 武力分档与单挑（阵前斗将）：
 - 第一档：关羽、张飞、赵云、马超、黄忠、许褚。第二档：徐晃、张辽、庞德、甘宁、魏延、周泰。第三档：关平、周仓、廖化、潘璋、马忠、朱然、徐盛、丁奉。谋士和文臣不单挑。
 - 单挑胜负按武力分档：同档可战数十合到上百合不分胜负；高档对低档，数合到十数合内取胜或逼退。关羽、张飞、赵云不能在单挑中输给低档武将；带伤、力竭、中暗箭等例外须写明原因（如关羽右臂箭疮未愈）。
 - 可以按演义笔法安排单挑，尤其是名将阵前相遇时，作为事件写入。单挑结果影响士气，但不单独决定战役胜负：带兵作战另按兵力、计谋、地利、粮草和军心计算。
 原著关键事件及其前提（前提不成立，事件就不得照搬，至多以弱化的形式发生）：
-- 白衣渡江、袭取烽火台：沿江烽火台守备松懈，关羽主力远在北方。
+- 白衣渡江、袭取烽火台：沿江烽火台守备松懈，关羽主力远在北方。吕蒙只需先锋商船数十只、精兵数千（演义第七十五回：选会水者扮作商人，白衣摇橹，精兵伏于船中，诸将次第接应），筹备就绪即可发动，也可提前。
 - 士仁、糜芳开城投降：二人惧罪，吴军兵临城下，且城中无人能节制他们。
 - 吕蒙厚待军属、动摇关羽军心：军属所在的城（主要是江陵）已落入吴手。只失公安时，影响仅限于公安籍的少数士卒。
 - 关羽军溃散、败走麦城：江陵、公安俱失，军心已散，退路被断，援军不至。
 - 关羽被擒杀：以上皆成立，且关羽兵尽粮绝、突围路线被吴军预先设伏。
 - 孟达降魏：他有理由担心被治罪（如因拒援导致大败而怕刘备迁怒、受到刘备严令威胁），或被刘封欺凌，同时魏方主动招揽。没有这些，孟达不会投魏。`;
 
+
 const WORLDS = {
   canon: `【起点：原著部署】
 依《三国演义》（毛宗岗本）第七十三至七十四回之局面：诸葛亮在成都辅佐刘备，荆州由关羽总督，后方江陵由糜芳、公安由士仁把守。`,
   kongming: `【起点：反事实·孔明留守荆州】
-本局为实验设定：建安十九年刘备入蜀时，改召张飞、赵云入川，而令诸葛亮与关羽同镇荆州。故此时诸葛亮以军师将军身份留守江陵，总理荆州政务、钱粮与后方防务；关羽仍为前将军、假节钺，统北伐之军，军令上不受诸葛亮节制。益州则由法正、黄权、许靖等佐刘备。
+本局为实验设定：建安十九年刘备入蜀时，改召张飞、赵云入川，而令诸葛亮与关羽同镇荆州。故此时诸葛亮以军师将军身份留守江陵，总理荆州政务、钱粮与后方防务；关羽仍为前将军、假节钺，统北伐之军，军令上不受诸葛亮节制。益州则由法正、黄权、许靖等佐刘备；成都没有孔明，他的意见只能靠书信从江陵送来。
 此设定的连带影响：成都缺少孔明理政，益州钱粮调度较原著吃力；江陵有孔明坐镇，糜芳、士仁受其节制和抚慰，但江陵兵力大半已随关羽北上；关羽对孔明素来尊重，然性情自矜，未必事事听从；孙权、吕蒙知孔明在江陵，偷袭须另作打算。`
 };
 
@@ -279,31 +380,33 @@ const TONES = {
   kongming: ``
 };
 
-const SIM_RULES = `你是《异章：荆州》的世界推演者。这是以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的反事实推演。刘备（玩家）身在成都，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。
+const SIM_RULES = `你是《异章：荆州》的世界推演者。这是以《三国演义》第七十三至七十七回（关羽北伐、白衣渡江、败走麦城）为基线的反事实推演。刘备（玩家）身在成都，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。全部用中文书写，不得夹杂英文字母或任何外文。
 
 推演原则：
 0. 以《三国演义》（毛宗岗本）为准：人物性格、事件、地理、兵力与年代以演义为基线；演义没写到的，才用史书补充；两者冲突时以演义为准。
-1. 千里之外，刘备无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，依自己的性情、所知消息和刘备的方略当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使回成都请示，其间只能固守待命，可能贻误战机。自决的结果取决于此人的才能与性格（孔明谨慎周密，关羽勇而自矜，糜芳怯懦）。前方自行做出的重要决定写入 autonomous。
-2. 刘备的新命令经驿马传递，成都至江陵约二十余日，至上庸约十余日；送达之前前方不会照它行事。未送达的命令写入 in_transit。接令者也可能拖延、曲解或抗命。
-3. 每个人物按自己的目标、性情和此刻所知行事，不迎合刘备。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
-4. 公正而不刁难（本局基调另有规定的，以基调为准）：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、地利、时机、人心相称。按演义的笔法，关羽、张飞、赵云这样的名将临阵几乎无人能当；他们落败，要有中计、伏兵、泄密、断粮、军心离散或众寡悬殊这类明确的原因，并在事件里写出来。
-5. 前后一致：先核对事件记录与当前局势再推演。人物移动和行军需要时日，不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。
-6. 本回时间推进约二十日至一月，写出其间四至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及刘备在本回末是否已得知（known）。
-7. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-8. 全局约在五至六回内收束（时间约到建安二十五年春），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
+1. 千里之外，刘备无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，依自己的性情、所知消息和刘备的方略当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使回成都请示，其间只能固守待命，可能贻误战机。自决的结果取决于此人的才能与性格。前方自行做出的重要决定写入 autonomous。
+2. 行程以驿程表为准。刘备命令的送达日期已由驿程表算定（见"军令驿程"），必须照此：送达之前，前方不会照它行事；送达之回要写出接令的情形。接令者也可能拖延、曲解或抗命。其他人马（包括敌军）的移动也按驿程表估算，不得快于表中所列。
+3. 每个人物按自己的目标、性情和此刻所知行事，不迎合刘备，也不得违背各方立场底线。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。
+4. 公正而不刁难（本局基调另有规定的，以基调为准）：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、城防、地利、时机、人心相称。按演义的笔法，关羽、张飞、赵云这样的名将临阵几乎无人能当；他们落败，要有中计、伏兵、泄密、断粮、军心离散或众寡悬殊这类明确的原因，并在事件里写出来。
+5. 前后一致：先核对事件记录与当前局势再推演。人物不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。粮草按日消耗，每回更新各部 grain；粮尽必有后果（逃散、哗变、被迫出战或撤退）。硬攻坚城旷日持久；城池易手须写明门是怎么开的。
+6. 敌方主动：每回先替孙权与吕蒙、曹操与曹仁徐晃各自谋划（写入 plans），按其目标与所知行动，再写事件。得知刘备援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；刘备一方可以用计诱其误判。
+7. 本回时间推进约二十日至一月，写出其间四至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及刘备在本回末是否已得知（known）。
+8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
+9. 全局约在五至六回内收束（时间约到建安二十五年春），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（如荆州尽失、关羽身死；或荆州转危为安、北伐大捷、孙刘破盟成定局等），本回即为终章。
 
-决断选项（choices）：
-9. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。choices 必须建立在这个判断之上；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受，否则不要给出。
-10. 三个选项方向彼此不同，各有代价，但至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。选项要具体：派谁、去哪、做什么。只依据刘备此刻所知。`;
+谋士进言与决断选项：
+10. 先写 assessment，冷静判断刘备此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
+11. 再写 counsel：刘备身边的谋士各自进言，二至三条，各用其口吻，按演义的性格与才智（孔明料事如神，法正好奇谋进取，黄权持重泼冷水而多中）。只有此刻身在成都的人能当面进言（how 写"面陈"）；身在外地者只能以书信进言，how 写明发信的时间与地点，信件按驿程表在路上耽搁，所言只能依据他发信时所知。谋士之间可以意见相左。
+12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（counsel 的 choice 写对应选项的序号，从1起），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据刘备此刻所知。不得违背立场底线（刘备不联曹、不降），对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。`;
 
 const SIM_FORMAT = `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
 {
   "date": "本回末的时间，如 建安二十四年九月下旬",
+  "plans": [{"side":"孙权、吕蒙","goal":"目标，二十字以内","plan":"当前谋划，四十字以内","status":"筹备|待发|已发动|改图|搁置","knows":"他们此刻掌握的刘备一方情报，可含误判，三十字以内"}],
   "events": [{"date":"九月中旬","who":"关羽","where":"樊城外","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
   "autonomous": [{"who":"关羽","did":"未奉成都之令而自行做出的决定及结果，四十字以内"}],
-  "in_transit": [{"order":"刘备尚未送达的命令，二十字以内","eta":"预计送达时间与地点"}],
-  "places": {"成都":"刘","汉中":"刘","上庸":"刘","樊城":"曹","襄阳":"曹","许都":"曹","麦城":"刘","江陵":"刘","公安":"刘","陆口":"孙","建业":"孙"},
-  "forces": [{"name":"关羽本部","where":"樊城外","troops":"约三万","note":"十二字以内"}],
+  "places": {"成都":"刘","汉中":"刘","上庸":"刘","樊城":"曹","襄阳":"曹","许都":"曹","秭归":"刘","夷陵":"刘","麦城":"刘","江陵":"刘","公安":"刘","陆口":"孙","建业":"孙"},
+  "forces": [{"name":"关羽本部","where":"樊城外","troops":"约三万","grain":"可支约二十日","note":"十二字以内"}],
   "figures": [{"name":"关羽","where":"樊城外","note":"十二字以内的现状"}],
   "gauges": {"后方": 50, "前线": 50, "孙刘": 50},
   "intel": ["刘备此刻确知或听闻之事，三至六条"],
@@ -311,20 +414,25 @@ const SIM_FORMAT = `只输出一个 JSON 对象，不要任何其他文字，不
   "foreshadow": [{"line":"伏笔细节，三十字以内","truth":"真相，四十字以内"}],
   "chronicle": "本回纪要，一句，三十字以内",
   "assessment": "刘备此刻的处境与手中筹码，六十字以内",
+  "counsel": [{"who":"法正","how":"面陈","says":"进言内容，五十字以内","choice":1}],
   "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
   "ending": null
 }
-说明：places 必须包含上面全部十一个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列刘备一方各部及刘备已知的敌军，兵力用约数。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。autonomous、in_transit 没有则写 []。choices 正好三项。
-若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，choices 写 []。`;
+说明：plans 至少写东吴与曹魏两方。places 必须包含上面全部十三个地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列刘备一方各部及刘备已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 三项为0到100的整数：后方=荆州后方安稳程度，前线=刘军在襄樊前线的优势，孙刘=孙刘两家的关系。autonomous 没有则写 []。choices 正好三项。
+若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著败走麦城相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，counsel 与 choices 写 []。`;
 
 const NARRATE_RULES = `你是《异章：荆州》的说书人。推演者已经定下本回发生的事，你把它写成一回章回小说。
 
-1. 文风仿毛宗岗本《三国演义》：半文半白，章回体，回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。不得出现现代词汇或"玩家""系统""选项"等字样。
+1. 文风仿毛宗岗本《三国演义》：半文半白，章回体，回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。全部用中文，不得夹杂英文字母或任何外文，不得出现现代词汇或"玩家""系统""选项"等字样。
 2. 只写已定之事：不得增加改变局势的新事件，不得改动任何事件的结果、时间、地点和人物去向；可以补充场面、对白、心理与细节。
 3. known 为 false 的事件，刘备一方并不知道：可以"却说……"切去写一个侧影，但不点破其谋。
 4. 把每条伏笔的 line 化作正文中一个具体可辨的细节，不点破 truth。
-5. 结尾落到刘备需要再作决断的时刻。
-6. 人物言行按演义设定：孔明从容多智、料敌在先，关羽傲而重义，张飞粗豪。事件里有单挑的，按演义笔法写出兵器、回合与阵前气势。`;
+5. 结尾落到刘备需要再作决断的时刻：把谋士进言写成朝堂上的一幕（远方来信则写拆书而读），但不替刘备做决定。
+6. 人物言行按演义设定：孔明从容多智、料敌在先，关羽傲而重义，张飞粗豪，法正锐意进取，黄权持重。事件里有单挑的，按演义笔法写出兵器、回合与阵前气势。
+7. 称谓与官爵必须合乎当时，遵守下面的称谓表。
+
+${TITLES}`;
+
 
 /* ───────── 开局（预写的第一回） ───────── */
 
@@ -343,16 +451,17 @@ const OPENINGS = {
 
 法正曰：“孙权与曹操世仇，岂肯助之？军师过虑矣。”孔明曰：“孙权所欲者荆州耳，非为曹，亦非为我。”
 
-刘备沉吟良久。窗外秋雨未歇，案上烛火摇动。荆州距成都千里之遥，驿马单程二十余日，今夜所发之令，到得江陵，已是九月中了。刘备起身踱至地图之前，手按江陵，久久不语。
+刘备沉吟良久。窗外秋雨未歇，案上烛火摇动。荆州距成都千里之遥，驿马疾驰也要十余日，今夜所发之令，到得江陵已是八月下旬，送到樊城营中，更在九月之初。刘备起身踱至地图之前，手按江陵，久久不语。
 
 正是：七军覆没惊天下，一纸军书重万钧。`,
     state: {
       date: "建安二十四年八月",
-      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
+      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "秭归": "刘", "夷陵": "刘", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
       figures: [
         { name: "刘备", where: "成都", note: "汉中王" },
         { name: "诸葛亮", where: "成都", note: "军师将军，忧荆州后方" },
         { name: "法正", where: "成都", note: "尚书令，主张乘胜进取" },
+        { name: "黄权", where: "成都", note: "持重，忧东吴" },
         { name: "关羽", where: "樊城外", note: "水淹七军，围曹仁" },
         { name: "糜芳", where: "江陵", note: "南郡太守，惧关羽责罚" },
         { name: "士仁", where: "公安", note: "与关羽有隙" },
@@ -364,13 +473,13 @@ const OPENINGS = {
       ],
       gauges: { "后方": 40, "前线": 80, "孙刘": 30 },
       forces: [
-        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", note: "粮草吃紧" },
-        { name: "江陵守军", where: "江陵", troops: "数千", note: "糜芳统领" },
-        { name: "公安守军", where: "公安", troops: "数千", note: "士仁统领" },
-        { name: "上庸军", where: "上庸", troops: "数千，另有申耽、申仪的乡兵", note: "刘封、孟达，山郡新附" },
-        { name: "益州诸军", where: "成都", troops: "可调两三万", note: "集结需月余" },
-        { name: "曹仁", where: "樊城", troops: "数千", note: "城坏粮乏" },
-        { name: "徐晃援军", where: "宛", troops: "万余", note: "正在集结" }
+        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", grain: "可支约一月，降卒耗粮", note: "粮草吃紧" },
+        { name: "江陵守军", where: "江陵", troops: "数千", grain: "充足，秋粮入仓", note: "糜芳统领" },
+        { name: "公安守军", where: "公安", troops: "数千", grain: "充足", note: "士仁统领" },
+        { name: "上庸军", where: "上庸", troops: "数千，另有申耽、申仪的乡兵", grain: "仅够自守", note: "刘封、孟达，山郡新附" },
+        { name: "益州诸军", where: "成都", troops: "可调两三万", grain: "需转运", note: "集结需月余" },
+        { name: "曹仁", where: "樊城", troops: "数千", grain: "不足一月", note: "城坏粮乏" },
+        { name: "徐晃援军", where: "宛", troops: "万余", grain: "随军转运", note: "正在集结" }
       ],
       events: [
         { date: "八月", who: "关羽", where: "樊城", what: "决襄江之水淹于禁七军，进围樊城", why: "乘秋雨北伐", result: "于禁降，庞德死，曹操议迁都", known: true },
@@ -392,10 +501,21 @@ const OPENINGS = {
         { line: "近闻吕蒙称病还建业，代之者乃一书生陆逊", truth: "吕蒙称病是与孙权定下的计，精兵已藏于商船，伺机白衣渡江" },
         { line: "孙权所欲者荆州耳，非为曹，亦非为我", truth: "孙权已暗中遣使向曹操示好，愿袭关羽之后以取荆州" }
       ],
+      plans: [
+        { side: "孙权、吕蒙", goal: "取荆州全境", plan: "吕蒙称病麻痹关羽，于寻阳备商船精兵待机白衣渡江，并遣虞翻说士仁", status: "筹备", knows: "关羽主力在樊城，江陵、公安守军单薄，糜芳、士仁惧罪" },
+        { side: "曹操、曹仁、徐晃", goal: "解樊城之围", plan: "徐晃集兵待进，遣使结孙权袭关羽之后", status: "筹备", knows: "关羽兵多粮少，后方空虚" }
+      ],
+      orders: [],
+      assessment: "樊城未下，关羽兵多粮少；江陵、公安兵少而将怯，东吴动向可疑。",
+      counsel: [
+        { who: "诸葛亮", how: "面陈", says: "吕蒙称病、陆逊卑辞，其谋必在江陵。宜急令云长留兵守江，围樊勿深入。", choice: 1 },
+        { who: "法正", how: "面陈", says: "曹操新败，人心骚动。宜令上庸之兵东出襄阳，助云长速克樊城，东吴自不敢动。", choice: 2 },
+        { who: "黄权", how: "面陈", says: "江陵空虚，远水难救近火。可先遣轻兵星夜东下，再遣使安抚孙权。", choice: 3 }
+      ],
       choices: [
-        { label: "急令云长围樊勿进，分兵回守江陵", detail: "可固后方；但樊城或功亏一篑，云长未必肯从" },
-        { label: "发益州之兵东出，经秭归增援荆州", detail: "援军需一两月方到；益州新定，粮草吃紧" },
-        { label: "遣使赴东吴修好，许以湘水以东之地", detail: "或可稳住孙权；但须割地，且云长曾辱吴使" }
+        { label: "急令云长围樊勿进，分兵回守江陵", detail: "信使约半月到樊城；可固后方，但樊城或功亏一篑，云长未必肯从" },
+        { label: "令刘封、孟达出上庸攻襄阳，助云长速破樊城", detail: "速胜可解后顾之忧；但上庸兵少，孟达未必用命，后方仍空" },
+        { label: "遣轻兵三千经秭归驰援江陵，并遣使修好东吴", detail: "轻兵约半月可到江陵；兵少难久战，修好须许以好处" }
       ]
     }
   },
@@ -411,12 +531,12 @@ const OPENINGS = {
 
 刘备读罢，喜色尽收。法正进曰：“曹操新失七军，中原骚动，正当乘势北进。军师在江陵，东吴必不敢轻动，大王何忧？”黄权曰：“孔明尚且忧之，则江东之谋必深。臣以为荆州之事，宜早作计较。”
 
-刘备踱至地图之前，手按江陵，久久不语。荆州距成都千里之遥，驿马单程二十余日，今夜所发之令，到得江陵，已是九月中了。
+刘备踱至地图之前，手按江陵，久久不语。荆州距成都千里之遥，驿马疾驰也要十余日，今夜所发之令，到得江陵已是八月下旬。
 
 正是：一城坐镇卧龙在，千里军书未可期。`,
     state: {
       date: "建安二十四年八月",
-      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
+      places: { "成都": "刘", "汉中": "刘", "上庸": "刘", "樊城": "曹", "襄阳": "曹", "许都": "曹", "秭归": "刘", "夷陵": "刘", "麦城": "刘", "江陵": "刘", "公安": "刘", "陆口": "孙", "建业": "孙" },
       figures: [
         { name: "刘备", where: "成都", note: "汉中王" },
         { name: "诸葛亮", where: "江陵", note: "留守荆州，总理后方" },
@@ -433,13 +553,13 @@ const OPENINGS = {
       ],
       gauges: { "后方": 55, "前线": 80, "孙刘": 35 },
       forces: [
-        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", note: "粮草吃紧" },
-        { name: "江陵守军", where: "江陵", troops: "不足万人", note: "孔明节制，烽火加严" },
-        { name: "公安守军", where: "公安", troops: "数千", note: "士仁统领" },
-        { name: "上庸军", where: "上庸", troops: "数千，另有申耽、申仪的乡兵", note: "刘封、孟达，山郡新附" },
-        { name: "益州诸军", where: "成都", troops: "可调两三万", note: "集结需月余，钱粮吃力" },
-        { name: "曹仁", where: "樊城", troops: "数千", note: "城坏粮乏" },
-        { name: "徐晃援军", where: "宛", troops: "万余", note: "正在集结" }
+        { name: "关羽本部", where: "樊城外", troops: "约三万，另收于禁降卒", grain: "可支约一月，降卒耗粮", note: "粮草吃紧" },
+        { name: "江陵守军", where: "江陵", troops: "不足万人", grain: "充足，秋粮入仓", note: "孔明节制，烽火加严" },
+        { name: "公安守军", where: "公安", troops: "数千", grain: "充足", note: "士仁统领" },
+        { name: "上庸军", where: "上庸", troops: "数千，另有申耽、申仪的乡兵", grain: "仅够自守", note: "刘封、孟达，山郡新附" },
+        { name: "益州诸军", where: "成都", troops: "可调两三万", grain: "需转运，钱粮吃力", note: "集结需月余" },
+        { name: "曹仁", where: "樊城", troops: "数千", grain: "不足一月", note: "城坏粮乏" },
+        { name: "徐晃援军", where: "宛", troops: "万余", grain: "随军转运", note: "正在集结" }
       ],
       events: [
         { date: "八月", who: "关羽", where: "樊城", what: "决襄江之水淹于禁七军，进围樊城", why: "乘秋雨北伐", result: "于禁降，庞德死，曹操议迁都", known: true },
@@ -462,10 +582,21 @@ const OPENINGS = {
         { line: "竟又调江陵兵三千赴樊城", truth: "吴人细作已探知江陵兵少，吕蒙正在加紧筹划" },
         { line: "亮已善言抚之，然二人心意难测", truth: "虞翻与士仁有旧，吴人已在暗中与公安往来" }
       ],
+      plans: [
+        { side: "孙权、吕蒙", goal: "取荆州全境", plan: "孔明在江陵，偷袭难成；先遣虞翻说士仁图公安，再伺江陵之隙", status: "筹备", knows: "孔明坐镇江陵、烽火加严；江陵兵不足万人；士仁有怨" },
+        { side: "曹操、曹仁、徐晃", goal: "解樊城之围", plan: "徐晃集兵待进，遣使结孙权袭关羽之后", status: "筹备", knows: "关羽兵多粮少，荆州后方有孔明" }
+      ],
+      orders: [],
+      assessment: "江陵有孔明而兵少，关羽仍在樊城自专；东吴之谋未明。",
+      counsel: [
+        { who: "诸葛亮", how: "书信，八月上旬发自江陵", says: "云长刚而自矜，亮言不尽见听。愿主公明示荆州军令归一，则后方可固。", choice: 1 },
+        { who: "法正", how: "面陈", says: "军师在江陵，东吴必不敢轻动。宜令上庸之兵东出，助云长速取樊城。", choice: 2 },
+        { who: "黄权", how: "面陈", says: "孔明尚且忧之，江东之谋必深。宜发益州兵东出，交孔明调度。", choice: 3 }
+      ],
       choices: [
         { label: "授孔明节钺，总督荆州诸军", detail: "后方可固；但云长必有不平，前后军令或生龃龉" },
-        { label: "请孔明亲赴江东，稳住孙权", detail: "孔明有江东旧谊；但江陵将无主事之人" },
-        { label: "发益州兵东出增援，交孔明调度", detail: "援军需一两月方到；益州钱粮本已吃力" }
+        { label: "令刘封、孟达出上庸攻襄阳，助云长速破樊城", detail: "速胜可解后顾之忧；但上庸兵少，孟达未必用命" },
+        { label: "发益州兵东出增援，交孔明调度", detail: "大军集结加行程约五十日，轻兵约半月；益州钱粮本已吃力" }
       ]
     }
   }
@@ -479,6 +610,7 @@ const defaultPolicy = () => ({ text: "", powers: { "关羽": "便宜行事", "�
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
 const API_MODEL = "claude-sonnet-5-5";
+const QUICK_MODEL = "claude-haiku-4-5-20251001";  // 只用于拆解命令驿程、改正夹杂的外文这类小活
 const NUMS = "一二三四五六七八九十";
 const cn = n => n <= 10 ? NUMS[n - 1] : n < 20 ? "十" + NUMS[n - 11] : String(n);
 
@@ -511,8 +643,8 @@ async function initLLM() {
       if (sample) {
         llm = {
           kind: "claude",
-          call: async (prompt, onText, signal) => {
-            const r = await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false });
+          call: async (prompt, onText, signal, opts = {}) => {
+            const r = await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false, ...(opts.tier ? { modelTier: opts.tier } : {}) });
             return { text: r.text, model: "claude.ai", tier: r.modelTierApplied || "default" };
           }
         };
@@ -528,23 +660,23 @@ async function initLLM() {
 function setupKeyLLM() {
   let key = "";
   try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
-  llm = key ? { kind: "key", call: (p, onText, signal) => callAnthropic(key, p, onText, signal) } : null;
+  llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : API_MODEL) } : null;
 }
 
-async function callAnthropic(key, prompt, onText, signal) {
+async function callAnthropic(key, prompt, onText, signal, model) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST", signal,
     headers: {
       "content-type": "application/json", "x-api-key": key,
       "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
     },
-    body: JSON.stringify({ model: API_MODEL, max_tokens: 6000, stream: true, messages: [{ role: "user", content: prompt }] })
+    body: JSON.stringify({ model, max_tokens: 8000, stream: true, messages: [{ role: "user", content: prompt }] })
   });
   if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "", text = "";
-  const meta = { model: API_MODEL, tier: "", inTok: 0, outTok: 0 };
+  const meta = { model, tier: "", inTok: 0, outTok: 0 };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -571,16 +703,57 @@ async function callAnthropic(key, prompt, onText, signal) {
   return { text, ...meta };
 }
 
+/* ───────── 驿程：把命令拆成要送出的各项，由驿程表算定送达日期 ───────── */
+
+function buildRoutePrompt(g, decision) {
+  const st = g.chapters[g.chapters.length - 1].state;
+  return `把汉中王刘备的这道命令拆成需要送出或派出的各项。全部用中文。
+地点只能从这些里选：${ROUTE_NODES.join("、")}。
+每项写：part（这一项做什么，二十字以内）、from（命令或兵马从哪里出发，通常是成都）、to（送达或抵达之地；传令给某人，就取此人此刻所在之地）、tier（只传令写"信使"；派数百至两三千精兵、轻骑、轻舟写"轻兵"；派上万人或带辎重的兵马写"大军"）。派兵的同时附带传令的，只写兵马一项。
+人物此刻所在：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
+命令：${decision}
+只输出一个 JSON 数组，例如 [{"part":"令关羽撤围回守江陵","from":"成都","to":"樊城","tier":"信使"}]`;
+}
+
+function parseRoutes(raw) {
+  const t = String(raw || "").replace(/```(json)?/g, "");
+  const a = t.indexOf("["), b = t.lastIndexOf("]");
+  if (a < 0 || b < a) return [];
+  try {
+    const node = x => ROUTE_NODES.find(n => String(x || "").includes(n)) || null;
+    return JSON.parse(t.slice(a, b + 1)).filter(r => r && r.part).map(r => ({
+      part: String(r.part), from: node(r.from) || "成都", to: node(r.to),
+      tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使"
+    }));
+  } catch (e) { return []; }
+}
+
+// 返回新的军令表：沿用尚未送达的旧令，加上本回新令（发出日 = 当前回末）
+function scheduleOrders(g, routes) {
+  const st = g.chapters[g.chapters.length - 1].state;
+  const now = parseDate(st.date, yearOf(st.date));
+  const fresh = routes.map(r => {
+    const days = now == null || !r.to ? null : travelDays(r.from, r.to, r.tier);
+    return { ...r, sent: now, arrive: days == null ? null : now + days + (MUSTER[r.tier] || 0) };
+  });
+  return [...(st.orders || []), ...fresh];
+}
+
+const orderLine = o => `「${o.part}」${o.tier}自${o.from}${o.to ? "往" + o.to : ""}，${o.sent != null ? fmtDate(o.sent) + "发出，" : ""}${o.arrive != null ? `约${fmtDate(o.arrive)}${o.tier === "信使" ? "送达" : "抵达"}` : "日程按常理估算"}`;
+
 /* ───────── 推演：只出事实 ───────── */
 
 const evLine = e => `[${e.date || ""}] ${e.who || ""}@${e.where || ""}：${e.what || ""}${e.result ? " → " + e.result : ""}${e.known === false ? "（刘备不知）" : ""}`;
 
-function buildSimPrompt(g, decision) {
+function buildSimPrompt(g, decision, orders) {
   const n = g.chapters.length + 1;
-  const st = { ...g.chapters[g.chapters.length - 1].state };
-  for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices"]) delete st[k];
+  const cur = g.chapters[g.chapters.length - 1].state;
+  const st = { ...cur };
+  for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered"]) delete st[k];
   const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n刘备命令：${c.decision}` : ""}`).join("\n\n");
   const last = n >= MAX_TURNS ? "\n本回必须为终章，给出 ending。" : n >= MAX_TURNS - 1 ? "\n局势已近收束，本回要把各条线推向决战或定局。" : "";
+  const now = parseDate(cur.date, yearOf(cur.date));
+  const span = now == null ? "" : `（即推演到约${fmtDate(now + 20)}至${fmtDate(now + 30)}）`;
   return `${SIM_RULES}
 
 【世界设定】
@@ -593,22 +766,32 @@ ${TONES[g.start] || ""}
 【事件记录】
 ${log}
 
-【当前局势】
+【当前局势】（plans 为各方上回的谋划）
 ${JSON.stringify(st)}
 
 【刘备给前方的方略与授权】
 方略：${g.policy.text.trim() || "（未另立方略）"}
-授权：${DELEGATES.map(d => `${d}：${g.policy.powers[d]}`).join("；")}（授权只在此人身处荆州时有效）
+授权：${DELEGATES.map(d => `${d}：${g.policy.powers[d]}`).join("；")}（授权只在此人身处荆州时有效；方略与授权的改动随本回信使送达后才生效）
 
 【刘备本回的命令】
 ${decision}
 
-请推演第${cn(n)}回。${last}
+【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
+${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
+
+请推演第${cn(n)}回，本回时间推进约二十日至一月${span}。${last}
 
 ${SIM_FORMAT}`;
 }
 
-function parseSim(g, raw) {
+const LATIN = /[A-Za-z]/;
+// 收集所有字符串值里夹杂的外文词（不看 JSON 的键名）
+const latinWords = v => typeof v === "string" ? (v.match(/[A-Za-z]{2,}/g) || [])
+  : Array.isArray(v) ? v.flatMap(latinWords) : v && typeof v === "object" ? Object.values(v).flatMap(latinWords) : [];
+// 刘备的立场底线：不联曹、不降。违背的选项直接去掉。
+const STANCE_BREACH = /联曹|降曹|附曹|投曹|归曹|结好曹|通好曹|与曹[操魏]?(?:议和|结盟|联手|修好|讲和)|称臣于[曹魏]|向[曹魏][^，。]{0,4}称臣|降吴|降魏/;
+
+function parseSim(g, raw, orders) {
   const t = String(raw || "").replace(/```(json)?/g, "");
   const a = t.indexOf("{"), b = t.lastIndexOf("}");
   if (a < 0 || b < a) throw { code: "no_state" };
@@ -625,11 +808,24 @@ function parseSim(g, raw) {
   s.gauges = gauges;
   if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
   if (!Array.isArray(s.forces) || !s.forces.length) s.forces = prev.forces || [];
-  for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "in_transit"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
+  if (!Array.isArray(s.plans) || !s.plans.length) s.plans = prev.plans || [];
+  for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "counsel"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
   if (!s.events.length) throw { code: "no_state" };
-  s.choices = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label).slice(0, 3) : [];
-  if (!s.ending && !s.choices.length) throw { code: "no_choices" };
   s.date = s.date || prev.date;
+  const all = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label) : [];
+  s.choices = all.filter(c => !STANCE_BREACH.test(c.label + c.detail)).slice(0, 3);
+  s.dropped = all.length - all.filter(c => !STANCE_BREACH.test(c.label + c.detail)).length;
+  if (!s.ending && !s.choices.length) throw { code: "no_choices" };
+  // 选项删去后，进言对应的序号按原序号重新映射
+  const keep = all.filter(c => s.choices.includes(c));
+  s.counsel = s.counsel.map(c => ({ ...c, choice: keep.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
+  // 在途军令由代码按驿程表结算，不用模型自报
+  const now = parseDate(s.date, yearOf(prev.date));
+  const list = orders || prev.orders || [];
+  s.orders = list.filter(o => o.arrive != null && (now == null || o.arrive > now));
+  s.delivered = list.filter(o => o.arrive != null && now != null && o.arrive <= now);
+  s.in_transit = s.orders.map(o => ({ order: o.part, eta: `${fmtDate(o.arrive)}${o.tier === "信使" ? "送达" : "抵"}${o.to}（${o.tier}）` }));
+  s.latin = latinWords(s).length;
   return s;
 }
 
@@ -656,11 +852,17 @@ ${JSON.stringify(s.events)}
 【前方自决】
 ${JSON.stringify(s.autonomous)}
 
+【本回送达的军令】
+${(s.delivered || []).map(orderLine).join("\n") || "（无）"}
+
 【必须埋下的伏笔】
 ${JSON.stringify(s.foreshadow)}
 
 【本回结尾刘备面对的局面】
 ${s.assessment || s.chronicle || ""}${s.ending ? `\n本回为终章，结局：${s.ending.title}。${s.ending.summary}` : ""}
+
+【谋士进言】（写成结尾朝堂上的一幕或拆读来信）
+${(s.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
 
 请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，空一行后写正文，段落之间空一行。只输出回目和正文。`;
 }
@@ -669,6 +871,13 @@ function splitStory(raw) {
   const lines = String(raw).trim().split("\n");
   const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();
   return { title, text: lines.join("\n").trim() };
+}
+
+// 夹杂外文的段落交给快速档改写成中文，其余原样保留
+function buildLatinFixPrompt(paras) {
+  return `下面几段章回小说的文字里夹杂了英文单词。把英文改成合乎上下文的中文（半文半白），其余一字不改。逐段输出，段与段之间单独一行写 =====，不要任何其他文字。
+
+${paras.join("\n=====\n")}`;
 }
 
 /* ───────── 用量记录 ───────── */
@@ -686,7 +895,7 @@ function recordUsage(role, chapter, prompt, res, t0) {
 function renderUsage() {
   const rows = game.usage || [];
   if (!rows.length) return "";
-  const names = { sim: "推演", narrate: "说书" };
+  const names = { route: "驿程", sim: "推演", narrate: "说书", fix: "改字" };
   const exact = rows.every(r => r.inTok);
   const fmt = n => n >= 10000 ? (n / 10000).toFixed(1) + "万" : String(n);
   const line = role => {
@@ -701,7 +910,7 @@ function renderUsage() {
   };
   return `<section><h3>用量</h3><table class="usage">
     <tr><td></td><td>次</td><td>${exact ? "输入 tokens" : "输入字数"}</td><td>${exact ? "输出 tokens" : "输出字数"}</td><td>耗时</td></tr>
-    ${line("sim")}${line("narrate")}</table>
+    ${line("route")}${line("sim")}${line("narrate")}${line("fix")}</table>
     <p class="note">${exact ? "按 API 返回的实际 tokens 统计。" : "claude.ai 不返回 tokens，这里按字数统计；中文大致一字一 token。"}含已放弃分支上的调用，不含中途取消的调用。</p></section>`;
 }
 
@@ -715,10 +924,21 @@ async function decide(decision) {
   ctl = new AbortController();
   render();
   try {
-    const prompt = buildSimPrompt(game, decision), t0 = Date.now();
+    let routes = [];
+    if (decision !== WAIT_ORDER) {
+      // 先用快速档把命令拆成各项，驿程表算出送达日期，再交给推演
+      const rp = buildRoutePrompt(game, decision), r0 = Date.now();
+      try {
+        const rr = await llm.call(rp, () => {}, ctl.signal, { tier: "quick" });
+        recordUsage("route", game.chapters.length, rp, rr, r0);
+        routes = parseRoutes(rr.text);
+      } catch (e) { if (e && e.code === "cancelled") throw e; }
+    }
+    const orders = scheduleOrders(game, routes);
+    const prompt = buildSimPrompt(game, decision, orders), t0 = Date.now();
     const res = await llm.call(prompt, () => {}, ctl.signal);
     recordUsage("sim", game.chapters.length, prompt, res, t0);
-    const state = parseSim(game, res.text);
+    const state = parseSim(game, res.text, orders);
     current().decision = decision;
     current().policy = JSON.parse(JSON.stringify(game.policy));
     game.chapters.push({ title: `第${cn(game.chapters.length + 1)}回`, text: "", state });
@@ -745,6 +965,18 @@ async function narrate(i) {
     recordUsage("narrate", i, prompt, res, t0);
     const out = splitStory(res.text);
     if (!out.text) throw { code: "empty_completion" };
+    const ps = out.text.split(/\n+/).filter(Boolean);
+    const bad = ps.map((p, k) => LATIN.test(p) ? k : -1).filter(k => k >= 0);
+    if (bad.length) {
+      const fp = buildLatinFixPrompt(bad.map(k => ps[k])), f0 = Date.now();
+      try {
+        const fr = await llm.call(fp, () => {}, ctl.signal, { tier: "quick" });
+        recordUsage("fix", i, fp, fr, f0);
+        const fixed = fr.text.split(/\n?=====\n?/).map(x => x.trim());
+        if (fixed.length === bad.length) bad.forEach((k, m) => { if (fixed[m]) ps[k] = fixed[m]; });
+        out.text = ps.join("\n\n");
+      } catch (e) { if (e && e.code === "cancelled") throw e; }
+    }
     game.chapters[i].title = out.title || game.chapters[i].title;
     game.chapters[i].text = out.text;
     save();
@@ -841,9 +1073,13 @@ function renderChoices(st) {
   return `<div class="choices">
     <h3>汉中王当如何决断</h3>
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
+    ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
     ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
     <div class="choice-list">
-      ${(st.choices || []).map((c, i) => `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></button>`).join("")}
+      ${(st.choices || []).map((c, i) => {
+        const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
+        return `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${esc(c.label)}${by.length ? `<em class="by">${esc(by.join("、"))}之议</em>` : ""}</b><span>${esc(c.detail)}</span></button>`;
+      }).join("")}
       <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
     </div>
     ${renderPolicy(st)}
@@ -860,7 +1096,7 @@ function renderPolicy(st) {
   const active = DELEGATES.filter(n => { const f = fig(n); return f && f.where !== "成都" && f.where !== "已故"; });
   return `<div class="policy">
     <h3>方略与授权</h3>
-    <p class="hint">驿马单程二十余日，前方不能事事等你。授权"便宜行事"的人会按自己的判断和你的方略当机立断。方略和授权随下一道命令一并送出。</p>
+    <p class="hint">驿马到江陵要十余日，到樊城还要更久，前方不能事事等你。授权"便宜行事"的人会按自己的判断和你的方略当机立断。方略和授权随下一道命令一并送出。</p>
     ${active.map(n => `<div class="power"><span class="who">${n}</span><div class="seg" role="group" aria-label="${n}的授权">${Object.keys(POWERS).map(p => `<button type="button" data-who="${n}" data-power="${p}" aria-pressed="${game.policy.powers[n] === p}" title="${POWERS[p]}">${p}</button>`).join("")}</div><span class="desc">${POWERS[game.policy.powers[n]]}</span></div>`).join("")}
     <label for="policyText">总方略（前方将帅据此自决）</label>
     <textarea id="policyText" placeholder="例：以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师，孔明可先斩后奏。">${esc(game.policy.text)}</textarea>
@@ -903,6 +1139,9 @@ function renderReport() {
       <ol class="rp-ev">${evs.map(e => `<li class="${e.known === false ? "dark" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b><span class="rp-m">@${esc(e.where)}</span> ${esc(e.what)}${e.why ? `<span class="rp-m">（${esc(e.why)}）</span>` : ""} → ${esc(e.result)}${e.known === false ? "<em>暗</em>" : ""}</li>`).join("")}</ol>` : ""}
       ${(s.autonomous || []).length ? `<h4>前方自决</h4><ul>${s.autonomous.map(a => `<li><b>${esc(a.who)}</b> ${esc(a.did)}</li>`).join("")}</ul>` : ""}
       ${(s.foreshadow || []).length ? `<h4>伏笔</h4><ul>${s.foreshadow.map(f => `<li>「${esc(f.line)}」<span class="rp-m"> → ${esc(f.truth)}</span></li>`).join("")}</ul>` : ""}
+      ${(s.plans || []).length && i > 0 ? `<h4>各方谋划</h4><ul>${s.plans.map(p => `<li><b>${esc(p.side)}</b>〔${esc(p.status)}〕${esc(p.plan)}<span class="rp-m">　所知：${esc(p.knows)}</span></li>`).join("")}</ul>` : ""}
+      ${(s.delivered || []).length ? `<h4>本回送达的军令</h4><ul>${s.delivered.map(o => `<li>${esc(orderLine(o))}</li>`).join("")}</ul>` : ""}
+      ${(s.counsel || []).length ? `<h4>谋士进言</h4><ul>${s.counsel.map(c => `<li><b>${esc(c.who)}</b><span class="rp-m">（${esc(c.how)}）</span> ${esc(c.says)}</li>`).join("")}</ul>` : ""}
       ${(s.choices || []).length ? `<h4>当时的选项</h4><ul>${s.choices.map(o => `<li><b>${esc(o.label)}</b><span class="rp-m">　${esc(o.detail)}</span></li>`).join("")}</ul>` : ""}
       ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b></div>` : ""}
     </article>`;
@@ -925,7 +1164,7 @@ function renderPanel(st) {
     <section class="map"><h3>荆襄形势</h3>${renderMap(st.places)}
       <div class="legend"><span><i style="background:var(--shu)"></i>刘</span><span><i style="background:var(--wu)"></i>孙</span><span><i style="background:var(--wei)"></i>曹</span><span><i style="background:var(--war)"></i>交战</span></div></section>
     <section><h3>大势</h3><div class="gauges">${gauge("后方", "荆州后方")}${gauge("前线", "襄樊前线")}${gauge("孙刘", "孙刘之好")}</div></section>
-    ${(st.forces || []).length ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.note ? `，${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
+    ${(st.forces || []).length ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.grain ? `<span class="grain">粮：${esc(f.grain)}</span>` : ""}${f.note ? `　${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
     ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
     <section><h3>汉中王所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
@@ -937,9 +1176,20 @@ function renderPanel(st) {
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
 }
 
+const MOUNTAINS = [
+  ["秦岭", [[40, 64], [56, 58], [72, 64], [96, 57], [112, 62], [130, 58]], [62, 48, "start"]],
+  ["大巴山", [[60, 136], [76, 130], [92, 137], [108, 129], [124, 135]], [70, 150, "start"]],
+  ["巫山·三峡", [[100, 184], [114, 178], [128, 184]], [88, 170, "start"]],
+  ["武当", [[176, 112], [190, 106], [204, 112]], [210, 112, "start"]],
+  ["荆山", [[174, 146], [187, 140]], [166, 145, "end"]]
+];
+
 function renderMap(places) {
+  const peaks = MOUNTAINS.map(([name, pts, [lx, ly, anchor]]) => pts.map(([x, y]) =>
+    `<path d="M${x - 7},${y} L${x},${y - 9} L${x + 7},${y} Z" fill="var(--mount-fill)" stroke="var(--mount)" stroke-width="1" stroke-linejoin="round"/>`).join("") +
+    `<text x="${lx}" y="${ly}" font-size="8" fill="var(--muted)" text-anchor="${anchor}">${name}</text>`).join("");
   const nodes = Object.entries(PLACES).map(([name, [x, y]]) => {
-    const h = places[name] || "争";
+    const h = places[name] || OPENINGS.canon.state.places[name] || "争";
     const color = `var(${FACTION[h] || "--war"})`;
     const right = x > 360;
     return `<g><circle cx="${x}" cy="${y}" r="${name === "江陵" ? 7 : 5}" fill="${color}" stroke="var(--paper)" stroke-width="1.5"/>
@@ -949,7 +1199,8 @@ function renderMap(places) {
     <path d="M10,222 C90,222 160,198 232,190 S290,214 330,206 S372,196 398,194" fill="none" stroke="var(--river)" stroke-width="4" stroke-linecap="round"/>
     <path d="M70,98 C120,96 180,96 226,80 C242,118 262,166 290,202" fill="none" stroke="var(--river)" stroke-width="2.5" stroke-linecap="round"/>
     <text x="22" y="236" font-size="9" fill="var(--muted)">长江</text>
-    <text x="118" y="112" font-size="9" fill="var(--muted)">汉水</text>
+    <text x="104" y="110" font-size="9" fill="var(--muted)">汉水</text>
+    ${peaks}
     ${nodes}
   </svg>`;
 }
@@ -959,7 +1210,7 @@ function renderIntro() {
   return `<div class="intro story">
     <h1>异章·荆州</h1>
     <p class="tag">建安二十四年秋，关羽水淹七军，威震华夏。三个月后，荆州易主，关羽死于麦城。</p>
-    <p>这一回，你是汉中王刘备，远在成都。每一回你下一道命令，驿马要走二十多天才能送到荆州。关羽、孔明、糜芳、孙权、吕蒙、曹操，各有各的打算，没人会照着剧本走。</p>
+    <p>这一回，你是汉中王刘备，远在成都。每一回你下一道命令，驿马要走十多天才能送到江陵，再到樊城前线还要几天。关羽、孔明、糜芳、孙权、吕蒙、曹操，各有各的打算，没人会照着剧本走。</p>
     <p>选一个起点：</p>
     <div class="starts">
       ${Object.entries(OPENINGS).map(([k, o]) => `<button class="start-card" type="button" data-start="${k}"><span class="k">${k === "canon" ? "起点一" : "起点二"}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
