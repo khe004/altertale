@@ -5,7 +5,7 @@
 //   node tools/playtest.js [--era jingzhou] [--starts canon,kongming] [--strategies prudent,delegate] [--runs 1] [--parallel 2]
 //                          [--model sonnet] [--effort medium] [--player-model haiku] [--player-effort low]
 //
-// 回归测试：node tools/playtest.js --starts canon --strategies canon
+// 回归测试：node tools/playtest.js --era ruchuan --starts canon --strategies canon --player-model sonnet
 // Each game is written to playtest-out/<start>-<strategy>-<n>.json; a summary prints at the end.
 const fs = require("fs");
 const path = require("path");
@@ -185,7 +185,7 @@ async function runGame(start, strategy, n) {
 }
 
 // 原著回归：照演义打下去，这些原著事件应当发生（已发生或变形发生）
-const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "machao", "liuzhang"] };
+const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "zhangren", "liuzhang"] };
 
 function canonReport(r) {
   // 连玩时 game.past 里是先前的时代，逐个时代列出原著对照；回归只看起始时代
