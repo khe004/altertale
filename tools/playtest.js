@@ -155,8 +155,10 @@ async function runGame(start, strategy, n) {
   const label = strategy + (arg("label") ? "-" + arg("label") : "");
   const tag = `${ERA}/${start}/${label}/${SIM_TAG}/${n}`;
   const file = path.join(OUT, `${ERA}-${start}-${label}-${SIM_TAG}-${n}.json`);
-  const g = E.newGame(ERA, start);
-  g.policy.text = STRATEGIES[strategy].policy;
+  // --resume：从同名存档接着打（被中断的测试）
+  const old = process.argv.includes("--resume") && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")).game : null;
+  const g = old || E.newGame(ERA, start);
+  if (!old) g.policy.text = STRATEGIES[strategy].policy;
   const result = { era: ERA, start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
   const write = () => fs.writeFileSync(file, JSON.stringify(result, null, 1));
   try {
