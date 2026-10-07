@@ -217,9 +217,9 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 
 推演原则：
 0. 以《三国演义》（毛宗岗本）为准：人物性格、事件、地理、兵力与年代以演义为基线；演义没写到的，才用史书补充；两者冲突时以演义为准。人物按人物卡行事。
-1. 千里之外，${ev.player}无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，依自己的性情、所知消息和方略当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使请示，其间只能固守待命，可能贻误战机。自决的结果取决于此人的才能与性格。前方自行做出的重要决定写入 autonomous。
+1. 千里之外，${ev.player}无法事事遥控。前方将帅按"方略与授权"自行处置：授权"便宜行事"者，依自己的性情、所知消息和方略当机立断（进退、调兵、守城、应对使者）；授权"遇事请示"者，遇大事先遣使请示，其间只能固守待命，可能贻误战机。自决的结果取决于此人的才能与性格。前方自行做出的重要决定写入 autonomous。"便宜行事"只限本人辖区之内；坐镇一方者（见"坐镇"）离开驻地、率兵出境、改变全局部署（例如孔明离荆州入川），必须奉${ev.player}之令，除非驻地已失或主公危在旦夕而音信不通，并要在 autonomous 里写明缘故。写信请命、请召而未获答复，视为未准，只能备兵待命。
 2. 行程以驿程表为准。命令的送达日期已由驿程表算定（见"军令驿程"），必须照此：送达之前，前方不会照它行事；送达之回要写出接令的情形。接令者也可能拖延、曲解或抗命。其他人马（包括敌军）的移动也按驿程表估算，不得快于表中所列。
-3. 每个人物按自己的目标、性情和此刻所知行事，不迎合玩家，也不得违背立场底线。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生。每回在 canon 中逐条报告原著事件池与背景大事的状态。
+3. 每个人物按自己的目标、性情和此刻所知行事，不迎合玩家，也不得违背立场底线。原著事件有"惯性"：其前提仍在，就倾向于照原著或变形发生；前提已被改变，就不得强行发生；前提里含有"召""遣"等命令的，玩家没有下这道令，该事件就不会发生（可写成"未到时"或"失效"）。每回在 canon 中逐条报告原著事件池与背景大事的状态。
 4. 公正而不刁难（本局基调另有规定的，以基调为准）：及时、合理、切中要害的决断应当见效，得力将帅的自决也应常常有效；坏结果来自人物性格、信息滞后与对手谋略，而非无端厄运。胜负、伤亡、得失要与兵力、粮草、城防、地利、时机、人心相称。按演义的笔法，第一档名将临阵几乎无人能当；他们落败，要有中计、伏兵、泄密、断粮、军心离散或众寡悬殊这类明确的原因，并在事件里写出来。
 5. 前后一致：先核对事件记录与当前局势再推演。人物不能瞬移；兵力不能凭空出现或重复调用；死者不能再出场；已失的城池和兵马不能再作筹码。粮草按日消耗，每回更新各部 grain；粮尽必有后果（逃散、哗变、被迫出战或撤退）。硬攻坚城旷日持久；城池易手须写明门是怎么开的。
 6. 敌方主动：每回先替各方（${ev.rivals}）谋划（写入 plans），按其目标与所知行动，再写事件。得知援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；玩家一方可以用计诱其误判。
@@ -332,7 +332,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const st = { ...cur };
     for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered", "canon"]) delete st[k];
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
-    const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。" : n >= ev.maxTurns - 1 ? "\n局势已近收束，本回要把各条线推向决战或定局。" : "";
+    const last = n >= ev.maxTurns ? "\n本回必须为终章，给出 ending。终章按此刻实际的兵力和已下达的命令收束，不得为了收束而调来未奉命的人马；没有打完的仗可以以相持、对峙或局势未定作结。" : n >= ev.maxTurns - 1 ? "\n局势已近收束，本回要把各条线推向决战或定局。" : "";
     const now = parseDate(cur.date, yearOf(cur.date));
     const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
     const ad = adOf(cur.date);
@@ -369,7 +369,7 @@ ${JSON.stringify(st)}
 
 【方略与授权】
 方略：${g.policy.text.trim() || "（未另立方略）"}
-授权：${ev.delegates.map(d => `${d}：${g.policy.powers[d] || "便宜行事"}`).join("；")}（授权只在此人身处前方时有效；方略与授权的改动随本回信使送达后才生效）
+授权：${ev.delegates.map(d => `${d}：${g.policy.powers[d] || "便宜行事"}`).join("；")}（授权只在此人身处前方时有效；方略与授权的改动随本回信使送达后才生效）${Object.keys(postsOf(g)).length ? `\n坐镇：${Object.entries(postsOf(g)).map(([k, v]) => `${k}镇${v.join("、")}`).join("；")}（未奉${ev.player}之令不得离开）` : ""}
 
 【${ev.player}本回的命令】
 ${decision}
@@ -438,6 +438,42 @@ ${simFormat(g)}`;
     s.latin = latinWords(s).length;
     return s;
   };
+
+  /* ───────── 推演复核：人物不能瞬移，坐镇者不能未奉命离任 ───────── */
+
+  const GENERIC = new Set(["军师", "主公", "丞相", "大王", "陛下", "君侯", "皇叔"]);
+  const aliases = name => { const c = card(name); return [name, ...(c ? c.titles.flatMap(t => String(t[2]).split("、")) : [])].filter(a => a && !GENERIC.has(a)); };
+  // 坐镇者此刻仍在驻地，才受约束；奉命调走之后不再算
+  const postsOf = g => {
+    const all = startOf(g).posts || era(g).posts || {}, figs = g.chapters[g.chapters.length - 1].state.figures || [];
+    return Object.fromEntries(Object.entries(all).filter(([k, v]) => { const f = figs.find(x => x.name === k); return f && v.some(n => String(f.where).startsWith(n)); }));
+  };
+
+  E.checkSim = function (g, s, decision) {
+    const ev = era(g), prev = g.chapters[g.chapters.length - 1].state, problems = [];
+    const nodes = routeNodes(ev), at = w => nodes.find(n => w && String(w).startsWith(n));
+    const t0 = parseDate(prev.date, yearOf(prev.date)), t1 = parseDate(s.date, yearOf(prev.date));
+    const days = t0 != null && t1 != null ? t1 - t0 : null;
+    const before = Object.fromEntries((prev.figures || []).map(f => [f.name, at(f.where)]));
+    const said = [g.policy && g.policy.text, ...g.chapters.map(c => c.decision), decision].filter(Boolean).join("\n");
+    const posts = postsOf(g);
+    for (const f of s.figures || []) {
+      const a = before[f.name], b = at(f.where);
+      if (!a || !b || a === b) continue;
+      const need = travelDays(ev, a, b, "信使");
+      if (days != null && need != null && need > days) problems.push(`${f.name}从${a}到${b}最快也要${need}日，本回只过了${days}日，到不了`);
+      const post = posts[f.name];
+      if (post && post.includes(a) && !post.includes(b) && !aliases(f.name).some(x => said.includes(x)))
+        problems.push(`${f.name}坐镇${post.join("、")}，${ev.player}从未下令调他，他却离任到了${b}`);
+    }
+    return problems;
+  };
+
+  E.buildRepairPrompt = (prompt, problems) => `${prompt}
+
+【复核】你上一稿推演有以下不合理之处：
+${problems.map(p => "- " + p).join("\n")}
+请改正后重新推演本回，按同样的格式输出完整 JSON。未奉命的人留在原地（可以写信、备兵待命）；赶不到的人还在路上；依赖他们的事件随之改写。`;
 
   /* ───────── 过渡：一个时代成局之后，快进到下一个时代的冲突爆发 ───────── */
 

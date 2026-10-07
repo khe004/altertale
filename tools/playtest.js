@@ -28,6 +28,7 @@ const ERA = arg("era", "jingzhou");
 const ROLES = {
   sim: { model: arg("model", "sonnet"), effort: arg("effort", "") },
   route: { model: arg("route-model", "haiku"), effort: arg("route-effort", "low") },
+  repair: { model: arg("model", "sonnet"), effort: arg("effort", "") },
   transition: { model: arg("model", "sonnet"), effort: arg("effort", "") },
   player: { model: arg("player-model", "haiku"), effort: arg("player-effort", "") }
 };
@@ -124,6 +125,16 @@ async function playEra(g, strategy, tag, result, write) {
       catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
     }
     if (!state) throw new Error("simulation output unparseable twice");
+    const problems = E.checkSim(g, state, decision);
+    if (problems.length) {
+      console.log(`[${tag}] 复核：${problems.join("；")}`);
+      try {
+        const s2 = E.parseSim(g, await claude(E.buildRepairPrompt(E.buildSimPrompt(g, decision, orders), problems), "repair"), orders);
+        s2.repaired = problems;
+        s2.unresolved = E.checkSim(g, s2, decision);
+        state = s2;
+      } catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; state.unresolved = problems; }
+    }
     g.chapters[g.chapters.length - 1].decision = decision;
     g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
     write();

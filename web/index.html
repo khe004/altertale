@@ -396,7 +396,7 @@ function recordUsage(role, chapter, prompt, res, t0) {
 function renderUsage() {
   const rows = game.usage || [];
   if (!rows.length) return "";
-  const names = { route: "驿程", sim: "推演", narrate: "说书", fix: "改字", transition: "过渡" };
+  const names = { route: "驿程", sim: "推演", narrate: "说书", fix: "改字", repair: "复核", transition: "过渡" };
   const exact = rows.every(r => r.inTok);
   const fmt = n => n >= 10000 ? (n / 10000).toFixed(1) + "万" : String(n);
   const line = role => {
@@ -439,7 +439,20 @@ async function decide(decision) {
     const prompt = E.buildSimPrompt(game, decision, orders), t0 = Date.now();
     const res = await llm.call(prompt, () => {}, ctl.signal);
     recordUsage("sim", game.chapters.length, prompt, res, t0);
-    const state = E.parseSim(game, res.text, orders);
+    let state = E.parseSim(game, res.text, orders);
+    // 复核：人物瞬移、坐镇者未奉命离任，就带着问题重推一次
+    const problems = E.checkSim(game, state, decision);
+    if (problems.length) {
+      const fp = E.buildRepairPrompt(prompt, problems), t1 = Date.now();
+      try {
+        const r2 = await llm.call(fp, () => {}, ctl.signal);
+        recordUsage("repair", game.chapters.length, fp, r2, t1);
+        const s2 = E.parseSim(game, r2.text, orders);
+        s2.repaired = problems;
+        s2.unresolved = E.checkSim(game, s2, decision);
+        state = s2;
+      } catch (e) { if (e && e.code === "cancelled") throw e; state.unresolved = problems; }
+    }
     current().decision = decision;
     current().policy = JSON.parse(JSON.stringify(game.policy));
     game.chapters.push({ title: `第${cn(game.chapters.length + 1)}回`, text: "", state });
