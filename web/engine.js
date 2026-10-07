@@ -152,12 +152,13 @@ ${ev.cast.filter(n => card(n) && card(n).floor).map(n => `- ${n}：${card(n).flo
     const cs = g.chapters[g.chapters.length - 1].state.canon || {};
     return era(g).canonEvents.filter(c => !isDone(cs[c.id]));
   };
-  // 背景大事只取原著时间在当前之后约四个月内、尚未了结的
+  // 背景大事只取原著时间在开局之后、当前之后约四个月内、尚未了结的；开局以前的视为已经发生
   const bgDay = b => (b.year - 219) * 360 + (b.month - 1) * 30 + 15;
   const openBackground = g => {
     const st = g.chapters[g.chapters.length - 1].state, cs = st.canon || {};
     const now = parseDate(st.date, yearOf(st.date)) ?? 0;
-    return (AT.background || []).filter(b => !isDone(cs[b.id]) && bgDay(b) <= now + 120);
+    const o = g.chapters[0].state.date, from = parseDate(o, yearOf(o)) ?? 0;
+    return (AT.background || []).filter(b => !isDone(cs[b.id]) && bgDay(b) >= from && bgDay(b) <= now + 120);
   };
 
   function canonText(g) {
