@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // Simulation-only playtest: plays whole games without narration.
-// Reuses the prompt/parse code from web/index.html; calls the local `claude` CLI.
+// Loads the same character pool, era config and engine as web/index.html; calls the local `claude` CLI.
 //
-//   node tools/playtest.js [--starts canon,kongming] [--strategies prudent,delegate] [--runs 1] [--parallel 2]
+//   node tools/playtest.js [--era jingzhou] [--starts canon,kongming] [--strategies prudent,delegate] [--runs 1] [--parallel 2]
 //                          [--model sonnet] [--effort medium] [--player-model haiku] [--player-effort low]
 //
+// 回归测试：node tools/playtest.js --starts canon --strategies canon
 // Each game is written to playtest-out/<start>-<strategy>-<n>.json; a summary prints at the end.
 const fs = require("fs");
 const path = require("path");
@@ -17,11 +18,11 @@ const arg = (name, def) => {
   return i > 0 ? process.argv[i + 1] : def;
 };
 
-const html = fs.readFileSync(path.join(ROOT, "web/index.html"), "utf8");
-const script = html.slice(html.indexOf("<script>") + 8, html.lastIndexOf("</script>"));
-const core = script.slice(0, script.indexOf("function errorCopy"));
-const G = new Function(`${core}
-return { OPENINGS, WAIT_ORDER, MAX_TURNS, defaultPolicy, buildRoutePrompt, parseRoutes, scheduleOrders, buildSimPrompt, parseSim, cn };`)();
+// 加载与网页相同的人物池、时代配置与引擎
+globalThis.AT = {};
+for (const f of ["data/characters.js", "data/background.js", "data/eras/jingzhou.js", "engine.js"]) require(path.join(ROOT, "web", f));
+const E = AT.engine;
+const ERA = arg("era", "jingzhou");
 
 // Model, effort and token usage per role, filled from the CLI's JSON result.
 const ROLES = {
@@ -75,13 +76,14 @@ const STRATEGIES = {
   prudent: { policy: "", player: "你是一个认真、明智的玩家，目标是让结局与原著（荆州失守、关羽败走麦城）不同。根据局势判断最好的一步。" },
   delegate: { policy: "以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师；留守之将可先斩后奏，不必请示。", player: null },
   greedy: { policy: "", player: "你是一个贪功的玩家，一心乘胜北伐、扩大战果，认为东吴不足为虑，很少考虑后方。" },
+  canon: { policy: "", player: null },  // 回归测试：照演义，刘备在成都不知前方变故，从不另发令
   single: { policy: "", player: "你是一个认真的普通玩家，目标是让结局与原著不同，但每回只能从给出的选项里选一个。" },
   random: { policy: "", player: null }
 };
 
 async function playerMove(strategy, g) {
   const st = g.chapters[g.chapters.length - 1].state;
-  if (strategy === "delegate") return G.WAIT_ORDER;
+  if (strategy === "delegate" || strategy === "canon") return E.WAIT_ORDER;
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
   const single = strategy === "single";
   const events = (st.events || []).filter(e => e.known !== false).map(e => `${e.date} ${e.who}（${e.where}）${e.what}，${e.result}`);
@@ -110,26 +112,25 @@ ${single ? "只能从上面选一个，只输出它的序号。" : "可以选其
 async function runGame(start, strategy, n) {
   const tag = `${start}/${strategy}/${SIM_TAG}/${n}`;
   const file = path.join(OUT, `${start}-${strategy}-${SIM_TAG}-${n}.json`);
-  const o = G.OPENINGS[start];
-  const g = { start, policy: G.defaultPolicy(), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
+  const g = E.newGame(ERA, start);
   g.policy.text = STRATEGIES[strategy].policy;
   const result = { start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
   const write = () => fs.writeFileSync(file, JSON.stringify(result, null, 1));
   try {
-    while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < G.MAX_TURNS + 1) {
+    while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < E.era(g).maxTurns + 1) {
       const decision = await playerMove(strategy, g);
-      const routes = decision === G.WAIT_ORDER ? [] : G.parseRoutes(await claude(G.buildRoutePrompt(g, decision), "route"));
-      const orders = G.scheduleOrders(g, routes);
+      const routes = decision === E.WAIT_ORDER ? [] : E.parseRoutes(g, await claude(E.buildRoutePrompt(g, decision), "route"));
+      const orders = E.scheduleOrders(g, routes);
       let state = null;
       for (let attempt = 0; attempt < 2 && !state; attempt++) {
-        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision, orders), "sim"), orders); }
+        try { state = E.parseSim(g, await claude(E.buildSimPrompt(g, decision, orders), "sim"), orders); }
         catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
       }
       if (!state) throw new Error("simulation output unparseable twice");
       g.chapters[g.chapters.length - 1].decision = decision;
-      g.chapters.push({ title: `第${G.cn(g.chapters.length + 1)}回`, text: "", state });
+      g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
       write();
-      console.log(`[${tag}] 第${G.cn(g.chapters.length)}回 ${state.date} | 江陵:${state.places["江陵"]} 公安:${state.places["公安"]} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? " | 终章：" + state.ending.title : ""}`);
+      console.log(`[${tag}] 第${E.cn(g.chapters.length)}回 ${state.date} | 江陵:${state.places["江陵"]} 公安:${state.places["公安"]} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? " | 终章：" + state.ending.title : ""}`);
     }
   } catch (e) {
     result.error = String(e.message || e);
@@ -137,6 +138,21 @@ async function runGame(start, strategy, n) {
   }
   write();
   return result;
+}
+
+// 原著回归：照演义打下去，这些原著事件应当发生（已发生或变形发生）
+const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"] };
+
+function canonReport(r) {
+  const rows = E.canonSummary(r.game);
+  const lines = rows.map(x => `  ${x.status.padEnd(4, "　")} ${x.name}${x.chapter ? `（第${E.cn(x.chapter)}回）` : ""}${x.note ? "：" + x.note : ""}`);
+  let verdict = "";
+  if (r.strategy === "canon") {
+    const want = REGRESSION[ERA] || [];
+    const miss = want.filter(id => !["已发生", "变形发生"].includes((rows.find(x => x.id === id) || {}).status));
+    verdict = miss.length ? `  回归未通过，未发生：${miss.map(id => rows.find(x => x.id === id).name).join("、")}` : "  回归通过：原著主干事件都已发生";
+  }
+  return lines.join("\n") + (verdict ? "\n" + verdict : "");
 }
 
 function summarize(r) {
@@ -158,6 +174,7 @@ function summarize(r) {
     while (queue.length) results.push(await queue.shift()());
   }));
   console.log("\n== 汇总 ==\n" + results.map(summarize).join("\n"));
+  for (const r of results) console.log(`\n== 原著对照：${r.start}/${r.strategy}/${r.n} ==\n${canonReport(r)}`);
   const turns = results.reduce((n, r) => n + r.game.chapters.length - 1, 0);
   console.log(`\n== 用量（${results.length} 局，${turns} 回） ==`);
   for (const [role, u] of Object.entries(usage))
