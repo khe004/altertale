@@ -3,6 +3,7 @@
 // Reuses the prompt/parse code from web/index.html; calls the local `claude` CLI.
 //
 //   node tools/playtest.js [--starts canon,kongming] [--strategies prudent,delegate] [--runs 1] [--parallel 2]
+//                          [--model sonnet] [--effort medium] [--player-model haiku] [--player-effort low]
 //
 // Each game is written to playtest-out/<start>-<strategy>-<n>.json; a summary prints at the end.
 const fs = require("fs");
@@ -22,11 +23,23 @@ const core = script.slice(0, script.indexOf("function errorCopy"));
 const G = new Function(`${core}
 return { OPENINGS, WAIT_ORDER, MAX_TURNS, defaultPolicy, buildSimPrompt, parseSim, cn };`)();
 
-// Token usage per role, filled from the CLI's JSON result.
+// Model, effort and token usage per role, filled from the CLI's JSON result.
+const ROLES = {
+  sim: { model: arg("model", "sonnet"), effort: arg("effort", "") },
+  player: { model: arg("player-model", "haiku"), effort: arg("player-effort", "") }
+};
 const usage = {};
 function track(role, r) {
-  const u = usage[role] || (usage[role] = { calls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, usd: 0 });
+  const u = usage[role] || (usage[role] = {
+    model: ROLES[role].model, effort: ROLES[role].effort || "（CLI 默认）", servedBy: [],
+    calls: 0, input: 0, cacheWrite: 0, cacheRead: 0, output: 0, thinking: 0, seconds: 0, usd: 0
+  });
   const t = r.usage || {};
+  for (const [id, m] of Object.entries(r.modelUsage || {})) {
+    if (!u.servedBy.includes(id)) u.servedBy.push(id);
+    u.thinking += m.thinkingTokens || 0;
+  }
+  u.seconds += (r.duration_ms || 0) / 1000;
   u.calls++;
   u.input += t.input_tokens || 0;
   u.cacheWrite += t.cache_creation_input_tokens || 0;
@@ -35,9 +48,12 @@ function track(role, r) {
   u.usd += r.total_cost_usd || 0;
 }
 
-function claude(prompt, model, role) {
+function claude(prompt, role) {
+  const { model, effort } = ROLES[role];
+  const args = ["-p", "--model", model, "--tools", "", "--output-format", "json"];
+  if (effort) args.push("--effort", effort);
   return new Promise((resolve, reject) => {
-    const p = spawn("claude", ["-p", "--model", model, "--tools", "", "--output-format", "json"], { cwd: OUT });
+    const p = spawn("claude", args, { cwd: OUT });
     let out = "", err = "";
     p.stdout.on("data", d => (out += d));
     p.stderr.on("data", d => (err += d));
@@ -77,7 +93,7 @@ ${events.join("\n") || "（无）"}
 ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 
 可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。`;
-  return (await claude(prompt, arg("player-model", "haiku"), "player")).trim().split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
+  return (await claude(prompt, "player")).trim().split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
 }
 
 async function runGame(start, strategy, n) {
@@ -86,14 +102,14 @@ async function runGame(start, strategy, n) {
   const o = G.OPENINGS[start];
   const g = { start, policy: G.defaultPolicy(), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
   g.policy.text = STRATEGIES[strategy].policy;
-  const result = { start, strategy, n, parseFailures: 0, error: null, game: g };
+  const result = { start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
   const write = () => fs.writeFileSync(file, JSON.stringify(result, null, 1));
   try {
     while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < G.MAX_TURNS + 1) {
       const decision = await playerMove(strategy, g);
       let state = null;
       for (let attempt = 0; attempt < 2 && !state; attempt++) {
-        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision), arg("model", "sonnet"), "sim")); }
+        try { state = G.parseSim(g, await claude(G.buildSimPrompt(g, decision), "sim")); }
         catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
       }
       if (!state) throw new Error("simulation output unparseable twice");
@@ -132,6 +148,6 @@ function summarize(r) {
   const turns = results.reduce((n, r) => n + r.game.chapters.length - 1, 0);
   console.log(`\n== 用量（${results.length} 局，${turns} 回） ==`);
   for (const [role, u] of Object.entries(usage))
-    console.log(`${role}: ${u.calls} 次调用，输入 ${u.input} + 缓存写 ${u.cacheWrite} + 缓存读 ${u.cacheRead}，输出 ${u.output} tokens，约 $${u.usd.toFixed(2)}`);
+    console.log(`${role}（${u.servedBy.join(", ") || u.model}，effort ${u.effort}）: ${u.calls} 次调用，输入 ${u.input} + 缓存写 ${u.cacheWrite} + 缓存读 ${u.cacheRead}，输出 ${u.output}（其中思考 ${u.thinking}）tokens，耗时 ${Math.round(u.seconds)} 秒，约 $${u.usd.toFixed(2)}`);
   fs.writeFileSync(path.join(OUT, "usage.json"), JSON.stringify({ games: results.length, turns, usage }, null, 1));
 })();
