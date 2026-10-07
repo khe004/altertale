@@ -121,6 +121,12 @@ main { min-width: 0; }
 .events .when { color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 0.5em; }
 .events em { font-style: normal; font-size: 0.72rem; color: var(--seal); border: 1px solid var(--seal); border-radius: 2px; padding: 0 0.25em; margin-left: 0.4em; }
 .forces .fig { grid-template-columns: 5em minmax(0, 1fr); }
+.usage { width: 100%; border-collapse: collapse; font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+.usage td, .usage th { text-align: right; padding: 0.15rem 0.3rem; font-weight: 400; }
+.usage th, .usage td:first-child { text-align: left; }
+.usage tr:first-child td { color: var(--muted); }
+.usage .sub td { text-align: left; color: var(--muted); font-size: 0.72rem; padding-top: 0; }
+.note { margin: 0.35rem 0 0; color: var(--muted); font-size: 0.72rem; }
 .eta { color: var(--muted); font-size: 0.78rem; }
 .reveals { display: grid; gap: 0.75rem; }
 .reveal { display: grid; gap: 0.15rem; }
@@ -457,7 +463,10 @@ async function initLLM() {
       if (sample) {
         llm = {
           kind: "claude",
-          call: async (prompt, onText, signal) => (await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false })).text
+          call: async (prompt, onText, signal) => {
+            const r = await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false });
+            return { text: r.text, model: "claude.ai", tier: r.modelTierApplied || "default" };
+          }
         };
         render();
         return;
@@ -487,6 +496,7 @@ async function callAnthropic(key, prompt, onText, signal) {
   const reader = res.body.getReader();
   const dec = new TextDecoder();
   let buf = "", text = "";
+  const meta = { model: API_MODEL, tier: "", inTok: 0, outTok: 0 };
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -497,14 +507,20 @@ async function callAnthropic(key, prompt, onText, signal) {
       if (!line.startsWith("data:")) continue;
       try {
         const ev = JSON.parse(line.slice(5));
-        if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
+        if (ev.type === "message_start" && ev.message) {
+          meta.model = ev.message.model || meta.model;
+          const u = ev.message.usage || {};
+          meta.inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
+        } else if (ev.type === "message_delta" && ev.usage) {
+          meta.outTok = ev.usage.output_tokens || meta.outTok;
+        } else if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
           text += ev.delta.text;
           onText(text);
         } else if (ev.type === "error") throw { code: "upstream_error", message: ev.error && ev.error.message };
       } catch (e) { if (e && e.code) throw e; }
     }
   }
-  return text;
+  return { text, ...meta };
 }
 
 /* ───────── 推演：只出事实 ───────── */
@@ -603,6 +619,40 @@ function splitStory(raw) {
   return { title, text: lines.join("\n").trim() };
 }
 
+/* ───────── 用量记录 ───────── */
+
+// Every completed call is kept, including ones on branches later abandoned: that usage was spent.
+function recordUsage(role, chapter, prompt, res, t0) {
+  (game.usage = game.usage || []).push({
+    role, chapter, model: res.model, tier: res.tier || "",
+    inChars: prompt.length, outChars: res.text.length,
+    inTok: res.inTok || 0, outTok: res.outTok || 0, ms: Date.now() - t0
+  });
+  save();
+}
+
+function renderUsage() {
+  const rows = game.usage || [];
+  if (!rows.length) return "";
+  const names = { sim: "推演", narrate: "说书" };
+  const exact = rows.every(r => r.inTok);
+  const fmt = n => n >= 10000 ? (n / 10000).toFixed(1) + "万" : String(n);
+  const line = role => {
+    const rs = rows.filter(r => r.role === role);
+    if (!rs.length) return "";
+    const sum = k => rs.reduce((n, r) => n + r[k], 0);
+    const inN = exact ? sum("inTok") : sum("inChars"), outN = exact ? sum("outTok") : sum("outChars");
+    const tiers = { default: "默认档", quick: "快速档", complex: "复杂档" };
+    const models = [...new Set(rs.map(r => r.model + (r.tier ? " · " + (tiers[r.tier] || r.tier) : "")))].join("，");
+    return `<tr><th>${names[role]}</th><td>${rs.length}</td><td>${fmt(inN)}</td><td>${fmt(outN)}</td><td>${Math.round(sum("ms") / 1000)}秒</td></tr>
+      <tr class="sub"><td colspan="5">${esc(models)}</td></tr>`;
+  };
+  return `<section><h3>用量</h3><table class="usage">
+    <tr><td></td><td>次</td><td>${exact ? "输入 tokens" : "输入字数"}</td><td>${exact ? "输出 tokens" : "输出字数"}</td><td>耗时</td></tr>
+    ${line("sim")}${line("narrate")}</table>
+    <p class="note">${exact ? "按 API 返回的实际 tokens 统计。" : "claude.ai 不返回 tokens，这里按字数统计；中文大致一字一 token。"}含已放弃分支上的调用，不含中途取消的调用。</p></section>`;
+}
+
 /* ───────── 一回的流程：先推演、存档，再说书 ───────── */
 
 async function decide(decision) {
@@ -613,7 +663,10 @@ async function decide(decision) {
   ctl = new AbortController();
   render();
   try {
-    const state = parseSim(game, await llm.call(buildSimPrompt(game, decision), () => {}, ctl.signal));
+    const prompt = buildSimPrompt(game, decision), t0 = Date.now();
+    const res = await llm.call(prompt, () => {}, ctl.signal);
+    recordUsage("sim", game.chapters.length, prompt, res, t0);
+    const state = parseSim(game, res.text);
     current().decision = decision;
     current().policy = JSON.parse(JSON.stringify(game.policy));
     game.chapters.push({ title: `第${cn(game.chapters.length + 1)}回`, text: "", state });
@@ -635,7 +688,10 @@ async function narrate(i) {
   ctl = new AbortController();
   render();
   try {
-    const out = splitStory(await llm.call(buildNarratePrompt(game, i), t => { streamText = t; renderStream(); }, ctl.signal));
+    const prompt = buildNarratePrompt(game, i), t0 = Date.now();
+    const res = await llm.call(prompt, t => { streamText = t; renderStream(); }, ctl.signal);
+    recordUsage("narrate", i, prompt, res, t0);
+    const out = splitStory(res.text);
     if (!out.text) throw { code: "empty_completion" };
     game.chapters[i].title = out.title || game.chapters[i].title;
     game.chapters[i].text = out.text;
@@ -788,6 +844,7 @@ function renderPanel(st) {
       ? `<ul>${(st.hidden || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
       : `<p>此刻另有 ${(st.hidden || []).length} 条汉中王不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
       ${peek && !done ? `<ul>${game.chapters.flatMap((c, i) => (c.state.foreshadow || []).map(f => `<li>第${cn(i + 1)}回「${esc(f.line)}」：${esc(f.truth)}</li>`)).join("")}</ul>` : ""}</section>
+    ${renderUsage()}
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
 }
 
