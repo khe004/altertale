@@ -21,6 +21,8 @@
   --wu: #B04A3C;
   --wei: #3A5D92;
   --war: #B08A2E;
+  --zhang: #8A6A3A;
+  --lu: #6E5A86;
   --mount: #9A9384;
   --mount-fill: #D9D4C7;
   --font-display: "Ma Shan Zheng", "STKaiti", "KaiTi", serif;
@@ -31,13 +33,13 @@
   :root:not([data-theme="light"]) {
     --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
     --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
-    --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
+    --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --zhang: #C49A62; --lu: #A592C2; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
   --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
-  --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
+  --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --zhang: #C49A62; --lu: #A592C2; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html, body { min-height: 100%; }
@@ -168,6 +170,13 @@ main { min-width: 0; }
 .canon small { font-family: var(--font-ui); font-size: 0.7rem; color: var(--muted); margin-left: 0.35em; }
 .canon .st { font-family: var(--font-ui); font-size: 0.75rem; border-radius: 2px; padding: 0 0.35rem; border: 1px solid currentColor; white-space: nowrap; }
 .st.same { color: var(--muted); } .st.bent { color: var(--war); } .st.gone { color: var(--shu); } .st.none { color: var(--line); }
+.era-pick { margin-top: 1.75rem; }
+.era-pick h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.9rem; color: var(--indigo); margin: 0; display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+.era-pick h2 small { font-family: var(--font-ui); font-size: 0.75rem; color: var(--muted); }
+.era-no { font-family: var(--font-ui); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--seal); }
+.era-pick .tag { margin: 0.2rem 0 0.4rem; }
+.next-era { margin-top: 1rem; border-top: 1px dashed var(--seal); padding-top: 0.7rem; }
+.next-era p { margin: 0 0 0.4rem; }
 .eta { color: var(--muted); font-size: 0.78rem; }
 .reveals { display: grid; gap: 0.75rem; }
 .reveal { display: grid; gap: 0.15rem; }
@@ -227,7 +236,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 
 <header class="top">
   <div class="top-inner">
-    <div class="brand">异章·荆州<small>改变一个选择，让故事重新演化</small></div>
+    <div class="brand"><span id="brandTitle">异章</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
     <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
     <button class="ui-btn" id="restartBtn" type="button" hidden>另开一局</button>
@@ -241,6 +250,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 
 <script src="data/characters.js"></script>
 <script src="data/background.js"></script>
+<script src="data/eras/ruchuan.js"></script>
 <script src="data/eras/jingzhou.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -251,7 +261,8 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const FACTION = { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
+const ERA_ORDER = ["ruchuan", "jingzhou"];
+const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
 const API_MODEL = "claude-sonnet-5-5";
@@ -361,7 +372,7 @@ function recordUsage(role, chapter, prompt, res, t0) {
 function renderUsage() {
   const rows = game.usage || [];
   if (!rows.length) return "";
-  const names = { route: "驿程", sim: "推演", narrate: "说书", fix: "改字" };
+  const names = { route: "驿程", sim: "推演", narrate: "说书", fix: "改字", transition: "过渡" };
   const exact = rows.every(r => r.inTok);
   const fmt = n => n >= 10000 ? (n / 10000).toFixed(1) + "万" : String(n);
   const line = role => {
@@ -376,7 +387,7 @@ function renderUsage() {
   };
   return `<section><h3>用量</h3><table class="usage">
     <tr><td></td><td>次</td><td>${exact ? "输入 tokens" : "输入字数"}</td><td>${exact ? "输出 tokens" : "输出字数"}</td><td>耗时</td></tr>
-    ${line("route")}${line("sim")}${line("narrate")}${line("fix")}</table>
+    ${line("route")}${line("sim")}${line("narrate")}${line("fix")}${line("transition")}</table>
     <p class="note">${exact ? "按 API 返回的实际 tokens 统计。" : "claude.ai 不返回 tokens，这里按字数统计；中文大致一字一 token。"}含已放弃分支上的调用，不含中途取消的调用。</p></section>`;
 }
 
@@ -455,6 +466,30 @@ async function narrate(i) {
   }
 }
 
+/* ───────── 过渡：进入下一时代 ───────── */
+
+async function transition() {
+  if (busy || !llm) return;
+  busy = "transition"; lastError = null;
+  ctl = new AbortController();
+  render();
+  let result = null;
+  try {
+    const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
+    const res = await llm.call(prompt, () => {}, ctl.signal);
+    recordUsage("transition", game.chapters.length, prompt, res, t0);
+    result = E.applyTransition(game, res.text);
+    peek = false; showReport = false;
+    save();
+  } catch (e) {
+    if (!e || e.code !== "cancelled") lastError = { ...(e || { code: "unknown" }), transition: true };
+  }
+  busy = false; ctl = null;
+  render();
+  window.scrollTo(0, 0);
+  if (result) await narrate(game.chapters.length - 1);
+}
+
 function errorCopy(e) {
   const c = e && e.code;
   if (c === "not_granted" || c === "sampling_disabled") return "未获准调用 Claude，故事无法继续。请在本页的权限设置中允许后刷新。";
@@ -473,6 +508,7 @@ function render() {
   const main = $("#main"), panel = $("#panel");
   $("#restartBtn").hidden = !game;
   if (!game) {
+    $("#brandTitle").textContent = "异章";
     panel.hidden = true;
     $("#date").textContent = "";
     main.innerHTML = renderIntro();
@@ -480,6 +516,7 @@ function render() {
     return;
   }
   const st = current().state;
+  $("#brandTitle").textContent = era().title;
   $("#date").textContent = st.date || "";
   panel.hidden = false;
   panel.innerHTML = renderPanel(st);
@@ -500,15 +537,19 @@ function render() {
         : `${head}<div class="notice"><span>${lastError && lastError.narrate && i === game.chapters.length - 1 ? esc(errorCopy(lastError)) + " " : ""}这一回的事已经定下，还没写成文字。下面的军情就是本回发生的事。</span><div class="row"><button class="ui-btn" type="button" data-narrate="${i}" ${busy || !llm ? "disabled" : ""}>写成这一回</button></div></div>`;
     html += `<section class="chapter" id="ch-${i}">
       ${body}
-      ${i > 0 && known.length ? `<details class="events" ${c.text ? "" : "open"}><summary>本回军情 · ${known.length} 条</summary><ul>${known.map(e => `<li class="${e.known === false ? "secret" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.known === false ? `<em>暗</em>` : ""}</li>`).join("")}</ul></details>` : ""}
+      ${(i > 0 || !c.text) && known.length ? `<details class="events" ${c.text ? "" : "open"}><summary>本回军情 · ${known.length} 条</summary><ul>${known.map(e => `<li class="${e.known === false ? "secret" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.known === false ? `<em>暗</em>` : ""}</li>`).join("")}</ul></details>` : ""}
       ${(c.state.autonomous || []).length ? `<div class="auto"><h4>前方自决</h4><ul>${c.state.autonomous.map(a => `<li><b>${esc(a.who)}</b>${esc(a.did)}</li>`).join("")}</ul></div>` : ""}
-      ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
+      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
     </section>`;
     if (c.decision) html += `<div class="divider">· · ·</div>`;
   });
 
-  if (busy === "sim") {
-    html += `<div class="decision"><span>汉中王令</span><b>${esc(game.pending)}</b></div>
+  if (busy === "transition") {
+    html += `<section class="chapter" id="live">
+        <p class="writing" id="writing"><span>岁月流转，推演其间数年<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">先不推了</button></p>
+      </section>`;
+  } else if (busy === "sim") {
+    html += `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(game.pending)}</b></div>
       <section class="chapter" id="live">
         <p class="writing" id="writing"><span>驿马奔驰，各方正在行动<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
       </section>`;
@@ -537,7 +578,7 @@ function renderStream() {
 function renderChoices(st) {
   const off = !llm;
   return `<div class="choices">
-    <h3>汉中王当如何决断</h3>
+    <h3>${esc(era().playerTitle)}当如何决断</h3>
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
     ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
@@ -546,12 +587,12 @@ function renderChoices(st) {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
         return `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${c.canon ? `<span class="star" title="演义中的做法">★</span>` : ""}${esc(c.label)}${by.length ? `<em class="by">${esc(by.join("、"))}之议</em>` : ""}</b><span>${esc(c.detail)}</span></button>`;
       }).join("")}
-      <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>${era().starts[game.start].waitIsCanon ? `<span class="star" title="演义中的做法">★</span>` : ""}不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
+      <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>${E.startOf(game).waitIsCanon ? `<span class="star" title="演义中的做法">★</span>` : ""}不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
     </div>
     ${renderPolicy(st)}
     <div class="own">
       <label for="ownOrder">或者亲书一道手令（谁去、做什么、怎么做）</label>
-      <textarea id="ownOrder" placeholder="例：遣简雍星夜赴江陵，令糜芳将家眷送往成都，另选廖化代守公安。"></textarea>
+      <textarea id="ownOrder" placeholder="${esc(era().orderExample || "")}"></textarea>
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off ? "disabled" : ""}>发出手令</button></div>
     </div>
   </div>`;
@@ -562,18 +603,19 @@ function renderPolicy(st) {
   const active = era().delegates.filter(n => { const f = fig(n); return f && f.where !== "成都" && f.where !== "已故"; });
   return `<div class="policy">
     <h3>方略与授权</h3>
-    <p class="hint">驿马到江陵要十余日，到樊城还要更久，前方不能事事等你。授权"便宜行事"的人会按自己的判断和你的方略当机立断。方略和授权随下一道命令一并送出。</p>
+    <p class="hint">驿马往返动辄十天半月，前方不能事事等你。授权"便宜行事"的人会按自己的判断和你的方略当机立断。方略和授权随下一道命令一并送出。</p>
     ${active.map(n => `<div class="power"><span class="who">${n}</span><div class="seg" role="group" aria-label="${n}的授权">${Object.keys(POWERS).map(p => `<button type="button" data-who="${n}" data-power="${p}" aria-pressed="${game.policy.powers[n] === p}" title="${POWERS[p]}">${p}</button>`).join("")}</div><span class="desc">${POWERS[game.policy.powers[n]]}</span></div>`).join("")}
     <label for="policyText">总方略（前方将帅据此自决）</label>
-    <textarea id="policyText" placeholder="例：以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师，孔明可先斩后奏。">${esc(game.policy.text)}</textarea>
+    <textarea id="policyText" placeholder="${esc(era().policyExample || "")}">${esc(game.policy.text)}</textarea>
   </div>`;
 }
 
 function renderEnding(st) {
   const e = st.ending;
+  const nx = E.nextEra(game);
   const hiddenAll = [...new Set(game.chapters.flatMap(c => c.state.hidden || []))];
   return `<div class="ending">
-    <div class="k">终章 · ${esc(era().starts[game.start].label)}</div>
+    <div class="k">${e.type === "败局" ? "败局" : "终章"} · ${esc(era().name)} · ${esc(E.startOf(game).label)}</div>
     <h3>${esc(e.title)}</h3>
     <p>${esc(e.summary)}</p>
     <h4>与原著对照</h4><p>${esc(e.vs_canon)}</p>
@@ -583,7 +625,8 @@ function renderEnding(st) {
     <div class="reveals">${game.chapters.map((c, i) => (c.state.foreshadow || []).map(f => `<div class="reveal"><span class="where">第${cn(i + 1)}回</span><q>${esc(f.line)}</q><p>${esc(f.truth)}</p></div>`).join("")).join("")}</div>
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
-  <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button><button class="primary" id="againBtn" type="button">另开一局</button></div></div>`;
+  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
+  <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>进入${esc(nx.label)}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
 }
 
 // 原著对照：每条原著事件与背景大事最后怎样了
@@ -599,7 +642,6 @@ function renderCanonTable() {
 
 /* 战报：终局后把每回的全部事件（含暗线）、自决、伏笔、选项与命令按回列出 */
 function renderReport() {
-  const FC = { "刘": "shu", "孙": "wu", "曹": "wei", "争": "war" };
   const keys = era().reportPlaces;
   const chs = game.chapters, end = current().state.ending;
   const chapter = (c, i) => {
@@ -611,9 +653,9 @@ function renderReport() {
     const evs = s.events || [];
     return `<article class="rp-ch">
       <header><span class="rp-no">第${cn(i + 1)}回</span><span class="rp-date">${esc(s.date)}</span>
-        <span class="rp-places">${keys.map(k => `<span class="rp-pl" style="background:var(--${FC[s.places[k]] || "war"})">${k}·${esc(s.places[k])}</span>`).join("")}</span></header>
+        <span class="rp-places">${keys.map(k => `<span class="rp-pl" style="background:var(${factions()[s.places[k]] || "--war"})">${k}·${esc(s.places[k])}</span>`).join("")}</span></header>
       <div class="rp-g">${Object.keys(era().gauges).map(k => `${k} <b>${s.gauges[k]}</b>${delta(k)}`).join("　")}</div>
-      ${i > 0 && evs.length ? `<h4>本回事件<span class="rp-m">　${evs.length} 条，当时汉中王得知 ${evs.filter(e => e.known !== false).length} 条</span></h4>
+      ${i > 0 && evs.length ? `<h4>本回事件<span class="rp-m">　${evs.length} 条，当时${esc(era().playerTitle)}得知 ${evs.filter(e => e.known !== false).length} 条</span></h4>
       <ol class="rp-ev">${evs.map(e => `<li class="${e.known === false ? "dark" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b><span class="rp-m">@${esc(e.where)}</span> ${esc(e.what)}${e.why ? `<span class="rp-m">（${esc(e.why)}）</span>` : ""} → ${esc(e.result)}${e.known === false ? "<em>暗</em>" : ""}</li>`).join("")}</ol>` : ""}
       ${(s.autonomous || []).length ? `<h4>前方自决</h4><ul>${s.autonomous.map(a => `<li><b>${esc(a.who)}</b> ${esc(a.did)}</li>`).join("")}</ul>` : ""}
       ${(s.foreshadow || []).length ? `<h4>伏笔</h4><ul>${s.foreshadow.map(f => `<li>「${esc(f.line)}」<span class="rp-m"> → ${esc(f.truth)}</span></li>`).join("")}</ul>` : ""}
@@ -621,14 +663,16 @@ function renderReport() {
       ${(s.delivered || []).length ? `<h4>本回送达的军令</h4><ul>${s.delivered.map(o => `<li>${esc(E.orderLine(o))}</li>`).join("")}</ul>` : ""}
       ${(s.counsel || []).length ? `<h4>谋士进言</h4><ul>${s.counsel.map(c => `<li><b>${esc(c.who)}</b><span class="rp-m">（${esc(c.how)}）</span> ${esc(c.says)}</li>`).join("")}</ul>` : ""}
       ${(s.choices || []).length ? `<h4>当时的选项</h4><ul>${s.choices.map(o => `<li><b>${esc(o.label)}</b><span class="rp-m">　${esc(o.detail)}</span></li>`).join("")}</ul>` : ""}
-      ${c.decision ? `<div class="decision"><span>汉中王令</span><b>${esc(c.decision)}</b></div>` : ""}
+      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b></div>` : ""}
     </article>`;
   };
   return `<div class="story report">
-    <div class="rp-top"><h2>战报 · ${esc(era().starts[game.start].label)}</h2><button class="ui-btn" id="backBtn" type="button">回到故事</button></div>
+    <div class="rp-top"><h2>战报 · ${esc(E.startOf(game).label)}</h2><button class="ui-btn" id="backBtn" type="button">回到故事</button></div>
     <p class="rp-verdict">结局「${esc(end.title)}」　${esc(end.summary)}</p>
+    ${(game.past || []).length ? `<p class="rp-m">此前：${game.past.map(p => { const l = p.chapters[p.chapters.length - 1].state.ending; return `《${esc(E.era(p).name)}》${l ? "「" + esc(l.title) + "」" : ""}`; }).join("　")}</p>` : ""}
+    ${(current().state.years || []).length ? `<h4>其间数年</h4><ul>${current().state.years.map(y => `<li><span class="rp-m">${esc(y.when)}</span> ${esc(y.what)}</li>`).join("")}</ul>` : ""}
     ${renderCanonTable()}
-    <p class="rp-m">灰色带“暗”字的事件，是那一回结束时汉中王还不知道的。</p>
+    <p class="rp-m">灰色带“暗”字的事件，是那一回结束时${esc(era().playerTitle)}还不知道的。</p>
     ${chs.map(chapter).join("")}
   </div>`;
 }
@@ -641,15 +685,15 @@ function renderPanel(st) {
   };
   return `
     <section class="map"><h3>${esc(era().mapTitle)}</h3>${renderMap(st.places)}
-      <div class="legend"><span><i style="background:var(--shu)"></i>刘</span><span><i style="background:var(--wu)"></i>孙</span><span><i style="background:var(--wei)"></i>曹</span><span><i style="background:var(--war)"></i>交战</span></div></section>
+      <div class="legend">${Object.entries(factions()).map(([k, v]) => `<span><i style="background:var(${v})"></i>${esc((era().factionNames || {})[k] || k)}</span>`).join("")}</div></section>
     <section><h3>大势</h3><div class="gauges">${Object.entries(era().gauges).map(([k, v]) => gauge(k, v[0])).join("")}</div></section>
     ${(st.forces || []).length ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.grain ? `<span class="grain">粮：${esc(f.grain)}</span>` : ""}${f.note ? `　${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
     ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
-    <section><h3>汉中王所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
+    <section><h3>${esc(era().playerTitle)}所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
     <section class="hidden-box"><h3>暗线</h3>${done || peek
       ? `<ul>${(st.hidden || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
-      : `<p>此刻另有 ${(st.hidden || []).length} 条汉中王不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
+      : `<p>此刻另有 ${(st.hidden || []).length} 条${esc(era().playerTitle)}不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
       ${peek && !done ? `<ul>${game.chapters.flatMap((c, i) => (c.state.foreshadow || []).map(f => `<li>第${cn(i + 1)}回「${esc(f.line)}」：${esc(f.truth)}</li>`)).join("")}</ul>` : ""}</section>
     ${renderUsage()}
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
@@ -661,8 +705,8 @@ function renderMap(places) {
     `<path d="M${x - 7},${y} L${x},${y - 9} L${x + 7},${y} Z" fill="var(--mount-fill)" stroke="var(--mount)" stroke-width="1" stroke-linejoin="round"/>`).join("") +
     `<text x="${lx}" y="${ly}" font-size="8" fill="var(--muted)" text-anchor="${anchor}">${name}</text>`).join("");
   const nodes = Object.entries(ev.places).map(([name, [x, y]]) => {
-    const h = places[name] || ev.starts.canon.state.places[name] || "争";
-    const color = `var(${FACTION[h] || "--war"})`;
+    const h = places[name] || Object.values(ev.starts)[0].state.places[name] || "争";
+    const color = `var(${factions()[h] || "--war"})`;
     const right = x > 360;
     return `<g><circle cx="${x}" cy="${y}" r="${name === ev.capital ? 7 : 5}" fill="${color}" stroke="var(--paper)" stroke-width="1.5"/>
       <text x="${right ? x - 9 : x + 9}" y="${y + 4}" font-size="11" fill="var(--ink)" text-anchor="${right ? "end" : "start"}">${name}</text></g>`;
@@ -676,16 +720,22 @@ function renderMap(places) {
 
 function renderIntro() {
   const saved = load();
-  const ev = era();
   return `<div class="intro story">
-    <h1>${esc(ev.title)}</h1>
-    <p class="tag">${esc(ev.tagline)}</p>
-    <p>${esc(ev.intro)}</p>
-    <p>选一个起点：</p>
-    <div class="starts">
-      ${Object.entries(ev.starts).map(([k, o]) => `<button class="start-card" type="button" data-start="${k}"><span class="k">${k === "canon" ? "起点一" : "起点二"}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
-    </div>
-    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).starts[saved.start].label)}，已到第${cn(saved.chapters.length)}回）</button></p>` : ""}
+    <h1>异章</h1>
+    <p class="tag">改变一个选择，让故事重新演化。你是刘备。</p>
+    ${ERA_ORDER.map((id, n) => {
+      const ev = AT.eras[id];
+      return `<section class="era-pick">
+        <h2><span class="era-no">时代${cn(n + 1)}</span>${esc(ev.name)}<small>${esc(ev.ref)}</small></h2>
+        <p class="tag">${esc(ev.tagline)}</p>
+        <p>${esc(ev.intro)}</p>
+        <div class="starts">
+          ${Object.entries(ev.starts).map(([k, o], m) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">起点${cn(m + 1)}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
+        </div>
+      </section>`;
+    }).join("")}
+    <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写。</p>
+    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · ${esc(E.startOf(saved).label)}，已到第${cn(saved.chapters.length)}回）</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
@@ -696,8 +746,8 @@ function renderIntro() {
 
 /* ───────── 交互 ───────── */
 
-function startGame(k) {
-  game = E.newGame("jingzhou", k);
+function startGame(eraId, k) {
+  game = E.newGame(eraId, k);
   lastError = null;
   save();
   render();
@@ -705,7 +755,7 @@ function startGame(k) {
 }
 
 function bindIntro() {
-  document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startGame(b.dataset.start));
+  document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startGame(b.dataset.era, b.dataset.start));
   const r = $("#resumeBtn");
   if (r) r.onclick = () => { game = load(); upgrade(game); render(); };
   const sk = $("#saveKey");
@@ -748,6 +798,8 @@ function bindStory() {
   if (stop) stop.onclick = () => ctl && ctl.abort();
   const retry = $("#retryBtn");
   if (retry) retry.onclick = () => decide(game.pending || "");
+  const nb = $("#nextBtn");
+  if (nb) nb.onclick = transition;
   const rb = $("#reportBtn");
   if (rb) rb.onclick = () => { showReport = true; render(); window.scrollTo(0, 0); };
   const again = $("#againBtn");

@@ -40,7 +40,15 @@
   E.POWERS = { "便宜行事": "可自行决定进退、调兵、守城与应对使者", "遇事请示": "大事须遣使回成都请示，其间固守待命" };
   const era = E.era = g => AT.eras[(g && g.era) || "jingzhou"];
   E.defaultPolicy = ev => ({ text: "", powers: Object.fromEntries((ev || AT.eras.jingzhou).delegates.map(d => [d, "便宜行事"])) });
-  const startOf = g => era(g).starts[g.start];
+  // 承接上一时代的开局没有预写，存在 g.inherited 里
+  const startOf = E.startOf = g => g.start === "inherited" ? g.inherited : era(g).starts[g.start];
+  const factionsOf = ev => ev.factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
+  // 玩家所在地随刘备移动：取人物表里刘备的所在，落在驿程节点上才算
+  const seatOf = E.seatOf = g => {
+    const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
+    const f = (st.figures || []).find(x => x.name === ev.player);
+    return (f && routeNodes(ev).find(n => String(f.where).includes(n))) || ev.seat;
+  };
 
   E.newGame = function (eraId, startId) {
     const ev = AT.eras[eraId], o = ev.starts[startId];
@@ -81,8 +89,9 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     const c = card(name);
     if (!c) return null;
     let t = c.titles[0];
-    for (const x of c.titles) if (x[0] <= ad) t = x;
-    return { title: t[1], address: t[2] };
+    let faction = c.faction;
+    for (const x of c.titles) if (x[0] <= ad) { t = x; if (x[3]) faction = x[3]; }
+    return { title: t[1], address: t[2], faction };
   };
   const TIER_NAME = { 1: "第一档", 2: "第二档", 3: "第三档" };
 
@@ -92,7 +101,7 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     const t = titleAt(name, ad);
     const ab = c.abilities ? Object.entries(c.abilities).map(([k, v]) => k + v).join("、") : "";
     const parts = [
-      `- ${name}〔${c.faction}〕${t.title}，称"${t.address}"。`,
+      `- ${name}〔${t.faction}〕${t.title}，称"${t.address}"。`,
       c.kin ? `${c.kin}。` : "",
       c.martial ? `武力${TIER_NAME[c.martial]}。` : "",
       ab ? `${ab}。` : "",
@@ -113,7 +122,7 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     const text = [JSON.stringify({ f: st.figures, fo: st.forces, p: st.plans, c: st.counsel }),
       ...g.chapters.slice(-2).map(c => JSON.stringify(c.state.events || [])),
       g.policy ? g.policy.text : "", startOf(g).setup, extra || ""].join("");
-    const core = [ev.player, ...ev.delegates, "孙权", "曹操"];
+    const core = [ev.player, ...ev.delegates, ...Object.values(ev.factionNames || {}), "孙权", "曹操"];
     return ev.cast.filter(n => core.includes(n) || text.includes(n));
   }
 
@@ -203,8 +212,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   /* ───────── 规则与格式 ───────── */
 
   function simRules(g) {
-    const ev = era(g);
-    return `你是《异章：${ev.name}》的世界推演者。这是以《三国演义》${ev.ref}为基线的反事实推演。${ev.player}（玩家）身在${ev.seat}，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。全部用中文书写，不得夹杂英文字母或任何外文。
+    const ev = era(g), seat = seatOf(g);
+    return `你是《异章：${ev.name}》的世界推演者。这是以《三国演义》${ev.ref}为基线的反事实推演。${ev.player}（玩家）此刻身在${seat}，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。全部用中文书写，不得夹杂英文字母或任何外文。
 
 推演原则：
 0. 以《三国演义》（毛宗岗本）为准：人物性格、事件、地理、兵力与年代以演义为基线；演义没写到的，才用史书补充；两者冲突时以演义为准。人物按人物卡行事。
@@ -216,17 +225,18 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 6. 敌方主动：每回先替各方（${ev.rivals}）谋划（写入 plans），按其目标与所知行动，再写事件。得知援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；玩家一方可以用计诱其误判。
 7. 本回时间推进约${ev.turnSpan[0]}日至${ev.turnSpan[1] === 30 ? "一月" : ev.turnSpan[1] + "日"}，写出其间四至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${ev.player}在本回末是否已得知（known）。
 8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-9. 全局约在${cnBig(ev.maxTurns - 1)}至${cnBig(ev.maxTurns)}回内收束（时间约到${ev.endBy}），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（${ev.decisive}），本回即为终章。
+9. 全局约在${cnBig(ev.maxTurns - 1)}至${cnBig(ev.maxTurns)}回内收束（时间约到${ev.endBy}），每回都要让局势有实质推进，不要原地相持；一旦出现决定性结局（${ev.decisive}），本回即为终章。原著的结局是：${ev.baseline || "（见原著）"}。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。
 
 谋士进言与决断选项：
 10. 先写 assessment，冷静判断${ev.player}此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
-11. 再写 counsel：${ev.player}身边的谋士各自进言，二至三条，各用其口吻，按人物卡的进言风格与才智。只有此刻身在${ev.seat}的人能当面进言（how 写"面陈"）；身在外地者只能以书信进言，how 写明发信的时间与地点，信件按驿程表在路上耽搁，所言只能依据他发信时所知。谋士之间可以意见相左。
+11. 再写 counsel：${ev.player}身边的谋士各自进言，二至三条，各用其口吻，按人物卡的进言风格与才智。只有此刻与${ev.player}同在${seat}的人能当面进言（how 写"面陈"）；身在外地者只能以书信进言，how 写明发信的时间与地点，信件按驿程表在路上耽搁，所言只能依据他发信时所知。谋士之间可以意见相左。
 12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（counsel 的 choice 写对应选项的序号，从1起），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
   }
 
   function simFormat(g) {
     const ev = era(g);
-    const placesEx = JSON.stringify(ev.starts.canon.state.places);
+    const placesEx = JSON.stringify(Object.values(ev.starts)[0].state.places);
+    const fk = Object.keys(factionsOf(ev)).map(k => `"${k}"`).join("");
     const gaugesEx = JSON.stringify(Object.fromEntries(Object.keys(ev.gauges).map(k => [k, 50])));
     const ids = canonIds(g);
     return `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
@@ -249,8 +259,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
-若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，counsel 与 choices 写 []。`;
+说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
+若本回为终章：ending 写 {"type":"成局或败局","title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，counsel 与 choices 写 []。`;
   }
 
   function narrateRules(g, ad, material) {
@@ -275,10 +285,10 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
     return `把${ev.player}的这道命令拆成需要送出或派出的各项。全部用中文。
 地点只能从这些里选：${routeNodes(ev).join("、")}。
-每项写：part（这一项做什么，二十字以内）、from（命令或兵马从哪里出发，通常是${ev.seat}）、to（送达或抵达之地；传令给某人，就取此人此刻所在之地）、tier（只传令写"信使"；派数百至两三千精兵、轻骑、轻舟写"轻兵"；派上万人或带辎重的兵马写"大军"）。派兵的同时附带传令的，只写兵马一项。
+每项写：part（这一项做什么，二十字以内）、from（命令或兵马从哪里出发，通常是${seatOf(g)}）、to（送达或抵达之地；传令给某人，就取此人此刻所在之地）、tier（只传令写"信使"；派数百至两三千精兵、轻骑、轻舟写"轻兵"；派上万人或带辎重的兵马写"大军"）。派兵的同时附带传令的，只写兵马一项。
 人物此刻所在：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
 命令：${decision}
-只输出一个 JSON 数组，例如 [{"part":"令关羽撤围回守江陵","from":"${ev.seat}","to":"樊城","tier":"信使"}]`;
+只输出一个 JSON 数组，例如 [{"part":"令某将移兵某地","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"信使"}]`;
   };
 
   E.parseRoutes = function (g, raw) {
@@ -289,7 +299,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     try {
       const node = x => nodes.find(n => String(x || "").includes(n)) || null;
       return JSON.parse(t.slice(a, b + 1)).filter(r => r && r.part).map(r => ({
-        part: String(r.part), from: node(r.from) || ev.seat, to: node(r.to),
+        part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
         tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使"
       }));
     } catch (e) { return []; }
@@ -299,9 +309,12 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
   E.scheduleOrders = function (g, routes) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
     const now = parseDate(st.date, yearOf(st.date));
+    const seat = seatOf(g);
     const fresh = routes.map(r => {
       const days = now == null || !r.to ? null : travelDays(ev, r.from, r.to, r.tier);
-      return { ...r, sent: now, arrive: days == null ? null : now + days + (MUSTER[r.tier] || 0) };
+      // 兵马不在玩家身边时，要先等命令由信使送到出发地
+      const relay = r.tier !== "信使" && r.from !== seat ? travelDays(ev, seat, r.from, "信使") || 0 : 0;
+      return { ...r, sent: now, arrive: days == null ? null : now + relay + days + (MUSTER[r.tier] || 0) };
     });
     return [...(st.orders || []), ...fresh];
   };
@@ -376,15 +389,11 @@ ${simFormat(g)}`;
   // 刘备的立场底线：不联曹、不降。违背的选项直接去掉。
   const STANCE_BREACH = /联曹|降曹|附曹|投曹|归曹|结好曹|通好曹|与曹[操魏]?(?:议和|结盟|联手|修好|讲和)|称臣于[曹魏]|向[曹魏][^，。]{0,4}称臣|降吴|降魏/;
 
-  E.parseSim = function (g, raw, orders) {
-    const ev = era(g);
-    const t = String(raw || "").replace(/```(json)?/g, "");
-    const a = t.indexOf("{"), b = t.lastIndexOf("}");
-    if (a < 0 || b < a) throw { code: "no_state" };
-    const s = JSON.parse(t.slice(a, b + 1));
-    const prev = g.chapters[g.chapters.length - 1].state;
+  // 把模型给出的局势补全、校验（地名、势力、数值、选项底线），prev 是上一回的局势
+  function normalize(g, s, prev) {
+    const ev = era(g), fk = Object.keys(factionsOf(ev));
     const places = { ...prev.places };
-    for (const [k, v] of Object.entries(s.places || {})) if (k in ev.places && ["刘", "孙", "曹", "争"].includes(v)) places[k] = v;
+    for (const [k, v] of Object.entries(s.places || {})) if (k in ev.places && fk.includes(v)) places[k] = v;
     s.places = places;
     const gauges = { ...prev.gauges };
     for (const k of Object.keys(ev.gauges)) {
@@ -396,16 +405,30 @@ ${simFormat(g)}`;
     if (!Array.isArray(s.forces) || !s.forces.length) s.forces = prev.forces || [];
     if (!Array.isArray(s.plans) || !s.plans.length) s.plans = prev.plans || [];
     for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "counsel"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
-    if (!s.events.length) throw { code: "no_state" };
     s.date = s.date || prev.date;
-    s.canon = mergeCanon(prev.canon, s.canon, allCanonIds(g), g.chapters.length + 1);
     const all = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label) : [];
     const ok = all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
     s.choices = ok.slice(0, 3);
     s.dropped = all.length - ok.length;
-    if (!s.ending && !s.choices.length) throw { code: "no_choices" };
     // 选项删去后，进言对应的序号按原序号重新映射
     s.counsel = s.counsel.map(c => ({ ...c, choice: s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
+    if (s.ending && !s.ending.type) s.ending.type = "成局";
+    return s;
+  }
+
+  const parseJSON = raw => {
+    const t = String(raw || "").replace(/```(json)?/g, "");
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a < 0 || b < a) throw { code: "no_state" };
+    return JSON.parse(t.slice(a, b + 1));
+  };
+
+  E.parseSim = function (g, raw, orders) {
+    const prev = g.chapters[g.chapters.length - 1].state;
+    const s = normalize(g, parseJSON(raw), prev);
+    if (!s.events.length) throw { code: "no_state" };
+    if (!s.ending && !s.choices.length) throw { code: "no_choices" };
+    s.canon = mergeCanon(prev.canon, s.canon, allCanonIds(g), g.chapters.length + 1);
     // 在途军令由代码按驿程表结算，不用模型自报
     const now = parseDate(s.date, yearOf(prev.date));
     const list = orders || prev.orders || [];
@@ -414,6 +437,102 @@ ${simFormat(g)}`;
     s.in_transit = s.orders.map(o => ({ order: o.part, eta: `${fmtDate(o.arrive)}${o.tier === "信使" ? "送达" : "抵"}${o.to}（${o.tier}）` }));
     s.latin = latinWords(s).length;
     return s;
+  };
+
+  /* ───────── 过渡：一个时代成局之后，快进到下一个时代的冲突爆发 ───────── */
+
+  const DRIVERS = `驱动力（持续存在的几股力量；条件满足时爆发成冲突，可以比原著早或晚，可以变形、攻守互换，但不会因玩家打得好而凭空消失）：
+- 刘备取益州：刘备欲跨有荆益。原著：建安十六至十九年入川取成都。
+- 曹操争汉中：曹操欲保关中、威胁益州；汉中在张鲁或刘备手中且曹操东线无大战时发动。原著：建安二十年曹操取汉中，二十四年刘备夺之。若刘备先取汉中，曹操仍会来攻，攻守互换。
+- 孙权取荆州全境：孙权欲据长江之险；荆州空虚、边界之争激化、东吴主力不被合肥牵制时发动。原著：建安二十年讨三郡、湘水划界；二十四年白衣渡江。鲁肃在世（至建安二十二年）偏向讨地议和，鲁肃死后吕蒙得势，偏向偷袭。
+- 曹魏保襄樊：刘备军逼近襄樊时，曹仁坚守、曹操遣援。水淹七军须秋雨、汉水暴涨。
+- 刘备北伐：益州、汉中稳定、荆州在手时，刘备欲兴复汉室。原著：建安二十四年关羽北伐襄樊；隆中对设想"荆州之军向宛洛，益州之众出秦川"。
+- 刘备伐吴：关羽死、荆州失时，复仇之心驱使刘备伐吴（原著夷陵之战）。`;
+
+  E.nextEra = function (g) {
+    const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
+    if (!st.ending || st.ending.type === "败局" || !ev.next || !AT.eras[ev.next.era]) return null;
+    return { id: ev.next.era, label: ev.next.label, gap: ev.next.gap, era: AT.eras[ev.next.era] };
+  };
+
+  E.buildTransitionPrompt = function (g) {
+    const ev = era(g), nx = AT.eras[ev.next.era], ref = Object.values(nx.starts)[0];
+    const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
+    const st = g.chapters[g.chapters.length - 1].state;
+    const from = parseDate(st.date, yearOf(st.date)) ?? 0, to = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
+    const bg = (AT.background || []).filter(b => bgDay(b) > from && bgDay(b) <= to + 120);
+    const names = new Set([...(st.figures || []).map(f => f.name), ...(ref.state.figures || []).map(f => f.name)]);
+    const ad = adOf(ref.state.date);
+    const cast = nx.cast.filter(n => names.has(n));
+    const summary = E.canonSummary(g).map(r => `${r.name}：${r.status}${r.note ? "（" + r.note + "）" : ""}`).join("；");
+    const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）：${c.state.chronicle || ""}`).join("\n");
+    return `你是《异章》的世界推演者，负责在两个时代之间快进。全部用中文书写，不得夹杂英文字母或任何外文。人物言行、才智与武艺一律按《三国演义》（毛宗岗本）与人物卡；演义没写到的，才用史书补充。
+
+【上一时代：${ev.name}（${ev.ref}）】
+原著结局：${ev.baseline}
+本局纪要：
+${log}
+本局结局：${st.ending.title}。${st.ending.summary}
+原著对照：${summary}
+本局末的局势：${JSON.stringify({ date: st.date, places: st.places, figures: st.figures, forces: st.forces, gauges: st.gauges, plans: st.plans, hidden: st.hidden })}
+
+【下一时代：${nx.name}（${nx.ref}）】
+原著中这个时代的背景：
+${nx.setting}
+原著开局局势（仅供参照，本局要按上一时代的结局改写）：${JSON.stringify(ref.state)}
+原著中这个时代的原著事件：${nx.canonEvents.map(c => `[${c.id}] ${c.name}（前提：${c.pre}）`).join("；")}
+
+${DRIVERS}
+
+【其间的背景大事】
+${bg.map(b => `- [${b.id}] ${b.name}（原著${b.when}）。前提：${b.pre}。结果：${b.result}`).join("\n") || "（无）"}
+
+【人物】
+${cast.map(n => cardText(n, ad)).join("\n")}
+
+快进规则：
+1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${ev.next.gap}）。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
+2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。
+3. 若快进中出现比原著更差的结局（如益州得而复失、刘备身死），写 ending（type 为"败局"），不进入下一时代。
+4. 写出下一时代开局的完整局势，并给刘备第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中刘备此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
+
+只输出一个 JSON 对象，不要任何其他文字，不加代码块标记：
+{
+  "label": "四到八字的起点名",
+  "setup": "本局开局与原著开局的不同之处及其由来，二百字以内",
+  "years": [{"when": "建安某年某月", "what": "其间大事，四十字以内"}],
+  "ending": null,
+  "state": 下一时代开局的局势，格式如下
+}
+years 写六至十二条，按时间先后。state 的格式：
+${simFormat(tg)}`;
+  };
+
+  // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
+  E.applyTransition = function (g, raw) {
+    const ev = era(g), nx = AT.eras[ev.next.era], ref = Object.values(nx.starts)[0];
+    const o = parseJSON(raw);
+    const years = (Array.isArray(o.years) ? o.years : []).filter(y => y && y.what);
+    const yEvents = years.map(y => ({ date: String(y.when || ""), who: "", where: "", what: String(y.what), result: "", known: true }));
+    const last = g.chapters[g.chapters.length - 1];
+    if (o.ending) {
+      g.chapters.push({ title: `第${cn(g.chapters.length + 1)}回`, text: "", state: { ...last.state, events: yEvents, ending: { ...o.ending, type: "败局" }, choices: [], counsel: [] } });
+      return "lost";
+    }
+    const tg = { era: nx.id, start: "inherited", chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
+    const s = normalize(tg, o.state || {}, JSON.parse(JSON.stringify(ref.state)));
+    if (!s.choices.length) throw { code: "no_choices" };
+    s.events = s.events.length ? s.events : yEvents;
+    s.years = years;
+    s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
+    s.orders = []; s.delivered = []; s.in_transit = [];
+    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy });
+    g.era = nx.id;
+    g.start = "inherited";
+    g.inherited = { label: o.label || "承接上局", blurb: "", setup: `【起点：承接《${ev.name}》】\n${o.setup || ""}`, tone: "" };
+    g.policy = E.defaultPolicy(nx);
+    g.chapters = [{ title: "第一回", text: "", state: s }];
+    return "next";
   };
 
   /* ───────── 说书：把已定之事写成文字 ───────── */

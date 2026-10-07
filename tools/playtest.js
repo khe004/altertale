@@ -20,7 +20,7 @@ const arg = (name, def) => {
 
 // 加载与网页相同的人物池、时代配置与引擎
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/jingzhou.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/jingzhou.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 const ERA = arg("era", "jingzhou");
 
@@ -28,6 +28,7 @@ const ERA = arg("era", "jingzhou");
 const ROLES = {
   sim: { model: arg("model", "sonnet"), effort: arg("effort", "") },
   route: { model: arg("route-model", "haiku"), effort: arg("route-effort", "low") },
+  transition: { model: arg("model", "sonnet"), effort: arg("effort", "") },
   player: { model: arg("player-model", "haiku"), effort: arg("player-effort", "") }
 };
 const SIM_TAG = ROLES.sim.model + (ROLES.sim.effort ? "-" + ROLES.sim.effort : "");
@@ -83,7 +84,9 @@ const STRATEGIES = {
 
 async function playerMove(strategy, g) {
   const st = g.chapters[g.chapters.length - 1].state;
-  if (strategy === "delegate" || strategy === "canon") return E.WAIT_ORDER;
+  if (strategy === "delegate") return E.WAIT_ORDER;
+  // 原著回归：有标 canon 的选项就选它，否则照演义不另发令
+  if (strategy === "canon") { const c = (st.choices || []).find(x => x.canon); return c ? c.label : E.WAIT_ORDER; }
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
   const single = strategy === "single";
   const events = (st.events || []).filter(e => e.known !== false).map(e => `${e.date} ${e.who}（${e.where}）${e.what}，${e.result}`);
@@ -109,28 +112,45 @@ ${single ? "只能从上面选一个，只输出它的序号。" : "可以选其
   return out.split("\n").filter(Boolean).pop().replace(/^\d+[.、]\s*/, "");
 }
 
+// 打一个时代；--continue 时，成局后过渡到下一时代接着打
+async function playEra(g, strategy, tag, result, write) {
+  while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < E.era(g).maxTurns + 1) {
+    const decision = await playerMove(strategy, g);
+    const routes = decision === E.WAIT_ORDER ? [] : E.parseRoutes(g, await claude(E.buildRoutePrompt(g, decision), "route"));
+    const orders = E.scheduleOrders(g, routes);
+    let state = null;
+    for (let attempt = 0; attempt < 2 && !state; attempt++) {
+      try { state = E.parseSim(g, await claude(E.buildSimPrompt(g, decision, orders), "sim"), orders); }
+      catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
+    }
+    if (!state) throw new Error("simulation output unparseable twice");
+    g.chapters[g.chapters.length - 1].decision = decision;
+    g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
+    write();
+    const keys = E.era(g).reportPlaces.map(k => `${k}:${state.places[k]}`).join(" ");
+    console.log(`[${tag}] ${E.era(g).name}第${E.cn(g.chapters.length)}回 ${state.date} | ${keys} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? ` | ${state.ending.type || "终章"}：${state.ending.title}` : ""}`);
+  }
+}
+
 async function runGame(start, strategy, n) {
-  const tag = `${start}/${strategy}/${SIM_TAG}/${n}`;
-  const file = path.join(OUT, `${start}-${strategy}-${SIM_TAG}-${n}.json`);
+  const tag = `${ERA}/${start}/${strategy}/${SIM_TAG}/${n}`;
+  const file = path.join(OUT, `${ERA}-${start}-${strategy}-${SIM_TAG}-${n}.json`);
   const g = E.newGame(ERA, start);
   g.policy.text = STRATEGIES[strategy].policy;
-  const result = { start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
+  const result = { era: ERA, start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
   const write = () => fs.writeFileSync(file, JSON.stringify(result, null, 1));
   try {
-    while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < E.era(g).maxTurns + 1) {
-      const decision = await playerMove(strategy, g);
-      const routes = decision === E.WAIT_ORDER ? [] : E.parseRoutes(g, await claude(E.buildRoutePrompt(g, decision), "route"));
-      const orders = E.scheduleOrders(g, routes);
-      let state = null;
-      for (let attempt = 0; attempt < 2 && !state; attempt++) {
-        try { state = E.parseSim(g, await claude(E.buildSimPrompt(g, decision, orders), "sim"), orders); }
-        catch (e) { if (e instanceof Error && !(e instanceof SyntaxError)) throw e; result.parseFailures++; }
-      }
-      if (!state) throw new Error("simulation output unparseable twice");
-      g.chapters[g.chapters.length - 1].decision = decision;
-      g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
+    await playEra(g, strategy, tag, result, write);
+    if (process.argv.includes("--continue") && E.nextEra(g)) {
+      const outcome = E.applyTransition(g, await claude(E.buildTransitionPrompt(g), "transition"));
       write();
-      console.log(`[${tag}] 第${E.cn(g.chapters.length)}回 ${state.date} | 江陵:${state.places["江陵"]} 公安:${state.places["公安"]} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? " | 终章：" + state.ending.title : ""}`);
+      const s0 = g.chapters[0].state;
+      console.log(`[${tag}] 过渡：${outcome === "next" ? `进入${E.era(g).name}「${E.startOf(g).label}」，${s0.date}` : "快进中出现败局"}`);
+      if (outcome === "next") {
+        for (const y of s0.years || []) console.log(`    ${y.when} ${y.what}`);
+        console.log(`    起点：${E.startOf(g).setup.replace(/\n/g, " ")}`);
+        await playEra(g, strategy, tag, result, write);
+      }
     }
   } catch (e) {
     result.error = String(e.message || e);
@@ -141,18 +161,22 @@ async function runGame(start, strategy, n) {
 }
 
 // 原著回归：照演义打下去，这些原著事件应当发生（已发生或变形发生）
-const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"] };
+const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "machao", "liuzhang"] };
 
 function canonReport(r) {
-  const rows = E.canonSummary(r.game);
-  const lines = rows.map(x => `  ${x.status.padEnd(4, "　")} ${x.name}${x.chapter ? `（第${E.cn(x.chapter)}回）` : ""}${x.note ? "：" + x.note : ""}`);
-  let verdict = "";
-  if (r.strategy === "canon") {
-    const want = REGRESSION[ERA] || [];
-    const miss = want.filter(id => !["已发生", "变形发生"].includes((rows.find(x => x.id === id) || {}).status));
-    verdict = miss.length ? `  回归未通过，未发生：${miss.map(id => rows.find(x => x.id === id).name).join("、")}` : "  回归通过：原著主干事件都已发生";
-  }
-  return lines.join("\n") + (verdict ? "\n" + verdict : "");
+  // 连玩时 game.past 里是先前的时代，逐个时代列出原著对照；回归只看起始时代
+  const segs = [...(r.game.past || []), r.game];
+  return segs.map((seg, k) => {
+    const rows = E.canonSummary(seg);
+    const lines = rows.map(x => `  ${x.status.padEnd(4, "　")} ${x.name}${x.chapter ? `（第${E.cn(x.chapter)}回）` : ""}${x.note ? "：" + x.note : ""}`);
+    let verdict = "";
+    if (r.strategy === "canon" && k === 0) {
+      const want = REGRESSION[seg.era] || [];
+      const miss = want.filter(id => !["已发生", "变形发生"].includes((rows.find(x => x.id === id) || {}).status));
+      verdict = miss.length ? `  回归未通过，未发生：${miss.map(id => rows.find(x => x.id === id).name).join("、")}` : "  回归通过：原著主干事件都已发生";
+    }
+    return `  《${E.era(seg).name}》\n` + lines.join("\n") + (verdict ? "\n" + verdict : "");
+  }).join("\n");
 }
 
 function summarize(r) {
