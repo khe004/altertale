@@ -80,7 +80,8 @@ const STRATEGIES = {
   script: { policy: "", player: null },
   delegate: { policy: "以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师；留守之将可先斩后奏，不必请示。", player: null },
   greedy: { policy: "", player: "你是一个贪功的玩家，一心乘胜北伐、扩大战果，认为东吴不足为虑，很少考虑后方。" },
-  canon: { policy: "", player: null },  // 回归测试：照演义，刘备在成都不知前方变故，从不另发令
+  // 回归测试：有标 canon 的选项就选它；没有就照演义中玩家此时的实际作为下令（演义里此时没有动作就不另发令）
+  canon: { policy: "", player: "你只按《三国演义》（毛宗岗本）行事：此刻演义中刘备实际做了什么，就下什么命令（可以不在选项里），哪怕不是最优。若演义中刘备此时没有另发命令，或他此时还不知道前方的变故，只输出 WAIT。" },
   single: { policy: "", player: "你是一个认真的普通玩家，目标是让结局与原著不同，但每回只能从给出的选项里选一个。" },
   random: { policy: "", player: null }
 };
@@ -88,8 +89,8 @@ const STRATEGIES = {
 async function playerMove(strategy, g) {
   const st = g.chapters[g.chapters.length - 1].state;
   if (strategy === "delegate") return E.WAIT_ORDER;
-  // 原著回归：有标 canon 的选项就选它，否则照演义不另发令
-  if (strategy === "canon") { const c = (st.choices || []).find(x => x.canon); return c ? c.label : E.WAIT_ORDER; }
+  // 原著回归：有标 canon 的选项就选它，否则由模拟玩家照演义下令
+  if (strategy === "canon") { const c = (st.choices || []).find(x => x.canon); if (c) return c.label; }
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
   if (strategy === "script") {
     const script = arg("script", "").split("|").filter(Boolean), k = g.chapters.length - 1;
@@ -114,6 +115,7 @@ ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 
 ${single ? "只能从上面选一个，只输出它的序号。" : "可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。"}`;
   const out = (await claude(prompt, "player")).trim();
+  if (strategy === "canon" && /WAIT/.test(out)) return E.WAIT_ORDER;
   if (single) {
     const k = Number((out.match(/\d/) || ["1"])[0]) - 1;
     return (st.choices[k] || st.choices[0]).label;
