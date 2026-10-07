@@ -107,11 +107,24 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     return parts.join("");
   }
 
-  const castText = (ev, ad) => `人物卡（${ad}年时的官爵与称谓；人物言行、才智与武艺一律按《三国演义》，不按史书；称谓必须合乎当年，不得用后来的封号、官职与谥号）：
-${ev.cast.map(n => cardText(n, ad)).join("\n")}`;
+  // 与当前局势相关的人物：玩家、授权将领、各方之主，以及在局势、近两回事件、命令、方略、起点里出现过的人
+  function relevantCast(g, extra) {
+    const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
+    const text = [JSON.stringify({ f: st.figures, fo: st.forces, p: st.plans, c: st.counsel }),
+      ...g.chapters.slice(-2).map(c => JSON.stringify(c.state.events || [])),
+      g.policy ? g.policy.text : "", startOf(g).setup, extra || ""].join("");
+    const core = [ev.player, ...ev.delegates, "孙权", "曹操"];
+    return ev.cast.filter(n => core.includes(n) || text.includes(n));
+  }
 
-  function titleTable(ev, ad) {
-    return ev.cast.filter(card).map(n => {
+  const castText = (g, ad, extra) => {
+    const ev = era(g), on = relevantCast(g, extra), off = ev.cast.filter(n => !on.includes(n));
+    return `人物卡（${ad}年时的官爵与称谓；人物言行、才智与武艺一律按《三国演义》，不按史书；称谓必须合乎当年，不得用后来的封号、官职与谥号）：
+${on.map(n => cardText(n, ad)).join("\n")}${off.length ? `\n其他可能登场的人物（按演义设定，用到时照其人物卡的身份行事）：${off.map(n => `${n}（${titleAt(n, ad).title}）`).join("、")}` : ""}`;
+  };
+
+  function titleTable(ev, ad, only) {
+    return ev.cast.filter(card).filter(n => !only || only(n)).map(n => {
       const c = card(n), t = titleAt(n, ad);
       return `- ${n}：${t.title}，称"${t.address}"${c.kin ? "；" + c.kin : ""}`;
     }).join("\n");
@@ -133,22 +146,40 @@ ${ev.cast.filter(n => card(n) && card(n).floor).map(n => `- ${n}：${card(n).flo
   const CANON_FINAL = ["已发生", "变形发生", "失效"];
   E.CANON_STATUS = ["已发生", "变形发生", "失效", "未到时"];
 
+  // 只把尚未了结的原著事件交给推演核对；已发生、变形发生的只列名字，省提示词
+  const isDone = x => x && (x.status === "已发生" || x.status === "变形发生");
+  const openCanon = g => {
+    const cs = g.chapters[g.chapters.length - 1].state.canon || {};
+    return era(g).canonEvents.filter(c => !isDone(cs[c.id]));
+  };
+  // 背景大事只取原著时间在当前之后约四个月内、尚未了结的
+  const bgDay = b => (b.year - 219) * 360 + (b.month - 1) * 30 + 15;
+  const openBackground = g => {
+    const st = g.chapters[g.chapters.length - 1].state, cs = st.canon || {};
+    const now = parseDate(st.date, yearOf(st.date)) ?? 0;
+    return (AT.background || []).filter(b => !isDone(cs[b.id]) && bgDay(b) <= now + 120);
+  };
+
   function canonText(g) {
-    const ev = era(g), st = g.chapters[g.chapters.length - 1].state, cs = st.canon || {};
+    const ev = era(g), cs = g.chapters[g.chapters.length - 1].state.canon || {};
+    const done = ev.canonEvents.filter(c => isDone(cs[c.id]));
+    const open = openCanon(g);
     return `原著事件池（逐条核对前提：前提仍在，倾向于照原著或变形发生；前提不成立，就不得照搬，至多以弱化的形式发生）：
-${ev.canonEvents.map(c => `- [${c.id}] ${c.name}（${c.ref}）。前提：${c.pre}。原著结果：${c.result}。当前：${cs[c.id] ? cs[c.id].status + (cs[c.id].note ? "，" + cs[c.id].note : "") : "未到时"}`).join("\n")}`;
+${done.length ? `已了结：${done.map(c => `${c.name}（${cs[c.id].status}）`).join("、")}。\n` : ""}待核对：
+${open.map(c => `- [${c.id}] ${c.name}（${c.ref}）。前提：${c.pre}。原著结果：${c.result}。当前：${cs[c.id] ? cs[c.id].status + (cs[c.id].note ? "，" + cs[c.id].note : "") : "未到时"}`).join("\n") || "（无）"}`;
   }
 
   function backgroundText(g) {
-    const ev = era(g), st = g.chapters[g.chapters.length - 1].state, cs = st.canon || {};
-    const from = adOf(ev.starts[g.start].state.date);
-    const items = (AT.background || []).filter(b => b.year >= from && b.year <= from + 1);
+    const cs = g.chapters[g.chapters.length - 1].state.canon || {};
+    const items = openBackground(g);
     if (!items.length) return "";
     return `背景大事（主要不由刘备决定，多数情况下会发生；各有前提，可以提前、推迟或失效）：
 ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提：${b.pre}。结果：${b.result}。当前：${cs[b.id] ? cs[b.id].status : "未到时"}`).join("\n")}`;
   }
 
-  const canonIds = g => [...era(g).canonEvents.map(c => c.id), ...(AT.background || []).map(b => b.id)];
+  // 本回要报告状态的条目
+  const canonIds = g => [...openCanon(g).map(c => c.id), ...openBackground(g).map(b => b.id)];
+  const allCanonIds = g => [...era(g).canonEvents.map(c => c.id), ...(AT.background || []).map(b => b.id)];
 
   function mergeCanon(prev, list, ids, chapter) {
     const out = JSON.parse(JSON.stringify(prev || {}));
@@ -202,7 +233,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "date": "本回末的时间，如 建安二十四年九月下旬",
   "plans": [{"side":"某方","goal":"目标，二十字以内","plan":"当前谋划，四十字以内","status":"筹备|待发|已发动|改图|搁置","knows":"他们此刻掌握的玩家一方情报，可含误判，三十字以内"}],
   "events": [{"date":"九月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
-  "canon": [{"id":"${ids[0]}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
+  "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
   "autonomous": [{"who":"人物","did":"未奉命令而自行做出的决定及结果，四十字以内"}],
   "places": ${placesEx},
   "forces": [{"name":"某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内"}],
@@ -217,11 +248,11 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告原著事件池与背景大事中尚未"已发生"的条目，id 只能取：${ids.join("、")}。places 必须包含上面全部地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
+说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是"刘""孙""曹""争"（争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
 若本回为终章：ending 写 {"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，counsel 与 choices 写 []。`;
   }
 
-  function narrateRules(g, ad) {
+  function narrateRules(g, ad, material) {
     const ev = era(g);
     return `你是《异章：${ev.name}》的说书人。推演者已经定下本回发生的事，你把它写成一回章回小说。
 
@@ -233,8 +264,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 6. 人物言行按演义设定。事件里有单挑的，按演义笔法写出兵器、回合与阵前气势。
 7. 称谓与官爵必须合乎${ad}年当时，遵守下面的称谓表，不得用后来的封号、官职与谥号。
 
-称谓表：
-${titleTable(ev, ad)}`;
+称谓表（本回涉及的人物）：
+${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
   }
 
   /* ───────── 驿程：把命令拆成要送出的各项，由驿程表算定送达日期 ───────── */
@@ -300,7 +331,7 @@ ${ev.setting}
 ${travelText(ev)}
 
 【人物】
-${castText(ev, ad)}
+${castText(g, ad, decision)}
 
 ${duelText(ev)}
 
@@ -366,7 +397,7 @@ ${simFormat(g)}`;
     for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "counsel"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
     if (!s.events.length) throw { code: "no_state" };
     s.date = s.date || prev.date;
-    s.canon = mergeCanon(prev.canon, s.canon, canonIds(g), g.chapters.length + 1);
+    s.canon = mergeCanon(prev.canon, s.canon, allCanonIds(g), g.chapters.length + 1);
     const all = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label) : [];
     const ok = all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
     s.choices = ok.slice(0, 3);
@@ -390,7 +421,8 @@ ${simFormat(g)}`;
     const ev = era(g), so = startOf(g);
     const s = g.chapters[i].state, prev = g.chapters[i - 1];
     const tail = prev && prev.text ? prev.text.split(/\n+/).filter(Boolean).slice(-2).join("\n") : "";
-    return `${narrateRules(g, adOf(s.date))}
+    const material = JSON.stringify([s.events, s.autonomous, s.counsel, s.foreshadow, s.delivered]) + ((prev && prev.text) || "").slice(-300);
+    return `${narrateRules(g, adOf(s.date), material)}
 
 ${so.tone || ""}
 
