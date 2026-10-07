@@ -239,6 +239,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
     <div class="brand"><span id="brandTitle">异章</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
     <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
+    <button class="ui-btn" id="exportBtn" type="button" hidden>导出</button>
     <button class="ui-btn" id="restartBtn" type="button" hidden>另开一局</button>
   </div>
 </header>
@@ -287,6 +288,29 @@ const current = () => game.chapters[game.chapters.length - 1];
 
 function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(game)); } catch (e) {} }
 function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) { return null; } }
+
+// 导出整局：正文、推演状态、原著对照与用量都在 game 里
+async function exportGame(g, btn) {
+  if (!g) return;
+  const d = new Date(), pad = n => String(n).padStart(2, "0");
+  const filename = `altertale-${g.era || "game"}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+  const data = JSON.stringify({ app: "altertale", exportedAt: d.toISOString(), game: g }, null, 1);
+  const flash = t => { if (!btn) return; const o = btn.textContent; btn.textContent = t; setTimeout(() => btn.textContent = o, 2000); };
+  let dl = null;
+  try { dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads") : null; } catch (e) {}
+  if (dl) {
+    try { await dl.save({ filename, data }); flash("已导出"); }
+    catch (e) { flash(e && e.code === "declined" ? "已取消" : "导出失败"); }
+    return;
+  }
+  try {
+    const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    flash("已导出");
+  } catch (e) { flash("导出失败"); }
+}
 
 /* ───────── 语言模型 ───────── */
 
@@ -507,6 +531,7 @@ function errorCopy(e) {
 function render() {
   const main = $("#main"), panel = $("#panel");
   $("#restartBtn").hidden = !game;
+  $("#exportBtn").hidden = !game;
   if (!game) {
     $("#brandTitle").textContent = "异章";
     panel.hidden = true;
@@ -735,7 +760,7 @@ function renderIntro() {
       </section>`;
     }).join("")}
     <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写。</p>
-    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · ${esc(E.startOf(saved).label)}，已到第${cn(saved.chapters.length)}回）</button></p>` : ""}
+    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · ${esc(E.startOf(saved).label)}，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
@@ -758,6 +783,8 @@ function bindIntro() {
   document.querySelectorAll("[data-start]").forEach(b => b.onclick = () => startGame(b.dataset.era, b.dataset.start));
   const r = $("#resumeBtn");
   if (r) r.onclick = () => { game = load(); upgrade(game); render(); };
+  const x = $("#exportSavedBtn");
+  if (x) x.onclick = () => exportGame(load(), x);
   const sk = $("#saveKey");
   if (sk) {
     try { $("#apiKey").value = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
@@ -825,6 +852,7 @@ function restart() {
 }
 
 $("#restartBtn").onclick = restart;
+$("#exportBtn").onclick = () => exportGame(game, $("#exportBtn"));
 $("#panelToggle").onclick = () => {
   const p = $("#panel");
   p.classList.toggle("collapsed");
