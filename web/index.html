@@ -102,6 +102,7 @@ main { min-width: 0; }
 .primary { font-family: var(--font-ui); font-size: 0.88rem; padding: 0.45rem 1.1rem; border: none; background: var(--indigo); color: var(--paper); border-radius: 3px; }
 .primary:disabled { opacity: 0.5; cursor: default; }
 
+.track { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.7rem; }
 .assess { font-size: 0.95rem; color: var(--muted); margin: 0 0 0.9rem; padding-left: 0.8rem; border-left: 2px solid var(--line); }
 .choice.quiet { background: transparent; border-style: dashed; }
 .policy { margin-top: 1.5rem; border-top: 1px solid var(--line); padding-top: 1rem; display: grid; gap: 0.6rem; font-family: var(--font-ui); font-size: 0.85rem; }
@@ -424,8 +425,9 @@ async function decide(decision) {
   game.pending = decision;
   ctl = new AbortController();
   render();
+  const railWas = { rail: game.rail, railOff: game.railOff };
   try {
-    let routes = [];
+    let routes = [], verdict = null;
     if (decision !== WAIT_ORDER) {
       // 先用快速档把命令拆成各项，驿程表算出送达日期，再交给推演
       const rp = E.buildRoutePrompt(game, decision), r0 = Date.now();
@@ -433,8 +435,11 @@ async function decide(decision) {
         const rr = await llm.call(rp, () => {}, ctl.signal, { tier: "quick" });
         recordUsage("route", game.chapters.length, rp, rr, r0);
         routes = E.parseRoutes(game, rr.text);
+        verdict = E.parseCanonVerdict(rr.text);
       } catch (e) { if (e && e.code === "cancelled") throw e; }
     }
+    // 照原著下令就留在原著轨上，按节拍推演；偏离就下轨
+    E.applyRail(game, decision, verdict);
     const orders = E.scheduleOrders(game, routes);
     const prompt = E.buildSimPrompt(game, decision, orders), t0 = Date.now();
     const res = await llm.call(prompt, () => {}, ctl.signal);
@@ -459,6 +464,7 @@ async function decide(decision) {
     delete game.pending;
     save();
   } catch (e) {
+    game.rail = railWas.rail; game.railOff = railWas.railOff;
     busy = false; ctl = null;
     if (!e || e.code !== "cancelled") lastError = e || { code: "unknown" };
     render();
@@ -617,6 +623,7 @@ function renderChoices(st) {
   const off = !llm;
   return `<div class="choices">
     <h3>${esc(era().playerTitle)}当如何决断</h3>
+    ${renderTrack()}
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
     ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
@@ -625,7 +632,7 @@ function renderChoices(st) {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
         return `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${c.canon ? `<span class="star" title="演义中的做法">★</span>` : ""}${esc(c.label)}${by.length ? `<em class="by">${esc(by.join("、"))}之议</em>` : ""}</b><span>${esc(c.detail)}</span></button>`;
       }).join("")}
-      <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>${E.startOf(game).waitIsCanon ? `<span class="star" title="演义中的做法">★</span>` : ""}不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
+      <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>${E.waitIsCanon(game) ? `<span class="star" title="演义中的做法">★</span>` : ""}不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
     </div>
     ${renderPolicy(st)}
     <div class="own">
@@ -634,6 +641,13 @@ function renderChoices(st) {
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off ? "disabled" : ""}>发出手令</button></div>
     </div>
   </div>`;
+}
+
+// 原著轨的提示：照 ★ 走故事按演义展开；偏离之后标明从第几回起改写
+function renderTrack() {
+  if (E.railBeat(game)) return `<p class="track">★ 为演义中的做法。照此走，故事按演义展开；一旦另作决断，历史就此改写。</p>`;
+  if (game.railOff) return `<p class="track">第${cn(game.railOff)}回起，你已改写历史。</p>`;
+  return "";
 }
 
 function renderPolicy(st) {
@@ -877,6 +891,8 @@ function upgrade(g) {
   delete g.pending;
   g.era = g.era || "jingzhou";
   g.policy = g.policy || E.defaultPolicy(E.era(g));
+  // 原著轨之前的旧存档：已经下过令的，不再按原著节拍推演
+  if (g.rail === undefined && g.chapters.length > 1) g.rail = false;
 }
 
 function boot(data) {

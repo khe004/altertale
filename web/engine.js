@@ -52,7 +52,7 @@
 
   E.newGame = function (eraId, startId) {
     const ev = AT.eras[eraId], o = ev.starts[startId];
-    return { era: eraId, start: startId, policy: E.defaultPolicy(ev), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
+    return { era: eraId, start: startId, rail: !!o.rails, policy: E.defaultPolicy(ev), chapters: [{ title: o.title, text: o.text, state: JSON.parse(JSON.stringify(o.state)) }] };
   };
 
   /* ───────── 驿程 ───────── */
@@ -283,16 +283,43 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
   }
 
+  /* ───────── 原著轨：一路照原著下令时，按原著节拍推演 ───────── */
+
+  // 当前这一回的原著节拍；不在原著开局、或已偏离原著，返回 null
+  const railBeat = E.railBeat = g => {
+    const path = era(g).canonPath, so = startOf(g);
+    if (!path || !so || !so.rails || g.rail === false) return null;
+    return path[g.chapters.length - 1] || null;
+  };
+  const nextBeat = g => railBeat(g) && era(g).canonPath[g.chapters.length] || null;
+  // 这道命令是否与原著做法相同：选了 ★ 选项；原著不另发令而玩家也不发令；或快速档判定本质相同（verdict）
+  E.matchesCanon = function (g, decision, verdict) {
+    const beat = railBeat(g);
+    if (!beat) return false;
+    if (decision === E.WAIT_ORDER) return !!beat.wait;
+    if (beat.wait) return false;
+    const star = (g.chapters[g.chapters.length - 1].state.choices || []).find(c => c.canon);
+    return decision === beat.label || (star && decision === star.label) || verdict === true;
+  };
+  // 下令时调用：偏离原著就下轨，本时代不再回来；railOff 记下是第几回的命令
+  E.applyRail = function (g, decision, verdict) {
+    if (railBeat(g) && !E.matchesCanon(g, decision, verdict)) { g.rail = false; g.railOff = g.chapters.length; }
+  };
+  // 原著中此刻是否不另发令（不发令按钮标 ★）
+  E.waitIsCanon = g => { const b = railBeat(g); return !!(b && b.wait); };
+  E.parseCanonVerdict = raw => { const m = String(raw || "").match(/原著[:：]\s*(是|否)/); return m ? m[1] === "是" : null; };
+
   /* ───────── 驿程：把命令拆成要送出的各项，由驿程表算定送达日期 ───────── */
 
   E.buildRoutePrompt = function (g, decision) {
-    const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
+    const ev = era(g), st = g.chapters[g.chapters.length - 1].state, beat = railBeat(g);
     return `把${ev.player}的这道命令拆成需要送出或派出的各项。全部用中文。
 地点只能从这些里选：${routeNodes(ev).join("、")}。
 每项写：part（这一项做什么，二十字以内）、from（命令或兵马从哪里出发，通常是${seatOf(g)}）、to（送达或抵达之地；传令给某人，就取此人此刻所在之地）、tier（只传令写"信使"；派数百至两三千精兵、轻骑、轻舟写"轻兵"；派上万人或带辎重的兵马写"大军"）。派兵的同时附带传令的，只写兵马一项。
 人物此刻所在：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
 命令：${decision}
-只输出一个 JSON 数组，例如 [{"part":"令某将移兵某地","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"信使"}]`;
+只输出一个 JSON 数组，例如 [{"part":"令某将移兵某地","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"信使"}]${beat && !beat.wait ? `
+另外判断：演义中${ev.player}此时的做法是「${beat.label}」。这道命令与它是否本质相同（派的人、去向和意图一致即算相同，措辞和细节不同无妨；多出或少了关键的一步就算不同）？在 JSON 数组之后另起一行，只写"原著：是"或"原著：否"。` : ""}`;
   };
 
   E.parseRoutes = function (g, raw) {
@@ -336,8 +363,15 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const st = { ...cur };
     for (const k of ["events", "foreshadow", "autonomous", "chronicle", "assessment", "choices", "counsel", "orders", "in_transit", "latin", "dropped", "delivered", "canon"]) delete st[k];
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).map(evLine).join("\n") || c.state.chronicle || ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
-    const budget = n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限，只在决断时刻停下；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
-    const last = n >= ev.maxTurns ? `\n本回为终章，给出 ending。从此刻一直推演到本时代定局（${ev.decisive}）为止，不受上面的日数限制，可以跨越数月乃至一年以上；其间不再请${ev.player}决断，前方按此刻的兵力、已下达的命令、方略与各人性格行事，不得调来未奉命的人马。事件可以多写几条，按时间先后把这段路走完。` : "";
+    const beat = railBeat(g), nb = nextBeat(g);
+    const rail = beat ? `
+
+【原著节拍】${ev.player}这道命令与演义中的做法相同，本回照原著推演。演义中接下来是：
+${beat.story}
+要求：本回推演到${beat.to}为止，不适用推演原则第7、9条的节奏。上面写到的事件、结果、人物去留与时间都照原著；你可以补充细节、人物言行和其他各方的动静，但不得改变结果，也不得写出下一段的事。canon 里把这些报为"已发生"（细节有出入可报"变形发生"）：${beat.fulfills.join("、") || "（无）"}。
+${nb ? (nb.wait ? `演义中${ev.player}接下来没有另发命令：choices 三项都不是原著做法，都不标 canon。` : `choices 的第一项必须是演义中${ev.player}接下来的做法：label 写"${nb.label}"，detail 写此举的利弊，"canon": true；另两项方向不同，不标 canon。`) : `本回为终章，照原著给出 ending，type 写"成局"${beat.ending ? `，title 写"${beat.ending}"` : ""}。`}` : "";
+    const budget = beat ? "" : n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限，只在决断时刻停下；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
+    const last = beat ? "" : n >= ev.maxTurns ? `\n本回为终章，给出 ending。从此刻一直推演到本时代定局（${ev.decisive}）为止，不受上面的日数限制，可以跨越数月乃至一年以上；其间不再请${ev.player}决断，前方按此刻的兵力、已下达的命令、方略与各人性格行事，不得调来未奉命的人马。事件可以多写几条，按时间先后把这段路走完。` : "";
     const now = parseDate(cur.date, yearOf(cur.date));
     const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
     const ad = adOf(cur.date);
@@ -382,7 +416,7 @@ ${decision}
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
 ${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
 
-请推演第${cn(n)}回${n >= ev.maxTurns ? "（终章）。" : `，推演到下一个需要${ev.player}决断的时刻，`}${n >= ev.maxTurns ? "" : `在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。`}${budget}${last}
+${beat ? `请推演第${cn(n)}回，照原著节拍推演到${beat.to}。` : `请推演第${cn(n)}回${n >= ev.maxTurns ? "（终章）。" : `，推演到下一个需要${ev.player}决断的时刻，`}${n >= ev.maxTurns ? "" : `在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。`}`}${budget}${last}${rail}
 
 ${simFormat(g)}`;
   };
@@ -434,6 +468,18 @@ ${simFormat(g)}`;
     if (!s.events.length) throw { code: "no_state" };
     if (!s.ending && !s.choices.length) throw { code: "no_choices" };
     s.canon = mergeCanon(prev.canon, s.canon, allCanonIds(g), g.chapters.length + 1);
+    // 原著轨：下一拍的原著做法必须是第一个选项，且只有它标 ★
+    const nb = nextBeat(g);
+    if (nb && s.choices.length) {
+      const old = s.choices;
+      for (const c of old) delete c.canon;
+      if (!nb.wait) {
+        const star = old.find(c => c.label === nb.label) || { label: nb.label, detail: nb.detail || "" };
+        star.canon = true;
+        s.choices = [star, ...old.filter(c => c !== star)].slice(0, 3);
+        s.counsel = s.counsel.map(c => { const k = s.choices.indexOf(old[c.choice - 1]); return { ...c, choice: k + 1 }; });
+      }
+    }
     // 在途军令由代码按驿程表结算，不用模型自报
     const now = parseDate(s.date, yearOf(prev.date));
     const list = orders || prev.orders || [];
@@ -585,7 +631,8 @@ ${simFormat(tg)}`;
     s.years = years;
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
     s.orders = []; s.delivered = []; s.in_transit = [];
-    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy });
+    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff });
+    g.rail = false; delete g.railOff;  // 承接的开局没有原著节拍
     g.era = nx.id;
     g.start = "inherited";
     g.inherited = { label: o.label || "承接上局", blurb: "", setup: `【起点：承接《${ev.name}》】\n${o.setup || ""}`, tone: "" };

@@ -90,7 +90,10 @@ async function playerMove(strategy, g) {
   const st = g.chapters[g.chapters.length - 1].state;
   if (strategy === "delegate") return E.WAIT_ORDER;
   // 原著回归：有标 canon 的选项就选它，否则由模拟玩家照演义下令
-  if (strategy === "canon") { const c = (st.choices || []).find(x => x.canon); if (c) return c.label; }
+  if (strategy === "canon") {
+    if (E.waitIsCanon(g)) return E.WAIT_ORDER;
+    const c = (st.choices || []).find(x => x.canon); if (c) return c.label;
+  }
   if (strategy === "random") return st.choices[Math.floor(Math.random() * st.choices.length)].label;
   if (strategy === "script") {
     const script = arg("script", "").split("|").filter(Boolean), k = g.chapters.length - 1;
@@ -127,7 +130,11 @@ ${single ? "只能从上面选一个，只输出它的序号。" : "可以选其
 async function playEra(g, strategy, tag, result, write) {
   while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < E.era(g).maxTurns + 1) {
     const decision = await playerMove(strategy, g);
-    const routes = decision === E.WAIT_ORDER ? [] : E.parseRoutes(g, await claude(E.buildRoutePrompt(g, decision), "route"));
+    const raw = decision === E.WAIT_ORDER ? "" : await claude(E.buildRoutePrompt(g, decision), "route");
+    const routes = raw ? E.parseRoutes(g, raw) : [];
+    const onRail = !!E.railBeat(g);
+    E.applyRail(g, decision, E.parseCanonVerdict(raw));
+    if (onRail && !E.railBeat(g)) console.log(`[${tag}] 第${E.cn(g.chapters.length)}回的命令偏离原著，转入自由推演`);
     const orders = E.scheduleOrders(g, routes);
     let state = null;
     for (let attempt = 0; attempt < 2 && !state; attempt++) {
@@ -149,7 +156,7 @@ async function playEra(g, strategy, tag, result, write) {
     g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
     write();
     const keys = E.era(g).reportPlaces.map(k => `${k}:${state.places[k]}`).join(" ");
-    console.log(`[${tag}] ${E.era(g).name}第${E.cn(g.chapters.length)}回 ${state.date} | ${keys} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? ` | ${state.ending.type || "终章"}：${state.ending.title}` : ""}`);
+    console.log(`[${tag}] ${E.era(g).name}第${E.cn(g.chapters.length)}回${E.railBeat(g) || (onRail && g.rail !== false) ? "（原著轨）" : ""} ${state.date} | ${keys} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? ` | ${state.ending.type || "终章"}：${state.ending.title}` : ""}`);
   }
 }
 
