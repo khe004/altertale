@@ -20,7 +20,7 @@ const arg = (name, def) => {
 
 // 加载与网页相同的人物池、时代配置与引擎
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/jingzhou.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 const ERA = arg("era", "jingzhou");
 
@@ -174,7 +174,7 @@ async function runGame(start, strategy, n) {
   const write = () => fs.writeFileSync(file, JSON.stringify(result, null, 1));
   try {
     await playEra(g, strategy, tag, result, write);
-    if (process.argv.includes("--continue") && E.nextEra(g)) {
+    while (process.argv.includes("--continue") && E.nextEra(g)) {
       const onRail = !!E.canonTransition(g);
       const outcome = onRail ? E.applyCanonTransition(g) : E.applyTransition(g, await claude(E.buildTransitionPrompt(g), "transition"));
       if (onRail) console.log(`[${tag}] 一路照原著，其间数年照原著快进`);
@@ -196,7 +196,7 @@ async function runGame(start, strategy, n) {
 }
 
 // 原著回归：照演义打下去，这些原著事件应当发生（已发生或变形发生）
-const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "zhangren", "liuzhang"] };
+const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "zhangren", "liuzhang"], hanzhong: ["tiandang", "dingjunshan", "kongying", "yangxiu", "hanzhongwang"] };
 
 function canonReport(r) {
   // 连玩时 game.past 里是先前的时代，逐个时代列出原著对照；回归只看起始时代
@@ -205,7 +205,7 @@ function canonReport(r) {
     const rows = E.canonSummary(seg);
     const lines = rows.map(x => `  ${x.status.padEnd(4, "　")} ${x.name}${x.chapter ? `（第${E.cn(x.chapter)}回）` : ""}${x.note ? "：" + x.note : ""}`);
     let verdict = "";
-    if (r.strategy === "canon" && k === 0) {
+    if (r.strategy === "canon") {
       const want = REGRESSION[seg.era] || [];
       const miss = want.filter(id => !["已发生", "变形发生"].includes((rows.find(x => x.id === id) || {}).status));
       verdict = miss.length ? `  回归未通过，未发生：${miss.map(id => rows.find(x => x.id === id).name).join("、")}` : "  回归通过：原著主干事件都已发生";

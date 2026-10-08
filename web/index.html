@@ -262,6 +262,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/characters.js"></script>
 <script src="data/background.js"></script>
 <script src="data/eras/ruchuan.js"></script>
+<script src="data/eras/hanzhong.js"></script>
 <script src="data/eras/jingzhou.js"></script>
 <script src="engine.js"></script>
 <script>
@@ -272,7 +273,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "jingzhou"];
+const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
@@ -825,7 +826,7 @@ function renderIntro() {
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上荆州的原著开局。</p>
+    <p class="rp-m">三个时代可以连着打：入川打完若没有输，接着进入汉中之争，再接荆州之战。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
