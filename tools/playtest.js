@@ -128,7 +128,9 @@ ${single ? "只能从上面选一个，只输出它的序号。" : "可以选其
 
 // 打一个时代；--continue 时，成局后过渡到下一时代接着打
 async function playEra(g, strategy, tag, result, write) {
-  while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < E.era(g).maxTurns + 1) {
+  // --turns N：只打 N 回就停（复现某局的前几回）
+  const cap = Math.min(E.era(g).maxTurns, +arg("turns", "99")) + 1;
+  while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < cap) {
     const decision = await playerMove(strategy, g);
     const raw = decision === E.WAIT_ORDER ? "" : await claude(E.buildRoutePrompt(g, decision), "route");
     const routes = raw ? E.parseRoutes(g, raw) : [];
