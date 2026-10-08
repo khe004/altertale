@@ -234,7 +234,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 谋士进言与决断选项：
 10. 先写 assessment，冷静判断${ev.player}此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
 11. 再写 counsel：${ev.player}身边的谋士各自进言，二至三条，各用其口吻，按人物卡的进言风格与才智。只有此刻与${ev.player}同在${seat}的人能当面进言（how 写"面陈"）；身在外地者只能以书信进言，how 写明发信的时间与地点，信件按驿程表在路上耽搁，所言只能依据他发信时所知。谋士之间可以意见相左。
-12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（counsel 的 choice 写对应选项的序号，从1起），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。谋士献的是险计、急计（如奇袭、直取）时，选项照原样保留它的锋芒，不得缩成稳妥的小动作；${ev.player}选了它，按兵力、时机、内应、人心与对方的准备如实判定成败，不预设失败。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
+12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（choices 的 by 写这一项是哪位谋士的主张，必须就是他在 says 里说的那个做法；谋士的主张没有成为选项，就不写他；没有谋士主张的选项 by 写空字符串），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。谋士献的是险计、急计（如奇袭、直取）时，选项照原样保留它的锋芒，不得缩成稳妥的小动作；${ev.player}选了它，按兵力、时机、内应、人心与对方的准备如实判定成败，不预设失败。选项要具体：派谁、去哪、做什么、派信使、轻兵还是大军。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
   }
 
   function simFormat(g) {
@@ -259,8 +259,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "foreshadow": [{"line":"伏笔细节，三十字以内","truth":"真相，四十字以内"}],
   "chronicle": "本回纪要，一句，三十字以内",
   "assessment": "${ev.player}此刻的处境与手中筹码，六十字以内",
-  "counsel": [{"who":"谋士","how":"面陈","says":"进言内容，五十字以内","choice":1}],
-  "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内"}],
+  "counsel": [{"who":"谋士","how":"面陈","says":"进言内容，五十字以内"}],
+  "choices": [{"label":"决断，二十字以内","detail":"考量与代价，四十字以内","by":"主张此项的谋士，没有写空字符串"}],
   "ending": null
 }
 说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
@@ -449,8 +449,11 @@ ${simFormat(g)}`;
     const ok = all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
     s.choices = ok.slice(0, 3);
     s.dropped = all.length - ok.length;
-    // 选项删去后，进言对应的序号按原序号重新映射
-    s.counsel = s.counsel.map(c => ({ ...c, choice: s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
+    // 进言对应哪个选项，看选项的 by（谁的主张）；旧格式没有 by，就按进言自己标的序号（选项删去后重新映射）
+    const hasBy = s.choices.some(o => o.by != null);
+    s.counsel = s.counsel.map(c => ({ ...c, choice: hasBy
+      ? s.choices.findIndex(o => o.by && String(o.by).includes(c.who)) + 1
+      : s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
     if (s.ending && !s.ending.type) s.ending.type = "成局";
     return s;
   }
