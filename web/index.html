@@ -102,6 +102,13 @@ main { min-width: 0; }
 .primary { font-family: var(--font-ui); font-size: 0.88rem; padding: 0.45rem 1.1rem; border: none; background: var(--indigo); color: var(--paper); border-radius: 3px; }
 .primary:disabled { opacity: 0.5; cursor: default; }
 
+.past { margin: 0 0 1.5rem; }
+.past-era { border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.8rem; margin: 0 0 0.6rem; }
+.past-era > summary { cursor: pointer; font-family: var(--font-ui); font-size: 0.9rem; color: var(--muted); }
+.past-ch { margin: 0.6rem 0 0 0.4rem; }
+.past-ch > summary { cursor: pointer; }
+.years { padding-left: 1.2rem; }
+.years .when { color: var(--muted); margin-right: 0.5rem; }
 .track { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.7rem; }
 .assess { font-size: 0.95rem; color: var(--muted); margin: 0 0 0.9rem; padding-left: 0.8rem; border-left: 2px solid var(--line); }
 .choice.quiet { background: transparent; border-style: dashed; }
@@ -571,7 +578,7 @@ function render() {
     $("#backBtn").onclick = () => { showReport = false; render(); window.scrollTo(0, 0); };
     return;
   }
-  let html = `<div class="story">`;
+  let html = `<div class="story">${renderPast()}`;
   game.chapters.forEach((c, i) => {
     const known = (c.state.events || []).filter(e => e.known !== false || done);
     const head = `<div class="chapter-head"><div class="seal">${cn(i + 1)}</div><h2>${esc(c.title.replace(/^第[^回]*回\s*/, ""))}</h2></div>`;
@@ -608,6 +615,28 @@ function render() {
   main.innerHTML = html;
   bindStory();
   if (busy === "narrate") renderStream();
+}
+
+// 连着打时，上一时代的各回正文与其间数年的快进，收在故事开头，可以展开回看
+function renderPast() {
+  const past = game.past || [];
+  if (!past.length) return "";
+  const s0 = game.chapters[0].state, inh = game.start === "inherited" ? game.inherited : null;
+  return `<div class="past">${past.map(p => {
+    const end = p.chapters[p.chapters.length - 1].state.ending;
+    return `<details class="past-era"><summary>前情 ·《${esc(E.era(p).name)}》${cn(p.chapters.length)}回${end ? ` · 「${esc(end.title)}」` : ""}</summary>
+      ${p.chapters.map((c, i) => `<details class="past-ch"><summary>${esc(c.title || `第${cn(i + 1)}回`)}</summary>
+        ${c.text ? `<div class="body">${paras(c.text)}</div>` : `<p class="rp-m">（这一回没有写成文字）</p>`}
+        ${(c.state.events || []).length ? `<details class="events"><summary>本回军情 · ${c.state.events.length} 条</summary><ul>${c.state.events.map(e => `<li><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}</li>`).join("")}</ul></details>` : ""}
+        ${c.decision ? `<div class="decision"><span>${esc(E.era(p).playerTitle)}之令</span><b>${esc(c.decision)}</b></div>` : ""}
+      </details>`).join("")}
+      ${end ? `<p class="rp-m">终章「${esc(end.title)}」：${esc(end.summary)}</p>` : ""}
+    </details>`;
+  }).join("")}
+  ${(s0.years || []).length || inh ? `<details class="past-era"><summary>其间数年 · 到${esc(s0.date)}</summary>
+    ${(s0.years || []).length ? `<ul class="years">${s0.years.map(y => `<li><span class="when">${esc(y.when)}</span>${esc(y.what)}</li>`).join("")}</ul>` : ""}
+    ${inh && inh.setup ? `<p class="rp-m">${esc(inh.setup.replace(/^【[^】]*】\n?/, ""))}</p>` : ""}
+  </details>` : ""}</div>`;
 }
 
 function renderStream() {
@@ -667,7 +696,7 @@ function renderEnding(st) {
   const nx = E.nextEra(game);
   const hiddenAll = [...new Set(game.chapters.flatMap(c => c.state.hidden || []))];
   return `<div class="ending">
-    <div class="k">${e.type === "败局" ? "败局" : "终章"} · ${esc(era().name)} · ${esc(E.startOf(game).label)}</div>
+    <div class="k">${e.type === "败局" ? "败局" : "终章"} · ${esc(era().name)} · 起于「${esc(E.startOf(game).label)}」</div>
     <h3>${esc(e.title)}</h3>
     <p>${esc(e.summary)}</p>
     <h4>与原著对照</h4><p>${esc(e.vs_canon)}</p>
@@ -719,7 +748,7 @@ function renderReport() {
     </article>`;
   };
   return `<div class="story report">
-    <div class="rp-top"><h2>战报 · ${esc(E.startOf(game).label)}</h2><button class="ui-btn" id="backBtn" type="button">回到故事</button></div>
+    <div class="rp-top"><h2>战报 · ${esc(era().name)}</h2><button class="ui-btn" id="backBtn" type="button">回到故事</button></div>
     <p class="rp-verdict">结局「${esc(end.title)}」　${esc(end.summary)}</p>
     ${(game.past || []).length ? `<p class="rp-m">此前：${game.past.map(p => { const l = p.chapters[p.chapters.length - 1].state.ending; return `《${esc(E.era(p).name)}》${l ? "「" + esc(l.title) + "」" : ""}`; }).join("　")}</p>` : ""}
     ${(current().state.years || []).length ? `<h4>其间数年</h4><ul>${current().state.years.map(y => `<li><span class="rp-m">${esc(y.when)}</span> ${esc(y.what)}</li>`).join("")}</ul>` : ""}
@@ -787,7 +816,7 @@ function renderIntro() {
       </section>`;
     }).join("")}
     <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写。</p>
-    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · ${esc(E.startOf(saved).label)}，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
+    ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
