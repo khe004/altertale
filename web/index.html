@@ -482,6 +482,21 @@ async function decide(decision) {
   await narrate(game.chapters.length - 1);
 }
 
+// 夹杂英文的段落逐段改正：先用快速档，改不干净或改走了样就换默认档再改一次；仍不行就删去英文单词
+async function fixLatin(p, i) {
+  if (!E.LATIN.test(p)) return p;
+  for (const opts of [{ tier: "quick" }, {}]) {
+    const fp = E.buildLatinFixPrompt([p]), f0 = Date.now();
+    try {
+      const fr = await llm.call(fp, () => {}, ctl.signal, opts);
+      recordUsage("fix", i, fp, fr, f0);
+      const t = fr.text.replace(/^\s*=====\s*$/gm, "").trim();
+      if (t && !E.LATIN.test(t) && t.length > p.length * 0.6 && t.length < p.length * 1.4) return t;
+    } catch (e) { if (e && e.code === "cancelled") throw e; }
+  }
+  return p.replace(/[A-Za-z]+/g, "");
+}
+
 async function narrate(i) {
   if (busy || !llm) return;
   busy = "narrate"; narrating = i; lastError = null; streamText = "";
@@ -493,18 +508,8 @@ async function narrate(i) {
     recordUsage("narrate", i, prompt, res, t0);
     const out = E.splitStory(res.text);
     if (!out.text) throw { code: "empty_completion" };
-    const ps = out.text.split(/\n+/).filter(Boolean);
-    const bad = ps.map((p, k) => E.LATIN.test(p) ? k : -1).filter(k => k >= 0);
-    if (bad.length) {
-      const fp = E.buildLatinFixPrompt(bad.map(k => ps[k])), f0 = Date.now();
-      try {
-        const fr = await llm.call(fp, () => {}, ctl.signal, { tier: "quick" });
-        recordUsage("fix", i, fp, fr, f0);
-        const fixed = fr.text.split(/\n?=====\n?/).map(x => x.trim());
-        if (fixed.length === bad.length) bad.forEach((k, m) => { if (fixed[m]) ps[k] = fixed[m]; });
-        out.text = ps.join("\n\n");
-      } catch (e) { if (e && e.code === "cancelled") throw e; }
-    }
+    out.text = (await Promise.all(out.text.split(/\n+/).filter(Boolean).map(p => fixLatin(p, i)))).join("\n\n");
+    if (out.title) out.title = await fixLatin(out.title, i);
     game.chapters[i].title = out.title || game.chapters[i].title;
     game.chapters[i].text = out.text;
     save();
