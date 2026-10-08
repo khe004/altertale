@@ -95,6 +95,7 @@ main { min-width: 0; }
 .choice:hover:not(:disabled) { border-color: var(--indigo); }
 .choice b { font-weight: 600; }
 .choice span { font-family: var(--font-ui); font-size: 0.82rem; color: var(--muted); }
+.choice span.plan { color: var(--ink); font-size: 0.86rem; }
 .choice:disabled { opacity: 0.55; cursor: default; }
 .own { margin-top: 0.9rem; display: grid; gap: 0.5rem; }
 .own label { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); }
@@ -665,7 +666,7 @@ function renderChoices(st) {
     <div class="choice-list">
       ${(st.choices || []).map((c, i) => {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
-        return `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${c.canon ? `<span class="star" title="演义中的做法">★</span>` : ""}${esc(c.label)}${by.length ? `<em class="by">${esc(by.join("、"))}之议</em>` : ""}</b><span>${esc(c.detail)}</span></button>`;
+        return `<button class="choice" type="button" data-choice="${i}" ${off ? "disabled" : ""}><b>${c.canon ? `<span class="star" title="演义中的做法">★</span>` : ""}${esc(c.label)}${by.length ? `<em class="by">${esc(by.join("、"))}之议</em>` : ""}</b>${c.plan ? `<span class="plan">${esc(c.plan)}</span>` : ""}<span>${esc(c.detail)}</span></button>`;
       }).join("")}
       <button class="choice quiet" type="button" id="waitBtn" ${off ? "disabled" : ""}><b>${E.waitIsCanon(game) ? `<span class="star" title="演义中的做法">★</span>` : ""}不另发令，静观其变</b><span>前方将帅依你的方略与授权自行处置，省去驿马往返</span></button>
     </div>
@@ -871,7 +872,7 @@ function rewind(i) {
 }
 
 function bindStory() {
-  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => decide(current().state.choices[+b.dataset.choice].label));
+  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => { const c = current().state.choices[+b.dataset.choice]; decide(c.plan ? `${c.label}：${c.plan}` : c.label); });
   document.querySelectorAll("[data-redo]").forEach(b => b.onclick = () => {
     const i = +b.dataset.redo;
     rewind(i);
