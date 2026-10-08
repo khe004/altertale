@@ -573,6 +573,26 @@ ${problems.map(p => "- " + p).join("\n")}
     return { id: ev.next.era, label: ev.next.label, gap: ev.next.gap, era: AT.eras[ev.next.era] };
   };
 
+  // 一路照原著打完上一时代（始终在原著轨上、没有败）：其间数年照原著快进，下一时代从它的原著开局接着走原著轨，不调模型。
+  // 返回下一时代原著开局的键，不符合就返回 null
+  E.canonTransition = function (g) {
+    const ev = era(g), nx = ev.next && AT.eras[ev.next.era];
+    if (!nx || !ev.next.canonYears || g.rail === false || !(startOf(g) || {}).rails) return null;
+    const st = g.chapters[g.chapters.length - 1].state;
+    if (!st.ending || st.ending.type === "败局") return null;
+    return Object.keys(nx.starts).find(k => nx.starts[k].rails) || null;
+  };
+  E.applyCanonTransition = function (g) {
+    const k = E.canonTransition(g), ev = era(g);
+    if (!k) return null;
+    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff });
+    const ng = E.newGame(ev.next.era, k);
+    ng.chapters[0].state.years = ev.next.canonYears;
+    g.era = ng.era; g.start = k; g.rail = ng.rail; g.policy = ng.policy; g.chapters = ng.chapters;
+    delete g.inherited; delete g.railOff;
+    return "next";
+  };
+
   E.buildTransitionPrompt = function (g) {
     const ev = era(g), nx = AT.eras[ev.next.era], ref = Object.values(nx.starts)[0];
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };

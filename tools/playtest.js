@@ -175,7 +175,9 @@ async function runGame(start, strategy, n) {
   try {
     await playEra(g, strategy, tag, result, write);
     if (process.argv.includes("--continue") && E.nextEra(g)) {
-      const outcome = E.applyTransition(g, await claude(E.buildTransitionPrompt(g), "transition"));
+      const onRail = !!E.canonTransition(g);
+      const outcome = onRail ? E.applyCanonTransition(g) : E.applyTransition(g, await claude(E.buildTransitionPrompt(g), "transition"));
+      if (onRail) console.log(`[${tag}] 一路照原著，其间数年照原著快进`);
       write();
       const s0 = g.chapters[0].state;
       console.log(`[${tag}] 过渡：${outcome === "next" ? `进入${E.era(g).name}「${E.startOf(g).label}」，${s0.date}` : "快进中出现败局"}`);

@@ -532,10 +532,13 @@ async function transition() {
   render();
   let result = null;
   try {
-    const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
-    const res = await llm.call(prompt, () => {}, ctl.signal);
-    recordUsage("transition", game.chapters.length, prompt, res, t0);
-    result = E.applyTransition(game, res.text);
+    if (E.canonTransition(game)) result = E.applyCanonTransition(game);  // 照原著快进，开局正文已预写
+    else {
+      const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
+      const res = await llm.call(prompt, () => {}, ctl.signal);
+      recordUsage("transition", game.chapters.length, prompt, res, t0);
+      result = E.applyTransition(game, res.text);
+    }
     peek = false; showReport = false;
     save();
   } catch (e) {
@@ -544,7 +547,7 @@ async function transition() {
   busy = false; ctl = null;
   render();
   window.scrollTo(0, 0);
-  if (result) await narrate(game.chapters.length - 1);
+  if (result && !current().text) await narrate(game.chapters.length - 1);
 }
 
 function errorCopy(e) {
@@ -713,7 +716,7 @@ function renderEnding(st) {
     <div class="reveals">${game.chapters.map((c, i) => (c.state.foreshadow || []).map(f => `<div class="reveal"><span class="where">第${cn(i + 1)}回</span><q>${esc(f.line)}</q><p>${esc(f.truth)}</p></div>`).join("")).join("")}</div>
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
-  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
+  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（单刀赴会、湘水划界、定军山、进位汉中王……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
   <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>进入${esc(nx.label)}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
 }
 
@@ -822,7 +825,7 @@ function renderIntro() {
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写。</p>
+    <p class="rp-m">入川打完若没有输，可以接着进入荆州之战：其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上荆州的原著开局。</p>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
