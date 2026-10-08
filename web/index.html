@@ -82,6 +82,7 @@ main { min-width: 0; }
 .chapter .body p { margin: 0 0 1em; text-indent: 2em; }
 .decision { font-family: var(--font-ui); font-size: 0.88rem; color: var(--indigo); background: var(--indigo-soft); border-radius: 3px; padding: 0.55rem 0.8rem; margin: 1.25rem 0 0; display: flex; gap: 0.75rem; align-items: baseline; flex-wrap: wrap; }
 .decision b { font-weight: 500; }
+.decision .redo + .redo { margin-left: 0; }
 .decision .redo { margin-left: auto; font-size: 0.78rem; background: none; border: none; color: var(--muted); text-decoration: underline; text-underline-offset: 3px; padding: 0; }
 .decision .redo:hover { color: var(--ink); }
 .divider { text-align: center; color: var(--line); letter-spacing: 1em; margin: 0 0 2.5rem; font-size: 0.8rem; }
@@ -590,7 +591,7 @@ function render() {
       ${body}
       ${(i > 0 || !c.text) && known.length ? `<details class="events" ${c.text ? "" : "open"}><summary>本回军情 · ${known.length} 条</summary><ul>${known.map(e => `<li class="${e.known === false ? "secret" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.known === false ? `<em>暗</em>` : ""}</li>`).join("")}</ul></details>` : ""}
       ${(c.state.autonomous || []).length ? `<div class="auto"><h4>前方自决</h4><ul>${c.state.autonomous.map(a => `<li><b>${esc(a.who)}</b>${esc(a.did)}</li>`).join("")}</ul></div>` : ""}
-      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
+      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-resim="${i}" title="丢弃此后的推演，用同一道命令再推演一次">以此令重新推演</button><button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
     </section>`;
     if (c.decision) html += `<div class="divider">· · ·</div>`;
   });
@@ -852,17 +853,30 @@ function bindIntro() {
   }
 }
 
+// 退回到第 i 回下令之前：截去此后各回，方略与原著轨的状态一并退回；返回当时的命令
+function rewind(i) {
+  const c = game.chapters[i], decision = c.decision;
+  game.chapters = game.chapters.slice(0, i + 1);
+  if (c.policy) game.policy = c.policy;
+  delete c.decision;
+  delete c.policy;
+  if (game.railOff && game.railOff >= i + 1) { game.rail = true; delete game.railOff; }
+  lastError = null;
+  return decision;
+}
+
 function bindStory() {
   document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => decide(current().state.choices[+b.dataset.choice].label));
   document.querySelectorAll("[data-redo]").forEach(b => b.onclick = () => {
     const i = +b.dataset.redo;
-    game.chapters = game.chapters.slice(0, i + 1);
-    if (game.chapters[i].policy) game.policy = game.chapters[i].policy;
-    delete game.chapters[i].decision;
-    delete game.chapters[i].policy;
-    lastError = null;
+    rewind(i);
     save(); render();
     document.getElementById("ch-" + i)?.scrollIntoView({ behavior: "smooth", block: "end" });
+  });
+  document.querySelectorAll("[data-resim]").forEach(b => b.onclick = () => {
+    const decision = rewind(+b.dataset.resim);
+    save();
+    decide(decision);
   });
   document.querySelectorAll("[data-narrate]").forEach(b => b.onclick = () => narrate(+b.dataset.narrate));
   const pk = $("#peekBtn");
