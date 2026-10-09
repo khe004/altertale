@@ -802,6 +802,17 @@ ${problems.map(p => "- " + p).join("\n")}
     return "next";
   };
 
+  // 撤回上一次过渡：丢掉当前时代，回到上一时代的终章，可以重新过渡（规则改了之后用）
+  E.undoTransition = function (g) {
+    const p = (g.past || []).pop();
+    if (!p) return false;
+    g.era = p.era; g.start = p.start; g.chapters = p.chapters; g.policy = p.policy; g.rail = p.rail;
+    if (p.inherited) g.inherited = p.inherited; else delete g.inherited;
+    if (p.railOff != null) g.railOff = p.railOff; else delete g.railOff;
+    if (!g.past.length) delete g.past;
+    return true;
+  };
+
   /* ───────── 说书：把已定之事写成文字 ───────── */
 
   E.buildNarratePrompt = function (g, i) {

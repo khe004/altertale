@@ -666,7 +666,8 @@ function renderPast() {
   ${(s0.years || []).length || inh ? `<details class="past-era"><summary>其间数年 · 到${esc(s0.date)}</summary>
     ${(s0.years || []).length ? `<ul class="years">${s0.years.map(y => `<li><span class="when">${esc(y.when)}</span>${esc(y.what)}</li>`).join("")}</ul>` : ""}
     ${inh && inh.setup ? `<p class="rp-m">${esc(inh.setup.replace(/^【[^】]*】\n?/, ""))}</p>` : ""}
-  </details>` : ""}</div>`;
+  </details>` : ""}
+  ${busy ? "" : `<p class="rp-m"><button class="ui-btn" id="retransBtn" type="button">回到《${esc(E.era(past[past.length - 1]).name)}》终章，重新进入${esc(era().name)}</button> 本时代已打的${cn(game.chapters.length)}回会丢掉，可先导出。</p>`}</div>`;
 }
 
 function renderStream() {
@@ -869,6 +870,7 @@ function renderIntro() {
       </section>`;
     }).join("")}
     <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去，荆州保全就转入两路北伐，取长安即胜；失了荆州而关羽未死，就转入复荆州。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
+    <p><button class="ui-btn" id="importBtn" type="button">导入存档</button><input id="importFile" type="file" accept=".json,application/json" hidden> <span id="importMsg" class="rp-m"></span></p>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
@@ -894,6 +896,19 @@ function bindIntro() {
   if (r) r.onclick = () => { game = load(); upgrade(game); render(); };
   const x = $("#exportSavedBtn");
   if (x) x.onclick = () => exportGame(load(), x);
+  const ib = $("#importBtn"), inp = $("#importFile");
+  if (ib && inp) {
+    ib.onclick = () => inp.click();
+    inp.onchange = async () => {
+      const f = inp.files && inp.files[0];
+      if (!f) return;
+      try {
+        const d = JSON.parse(await f.text()), g = d && d.game ? d.game : d;
+        if (!g || !Array.isArray(g.chapters) || !AT.eras[g.era || "jingzhou"]) throw new Error();
+        game = g; upgrade(game); lastError = null; save(); render(); window.scrollTo(0, 0);
+      } catch (e) { $("#importMsg").textContent = "读不出这个存档"; }
+    };
+  }
   const sk = $("#saveKey");
   if (sk) {
     try { $("#apiKey").value = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
@@ -955,7 +970,20 @@ function bindStory() {
   if (again) again.onclick = restart;
   const kb = $("#keyBtn");
   if (kb) kb.onclick = () => { game = null; render(); window.scrollTo(0, 0); };
+  const rt = $("#retransBtn");
+  if (rt) rt.onclick = () => {
+    if (!retransArmed) {
+      retransArmed = true; rt.textContent = "再点一次确认";
+      setTimeout(() => { retransArmed = false; if (rt.isConnected) render(); }, 3000);
+      return;
+    }
+    retransArmed = false;
+    E.undoTransition(game);
+    lastError = null; peek = false; showReport = false;
+    save(); render(); window.scrollTo(0, document.body.scrollHeight);
+  };
 }
+let retransArmed = false;
 
 let restartArmed = false;
 function restart() {

@@ -21,7 +21,7 @@ AlterTale · 异章：以《三国演义》（毛宗岗本）为底本的反事�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 35），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 36），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -30,7 +30,7 @@ AlterTale · 异章：以《三国演义》（毛宗岗本）为底本的反事�
 ## 代码地图
 
 - `web/engine.js`：全部推演逻辑（提示词、解析、复核、原著轨、评分、分支、过渡）。
-- `web/index.html`：界面与调用流程（推演 → 复核 → 必要时重推 → 说书 → 外文修复）。
+- `web/index.html`：界面与调用流程（推演 → 复核 → 必要时重推 → 说书 → 外文修复）。开局页可导入存档；承接开局的时代里有"回到上一时代终章，重新进入"（`E.undoTransition`），规则改了以后让作者重新过渡。
 - `web/data/characters.js`：人物卡（按年份的称谓、性格、才能、目标）；`background.js`：背景大事。
 - `web/data/eras/*.js`：各时代。`ruchuan` 入川、`hanzhong` 汉中、`jingzhou` 荆州（三段原著线，可连打）；`beifa` 两路北伐（手写分支）；`fujingzhou` 复荆州（模板分支，借荆州的地图人物，开局由过渡生成，只能从荆州分支进入）。
 - `tools/check.js`：离线检查（零成本）；`tools/playtest.js`：自动对局测试；`tools/fixtures/`：各时代结局样本，用于测衔接；`tools/spend.json`：测试花费账本（每次模型调用后自动累加，已提交）。
