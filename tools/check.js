@@ -13,7 +13,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 
 let errors = 0;
@@ -28,7 +28,7 @@ for (const [id, ev] of Object.entries(AT.eras)) {
   for (const b of ev.canonPath || []) for (const x of b.fulfills) if (!ids.has(x)) fail(`${id}：节拍里的事件 ${x} 不在事件池`);
   for (const c of ev.canonEvents) for (const x of c.after || []) if (!ids.has(x)) fail(`${id}：${c.id} 的前置 ${x} 不在事件池`);
   if (ev.canonPath && ev.canonPath.length > ev.maxTurns) fail(`${id}：节拍 ${ev.canonPath.length} 个，多于回数上限 ${ev.maxTurns}`);
-  for (const b of !ev.next ? [] : Array.isArray(ev.next) ? ev.next : [ev.next]) if (!b.pending && !AT.eras[b.era]) fail(`${id}：分支 ${b.label} 指向的时代 ${b.era} 不存在`);
+  for (const b of !ev.next ? [] : Array.isArray(ev.next) ? ev.next : [ev.next]) if (!b.pending && !b.final && !AT.eras[b.era]) fail(`${id}：分支 ${b.label} 指向的时代 ${b.era} 不存在`);
   for (const [k, s] of Object.entries(ev.starts)) {
     for (const f of s.state.figures) if (f.where && !nodes.some(n => String(f.where).startsWith(n)) && /^[^\s]+$/.test(f.where) && !/已故/.test(f.where)) { /* 地图外的地点（如江陵、邺城）允许 */ }
     if (s.rails && ev.canonPath && !s.state.choices.some(c => c.canon && c.label === ev.canonPath[0].label) && !ev.canonPath[0].wait)

@@ -1,5 +1,5 @@
 {
- "total": 49.8917,
+ "total": 51.0302,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -72,6 +72,12 @@
    "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|x|x|x|x|终局方略，取长安：其一，追懿不使入城：张飞领轻骑三千夜渡渭水，抢占咸阳渭桥，断司马懿入长安之路；孤与魏延引六千继渡渭水，压懿营，趁其饥疲三日内决战。其二，开故道：黄忠领四千合散关兵二千，乘张郃闻懿败胆落，急攻陈仓，得陈仓则故道通粮；马超自祁山遣羌骑二千东出，牵制郭淮不得救陈仓。其三，围长安：破懿之后，诸军合围长安，深沟连营，断其樵汲，不强攻；诸葛亮亲至郿督粮，分兵屯田渭滨，作久围之计；遍发檄文，告关中士民曹丕篡汉，汉王兴复旧都，降者保全，城中有献门者封侯。其四，东线：关羽趁汉水秋涨攻樊城，若水淹魏营则急取之，牵制洛阳不得再援关中；赵云、庞统严守江陵、公安。其五，遣使东吴，告以关中大捷，请孙权出合肥，共分魏地。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-9.json --turns 9 --label run",
    "calls": 2,
    "usd": 0.2622
+  },
+  {
+   "date": "2026-10-09 23:01",
+   "args": "--era jingzhou --starts inherited --strategies script --script 两路并进，东路为主攻：关羽留赵云守江陵、庞统守公安，自率主力二万五千北攻樊城，得樊城即进逼宛城，威胁许昌洛阳；遣使孙权，约其出兵合肥。西路孤率张飞、黄忠出褒斜屯郿南，只立营牵制，不急战；马超出祁山招抚羌胡。孔明督粮。|关羽乘势猛攻樊城、宛城，务使洛阳不敢西顾；西路坚守营垒，不与魏军浪战。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/user-jingzhou-end.json --continue --turns 3 --label eastpush",
+   "calls": 8,
+   "usd": 1.1385
   }
  ]
 }

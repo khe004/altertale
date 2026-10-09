@@ -275,6 +275,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/eras/jingzhou.js"></script>
 <script src="data/eras/fujingzhou.js"></script>
 <script src="data/eras/beifa.js"></script>
+<script src="data/eras/yiling.js"></script>
 <script src="engine.js"></script>
 <script>
 "use strict";
@@ -284,7 +285,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "beifa"];
+const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
@@ -739,6 +740,7 @@ function renderLineEnd(e, nx) {
   if (nx || e.type === "败局") return "";
   const b = E.nextBranch(game);
   if (e.type === "胜局") return `<div class="next-era"><p>汉军入长安，${esc(e.victory || "还于旧都")}。兴复汉室，自此有了根基——这一局，你赢了。</p></div>`;
+  if (b && b.final) return `<div class="next-era"><p>${esc(b.text || b.label)}</p></div>`;
   if (b && b.pending) return `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。按这一局的结局，接下来的世界线是：<b>${esc(b.label)}</b>。这一段还没有写成，故事暂且到此。</p></div>`;
   return `<div class="next-era"><p>${esc(era().name)}告一段落。刘备年事已高，未能还于旧都，天下三分之势已定，刘备线到此完结。</p></div>`;
 }
@@ -869,7 +871,7 @@ function renderIntro() {
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去，荆州保全就转入两路北伐，取长安即胜；失了荆州而关羽未死，就转入复荆州。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
+    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去。荆州保全，就转入两路北伐，取长安即胜；荆州失守而关羽未死，转入复荆州；关羽身死，转入夷陵：伐吴，还是忍下这口气，独出秦川一路北伐。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代，直到白帝托孤。</p>
     <details class="past-era"><summary>导入存档</summary>
       <p class="rp-m">选择导出的存档文件：<input id="importFile" type="file" accept=".json,application/json"></p>
       <p class="rp-m">选不了文件的话，用记事本打开存档文件，全选复制，粘贴到下面：</p>
