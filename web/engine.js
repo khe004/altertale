@@ -10,28 +10,39 @@
   const cnBig = n => n <= 10 ? NUMS[n - 1] : (n >= 20 ? NUMS[Math.floor(n / 10) - 1] : "") + "十" + (n % 10 ? NUMS[n % 10 - 1] : "");
   const CN_D = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
   function cnNum(s) {
-    if (s === "正") return 1;
+    if (s === "正" || s === "元") return 1;
     if (s === "冬") return 11;
     if (s === "腊") return 12;
     if (!s.includes("十")) return CN_D[s] || 0;
     const [a, b] = s.split("十");
     return (a ? CN_D[a] : 1) * 10 + (b ? CN_D[b] : 0);
   }
-  // 建安纪年，每月按三十日、每旬十日计；返回自建安二十四年正月初一起的日数
+  // 建安纪年，每月按三十日、每旬十日计；返回自建安二十四年正月初一起的日数。
+  // 别的年号折成建安（黄初元年 = 建安二十五年，章武元年 = 建安二十六年）；只写季节的按季折算（春初 = 正月上旬，夏 = 五月，秋末 = 九月下旬）
+  const ERA_BASE = { "建安": 0, "延康": 24, "黄初": 24, "章武": 25 };
+  const YEAR_RE = /(建安|延康|黄初|章武)([元一二三四五六七八九十]+)年/;
+  const yearIn = str => { const m = YEAR_RE.exec(str || ""); return m ? ERA_BASE[m[1]] + cnNum(m[2]) : null; };
+  const SEASON = { "春": 0, "夏": 3, "秋": 6, "冬": 9 };
   const parseDate = E.parseDate = function (str, year) {
-    const m = /(?:建安([一二三四五六七八九十]+)年)?\s*闰?([正冬腊一二三四五六七八九十]+)月\s*(上旬|中旬|下旬|初|中|末|底)?/.exec(str || "");
-    if (!m) return null;
-    const y = m[1] ? cnNum(m[1]) : year;
-    const mo = cnNum(m[2]);
-    if (!y || !mo) return null;
-    const d = { "上旬": 5, "初": 5, "中旬": 15, "中": 15, "下旬": 25, "末": 28, "底": 28 }[m[3]] ?? 15;
-    return (y - 24) * 360 + (mo - 1) * 30 + d;
+    const y = yearIn(str) || year;
+    const rest = String(str || "").replace(YEAR_RE, "");
+    const m = /闰?(正|冬|腊|[一二三四五六七八九十]+)月\s*(上旬|中旬|下旬|初|中|末|底)?/.exec(rest);
+    if (m) {
+      const mo = cnNum(m[1]);
+      if (!y || !mo) return null;
+      const d = { "上旬": 5, "初": 5, "中旬": 15, "中": 15, "下旬": 25, "末": 28, "底": 28 }[m[2]] ?? 15;
+      return (y - 24) * 360 + (mo - 1) * 30 + d;
+    }
+    const q = /(早|初|孟|仲|暮|晚|季)?([春夏秋冬])(初|中|末|季|尽)?/.exec(rest);
+    if (!q || !y) return null;
+    const at = /[早初孟]/.test(q[1] || "") || q[3] === "初" ? 5 : /[暮晚季]/.test(q[1] || "") || /[末季尽]/.test(q[3] || "") ? 85 : 45;
+    return (y - 24) * 360 + SEASON[q[2]] * 30 + at;
   };
   const fmtDate = E.fmtDate = function (n) {
     const y = 24 + Math.floor(n / 360), r = n - (y - 24) * 360, mo = Math.floor(r / 30) + 1, d = r - (mo - 1) * 30;
     return `建安${cnBig(y)}年${mo === 1 ? "正" : cnBig(mo)}月${d <= 10 ? "上旬" : d <= 20 ? "中旬" : "下旬"}`;
   };
-  const yearOf = E.yearOf = str => { const m = /建安([一二三四五六七八九十]+)年/.exec(str || ""); return m ? cnNum(m[1]) : 24; };
+  const yearOf = E.yearOf = str => yearIn(str) || 24;
   const adOf = str => 195 + yearOf(str);
 
   /* ───────── 时代与开局 ───────── */
@@ -268,7 +279,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
     const ids = canonIds(g);
     return `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
 {
-  "date": "本回末的时间，如 建安二十四年九月下旬",
+  "date": "本回末的时间，写明年、月、旬，如 建安二十四年九月下旬（不要只写季节）",
   "plans": [{"side":"某方","goal":"目标，二十字以内","plan":"当前谋划，四十字以内","status":"筹备|待发|已发动|改图|搁置","knows":"他们此刻掌握的玩家一方情报，可含误判，三十字以内"}],
   "events": [{"date":"九月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
@@ -552,6 +563,10 @@ ${simFormat(g)}`;
     const nodes = routeNodes(ev), at = w => nodes.find(n => w && String(w).startsWith(n));
     const y = yearOf(prev.date), t1 = parseDate(s.date, y), tPrev = parseDate(prev.date, y);
     const seen = lastSeen(g), posts = postsOf(g);
+    // 日期：要写明年月（军令驿程和行军复核都靠它），不得倒退，非终章不得远超本回的日数上限
+    if (!/年/.test(s.date || "") || t1 == null) problems.push(`本回末的日期"${s.date || ""}"要写明年、月、旬（如 ${fmtDate((tPrev ?? 0) + ev.turnSpan[0])}）`);
+    else if (tPrev != null && t1 < tPrev) problems.push(`本回末是${s.date}，比上一回末的${prev.date}还早，日期倒退了`);
+    else if (tPrev != null && !s.ending && !railBeat(g) && t1 - tPrev > ev.turnSpan[1] + 30) problems.push(`本回从${prev.date}推到${s.date}，过了${t1 - tPrev}日，超过每回${ev.turnSpan[1]}日的上限，应当更早停在决断时刻`);
     // 每道命令（含方略）下达的时间
     const orders = [{ text: g.policy && g.policy.text, t: parseDate(g.chapters[0].state.date, y) },
       ...g.chapters.map(c => ({ text: c.decision, t: parseDate(c.state.date, y) })), { text: decision, t: tPrev }].filter(o => o.text);
@@ -569,7 +584,7 @@ ${simFormat(g)}`;
       if (!from || !b || from.w === b) continue;
       const a = from.w, days = t1 != null && from.t != null ? t1 - from.t : null;
       const need = travelDays(ev, a, b, "信使");
-      if (days != null && need != null && need > days) problems.push(`${f.name}从${a}到${b}最快也要${need}日，本回只过了${days}日，到不了`);
+      if (days != null && days >= 0 && need != null && need > days) problems.push(`${f.name}从${a}到${b}最快也要${need}日，本回只过了${days}日，到不了`);
       const post = posts[f.name];
       if (!post || post.includes(b)) continue;
       const call = orders.find(o => aliases(f.name).some(x => o.text.includes(x)));
@@ -632,15 +647,38 @@ ${problems.map(p => "- " + p).join("\n")}
     return "next";
   };
 
+  // 历代人物的最后下落：每个时代的名单只列本时代的人，不在名单里的人沿用他上一次出现的地方（跨时代也一样）
+  const segmentsOf = g => [...(g.past || []), g];
+  E.lastKnown = function (g) {
+    const out = {};
+    for (const seg of segmentsOf(g)) {
+      const name = (AT.eras[seg.era] || {}).name || seg.era;
+      for (const c of seg.chapters || []) for (const f of c.state.figures || []) if (f && f.name && f.where) out[f.name] = { where: String(f.where), note: f.note || "", date: c.state.date, era: name };
+    }
+    return out;
+  };
+  // 各时代末刘备一方与敌方的兵马记录（每个时代只记本时代战场上的兵，早先时代的兵没被提到不等于没了）
+  const forceLedger = g => segmentsOf(g).map(seg => {
+    const st = seg.chapters[seg.chapters.length - 1].state;
+    return `${(AT.eras[seg.era] || {}).name || seg.era}末（${st.date}）：${(st.forces || []).map(f => `${f.name}在${f.where}，${f.troops}${f.note ? "（" + f.note + "）" : ""}`).join("；")}`;
+  }).join("\n");
+  // 下一时代该交代下落的人：登场名单里刘备一方、仍在世的人
+  const mustCarry = (g, nx, ad) => {
+    const known = E.lastKnown(g);
+    return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (titleAt(n, ad) || {}).faction === "刘");
+  };
+
   E.buildTransitionPrompt = function (g) {
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const st = g.chapters[g.chapters.length - 1].state;
     const from = parseDate(st.date, yearOf(st.date)) ?? 0, to = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
     const bg = (AT.background || []).filter(b => bgDay(b) > from && bgDay(b) <= to + 120);
-    const names = new Set([...(st.figures || []).map(f => f.name), ...(ref.state.figures || []).map(f => f.name)]);
+    const known = E.lastKnown(g);
+    const names = new Set([...Object.keys(known), ...(ref.state.figures || []).map(f => f.name)]);
     const ad = adOf(ref.state.date);
     const cast = nx.cast.filter(n => names.has(n));
+    const carry = mustCarry(g, nx, ad);
     const summary = E.canonSummary(g).map(r => `${r.name}：${r.status}${r.note ? "（" + r.note + "）" : ""}`).join("；");
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）：${c.state.chronicle || ""}`).join("\n");
     return `你是《异章》的世界推演者，负责在两个时代之间快进。全部用中文书写，不得夹杂英文字母或任何外文。人物言行、才智与武艺一律按《三国演义》（毛宗岗本）与人物卡；演义没写到的，才用史书补充。
@@ -652,6 +690,12 @@ ${log}
 本局结局：${st.ending.title}。${st.ending.summary}
 原著对照：${summary}
 本局末的局势：${JSON.stringify({ date: st.date, places: st.places, figures: st.figures, forces: st.forces, gauges: st.gauges, plans: st.plans, hidden: st.hidden })}
+
+【历代人物的最后下落】（每个时代只记本时代登场的人；不在本局名单里的人，仍在他上一次出现的地方）
+${Object.entries(known).map(([n, k]) => `${n}：${k.where}（${k.era}，${k.date}${k.note ? "，" + k.note : ""}）`).join("；")}
+
+【历代兵马】（每个时代末只记本时代战场上的兵；早先时代的兵马没再被提到，不等于没了，除非记录了覆没、降散）
+${forceLedger(g)}
 
 【下一时代：${nx.name}（${nx.ref}）】
 这个时代的背景：
@@ -669,7 +713,7 @@ ${cast.map(n => cardText(n, ad)).join("\n")}
 
 快进规则：
 1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${br.gap}）${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
-2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。人物从上一时代末的位置出发：参考开局里的人物位置是原著的，不能照搬；开局时位置与上一时代末不同的人，years 里要写明他何时、因何调动。
+2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。人物从他最后的下落出发（见"历代人物的最后下落"）：参考开局里的人物位置是原著的，不能照搬；开局时位置与最后下落不同的人，years 里要写明他何时、因何调动。前几个时代的人物与兵马，没有记录死亡、覆没或降散的都还在，不得凭空消失：这些人必须写进开局的 figures（死于其间的写"已故"并在 years 里交代）：${carry.join("、") || "（无）"}；刘备一方各处的兵马要合计历代记录，合并、调动、折损在 years 里交代；参考开局里刘备一方有、上面没提到的后方兵马（如成都诸军），照参考开局保留。
 3. 若快进中出现比原著更差的结局（如益州得而复失、刘备身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给刘备第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中刘备此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
 
@@ -681,26 +725,46 @@ ${cast.map(n => cardText(n, ad)).join("\n")}
   "ending": null,
   "state": 下一时代开局的局势，格式如下
 }
-years 写六至十二条，按时间先后。state 的格式：
+years 写六至十二条，按时间先后。开局的 figures 不受"八至十二名"之限，上面点名必须写进开局的人都要列出。state 的格式：
 ${simFormat(tg)}`;
   };
 
-  // 复核过渡：上一时代末在场的人，开局换了地方，其间大事里却没有交代
+  // 复核过渡：人物从最后的下落出发，换了地方要在其间大事里交代；刘备一方的人不得凭空消失；后方兵马不得凭空没了
   E.checkTransition = function (g, raw) {
     let o; try { o = parseJSON(raw); } catch (e) { return []; }
     if (!o || o.ending || !o.state) return [];
-    const last = g.chapters[g.chapters.length - 1].state, problems = [];
+    const br = E.nextBranch(g), nx = br && AT.eras[br.era], problems = [];
+    const known = E.lastKnown(g);
     // 其间大事按条、开局说明按分句看
     const lines = [...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
     const moved = /入|召|调|迁|移|赴|往|至|抵|投|归|还|返|回|屯|镇|驻|随|出|进|伐|攻|围|征|援|救|退|奔|走/;
     const same = (a, b) => a.startsWith(b) || b.startsWith(a);
     for (const f of o.state.figures || []) {
-      const p = (last.figures || []).find(x => x.name === f.name);
+      const p = known[f.name];
       if (!p || !p.where || !f.where || /已故|死/.test(p.where + f.where) || same(String(p.where), String(f.where))) continue;
       const dest = String(f.where).slice(0, 2);
       // 提到此人，且在他名字之后写了去向（目的地或调动的字眼）
       if (!lines.some(l => aliases(f.name).some(a => { const k = l.indexOf(a), rest = k < 0 ? "" : l.slice(k + a.length); return k >= 0 && (rest.includes(dest) || moved.test(rest)); })))
-        problems.push(`${f.name}上一时代末在${p.where}，开局却在${f.where}，其间大事里没有交代他何时、因何调动`);
+        problems.push(`${f.name}最后在${p.where}（${p.era}，${p.date}），开局却在${f.where}，其间大事里没有交代他何时、因何调动`);
+    }
+    if (!nx) return problems;
+    const ref = Object.values(nx.starts)[0].state, ad = adOf(o.state.date || ref.date);
+    // 刘备一方仍在世的人，开局里要有他（列入名单、在兵马里点名，或在其间大事里写明死讯）
+    const listed = JSON.stringify([o.state.figures || [], (o.state.forces || []).map(f => [f.name, f.note])]);
+    for (const n of mustCarry(g, nx, ad)) {
+      if (aliases(n).some(a => listed.includes(a))) continue;
+      if (lines.some(l => aliases(n).some(a => l.includes(a)) && /死|卒|亡|逝|殁|遇害|阵亡/.test(l))) continue;
+      problems.push(`${n}最后在${known[n].where}（${known[n].era}，${known[n].date}），开局里却没有他：没有死讯就不会消失，要写进开局的 figures`);
+    }
+    // 参考开局里刘备一方驻有兵马的后方要地，开局里也要有兵（或在其间大事里写明调往何处）
+    const nodes = routeNodes(nx), nodeOf = w => nodes.find(n => w && String(w).startsWith(n));
+    const have = new Set((o.state.forces || []).flatMap(f => String(f.where || "").split(/[、，,至与和及]/).map(nodeOf)).filter(Boolean));
+    const places = { ...ref.places, ...(o.state.places || {}) };
+    for (const f of ref.forces || []) {
+      const w = nodeOf(f.where);
+      if (!w || places[w] !== "刘" || have.has(w)) continue;
+      if (lines.some(l => l.includes(w) && /兵|军|师/.test(l))) continue;
+      problems.push(`${w}本有刘备一方的兵马（参考开局：${f.name}，${f.troops}），开局里${w}一支兵也没有：兵马不会凭空消失，要么保留，要么在其间大事里写明调往何处`);
     }
     return problems;
   };
@@ -708,7 +772,7 @@ ${simFormat(tg)}`;
 
 【复核】你上一稿有以下不合理之处：
 ${problems.map(p => "- " + p).join("\n")}
-请改正后重新输出完整 JSON：要么让此人留在原处，要么在 years 里补上他调动的时间与缘由（须合乎当时局势与人物处境）；开局局势、谋士进言与选项随之改写。`;
+请改正后重新输出完整 JSON：人物要么留在原处，要么在 years 里补上他调动的时间与缘由（须合乎当时局势与人物处境）；漏掉的人与兵马补进开局；开局局势、谋士进言与选项随之改写。`;
 
   // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
   E.applyTransition = function (g, raw) {

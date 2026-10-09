@@ -54,7 +54,7 @@ for (const file of files) {
     if (!AT.eras[seg.era]) continue;
     for (let i = 1; i < seg.chapters.length; i++) {
       turns++;
-      const h = { ...seg, rail: false, chapters: seg.chapters.slice(0, i) }, st = seg.chapters[i].state, dec = seg.chapters[i - 1].decision || E.WAIT_ORDER;
+      const h = { ...seg, rail: seg.rail !== false || (seg.railOff != null && i < seg.railOff), chapters: seg.chapters.slice(0, i) }, st = seg.chapters[i].state, dec = seg.chapters[i - 1].decision || E.WAIT_ORDER;
       try {
         E.buildSimPrompt(h, dec, []);
         E.buildRoutePrompt(h, dec);
