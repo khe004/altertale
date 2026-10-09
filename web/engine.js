@@ -219,7 +219,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   // 交接清单：时代配置的 handoff 列出终章要交给下一段世界线的几件事及其可选值，如 { 孙刘: ["盟", "和", "破"] }
   function cleanHandoff(ev, e) {
     const spec = ev.handoff || {}, h = e.handoff || {};
-    e.handoff = Object.fromEntries(Object.entries(spec).map(([k, opts]) => [k, opts.find(o => String(h[k] || "").includes(o)) || opts[opts.length - 1]]));
+    // 只收所列的值；没写或写错的项不填，交给下游当作"不知道"
+    e.handoff = Object.fromEntries(Object.entries(spec).map(([k, opts]) => [k, opts.find(o => String(h[k] || "").includes(o))]).filter(([, v]) => v));
   }
   E.PASS = 60;
   // 整理终章的评分：分项限在 -15～15，总分由代码按 60 + 各项之和算出；有评分时，成局与败局以及格线为准
