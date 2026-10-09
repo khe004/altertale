@@ -870,7 +870,12 @@ function renderIntro() {
       </section>`;
     }).join("")}
     <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去，荆州保全就转入两路北伐，取长安即胜；失了荆州而关羽未死，就转入复荆州。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
-    <p><button class="ui-btn" id="importBtn" type="button">导入存档</button><input id="importFile" type="file" accept=".json,application/json" hidden> <span id="importMsg" class="rp-m"></span></p>
+    <details class="past-era"><summary>导入存档</summary>
+      <p class="rp-m">选择导出的存档文件：<input id="importFile" type="file" accept=".json,application/json"></p>
+      <p class="rp-m">选不了文件的话，用记事本打开存档文件，全选复制，粘贴到下面：</p>
+      <textarea id="importText" rows="4" style="width:100%;box-sizing:border-box" placeholder="把存档文件的全部内容粘贴到这里"></textarea>
+      <p><button class="ui-btn" id="importPaste" type="button">读入粘贴的存档</button> <span id="importMsg" class="rp-m"></span></p>
+    </details>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
@@ -896,19 +901,18 @@ function bindIntro() {
   if (r) r.onclick = () => { game = load(); upgrade(game); render(); };
   const x = $("#exportSavedBtn");
   if (x) x.onclick = () => exportGame(load(), x);
-  const ib = $("#importBtn"), inp = $("#importFile");
-  if (ib && inp) {
-    ib.onclick = () => inp.click();
-    inp.onchange = async () => {
-      const f = inp.files && inp.files[0];
-      if (!f) return;
-      try {
-        const d = JSON.parse(await f.text()), g = d && d.game ? d.game : d;
-        if (!g || !Array.isArray(g.chapters) || !AT.eras[g.era || "jingzhou"]) throw new Error();
-        game = g; upgrade(game); lastError = null; save(); render(); window.scrollTo(0, 0);
-      } catch (e) { $("#importMsg").textContent = "读不出这个存档"; }
-    };
-  }
+  // 导入存档：选文件，或粘贴文件内容（受限的页面框架里选文件可能用不了）
+  const importText = text => {
+    try {
+      const d = JSON.parse(text), g = d && d.game ? d.game : d;
+      if (!g || !Array.isArray(g.chapters) || !AT.eras[g.era || "jingzhou"]) throw new Error();
+      game = g; upgrade(game); lastError = null; save(); render(); window.scrollTo(0, 0);
+    } catch (e) { $("#importMsg").textContent = "读不出这个存档"; }
+  };
+  const inp = $("#importFile");
+  if (inp) inp.onchange = async () => { const f = inp.files && inp.files[0]; if (f) importText(await f.text()); };
+  const ip = $("#importPaste");
+  if (ip) ip.onclick = () => importText($("#importText").value.trim());
   const sk = $("#saveKey");
   if (sk) {
     try { $("#apiKey").value = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
