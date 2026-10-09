@@ -16,7 +16,7 @@ AlterTale · 异章：以《三国演义》（毛宗岗本）为底本的反事�
 
 ## 仓库与发布
 
-- 分支 `ccr-dee45b92-fl1t48`，直接提交推送，不开 PR（除非作者要求）。提交信息末尾加：
+- 直接在 `main` 上开发，提交后推送到 `main`，不开 PR（除非作者要求）。提交信息末尾加：
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
