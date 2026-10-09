@@ -36,6 +36,11 @@ const ROLES = {
 };
 const SIM_TAG = ROLES.sim.model + (ROLES.sim.effort ? "-" + ROLES.sim.effort : "");
 const usage = {};
+// 测试花费账本（提交进仓库）：每次调用后累加，跑到一半被杀也记得上
+const LEDGER = path.join(__dirname, "spend.json");
+const ledger = fs.existsSync(LEDGER) ? JSON.parse(fs.readFileSync(LEDGER, "utf8")) : { total: 0, runs: [] };
+const run = { date: new Date().toISOString().slice(0, 16).replace("T", " "), args: process.argv.slice(2).join(" "), calls: 0, usd: 0 };
+ledger.runs.push(run);
 function track(role, r) {
   const u = usage[role] || (usage[role] = {
     model: ROLES[role].model, effort: ROLES[role].effort || "（CLI 默认）", servedBy: [],
@@ -53,6 +58,10 @@ function track(role, r) {
   u.cacheRead += t.cache_read_input_tokens || 0;
   u.output += t.output_tokens || 0;
   u.usd += r.total_cost_usd || 0;
+  run.calls++;
+  run.usd = +(run.usd + (r.total_cost_usd || 0)).toFixed(4);
+  ledger.total = +(ledger.total + (r.total_cost_usd || 0)).toFixed(4);
+  fs.writeFileSync(LEDGER, JSON.stringify(ledger, null, 1) + "\n");
 }
 
 function claude(prompt, role) {
@@ -242,5 +251,6 @@ function summarize(r) {
   console.log(`\n== 用量（${results.length} 局，${turns} 回） ==`);
   for (const [role, u] of Object.entries(usage))
     console.log(`${role}（${u.servedBy.join(", ") || u.model}，effort ${u.effort}）: ${u.calls} 次调用，输入 ${u.input} + 缓存写 ${u.cacheWrite} + 缓存读 ${u.cacheRead}，输出 ${u.output}（其中思考 ${u.thinking}）tokens，耗时 ${Math.round(u.seconds)} 秒，约 $${u.usd.toFixed(2)}`);
+  console.log(`本次约 $${run.usd.toFixed(2)}，测试累计约 $${ledger.total.toFixed(2)}（tools/spend.json）`);
   fs.writeFileSync(path.join(OUT, `usage-${SIM_TAG}.json`), JSON.stringify({ games: results.length, turns, usage }, null, 1));
 })();
