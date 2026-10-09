@@ -799,6 +799,22 @@ ${simFormat(tg)}`;
 ${problems.map(p => "- " + p).join("\n")}
 请改正后重新输出完整 JSON：人物要么留在原处，要么在 years 里补上他调动的时间与缘由（须合乎当时局势与人物处境）；漏掉的人与兵马补进开局；开局局势、谋士进言与选项随之改写。`;
 
+  // 连打时的坐镇：上一时代末仍在驻地坐镇的人，开局时还在原处就照旧坐镇；过渡中调走的人视为改任，不再受约束。
+  // 下一时代参考开局写明的坐镇者（如原著荆州开局孔明镇成都），开局恰在其地的也算。
+  E.carryPosts = function (g, nx, figures) {
+    // 按地名比对，不看地图：中间某个时代的地图上没有江陵，孔明坐镇江陵也照样延续下去
+    const prev = startOf(g).posts || era(g).posts || {}, refStart = Object.values(nx.starts)[0] || {}, ref = refStart.posts || nx.posts || {};
+    const known = E.lastKnown(g), at = (where, list) => list.some(n => String(where || "").startsWith(n)), out = {};
+    for (const name of new Set([...Object.keys(prev), ...Object.keys(ref)])) {
+      const f = (figures || []).find(x => x.name === name);
+      if (!f) continue;
+      const stayed = prev[name] && known[name] && at(known[name].where, prev[name]);
+      const list = [stayed ? prev[name] : null, ref[name]].find(l => l && at(f.where, l));
+      if (list) out[name] = list;
+    }
+    return out;
+  };
+
   // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
   E.applyTransition = function (g, raw) {
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
@@ -813,6 +829,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const tg = { era: nx.id, start: "inherited", chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const s = normalize(tg, o.state || {}, JSON.parse(JSON.stringify(ref.state)));
     if (!s.choices.length) throw { code: "no_choices" };
+    const posts = E.carryPosts(g, nx, s.figures);
     s.events = s.events.length ? s.events : yEvents;
     s.years = years;
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
@@ -821,7 +838,7 @@ ${problems.map(p => "- " + p).join("\n")}
     g.rail = false; delete g.railOff;  // 承接的开局没有原著节拍
     g.era = nx.id;
     g.start = "inherited";
-    g.inherited = { label: o.label || "承接上局", blurb: "", setup: `【起点：承接《${ev.name}》】\n${o.setup || ""}`, tone: "" };
+    g.inherited = { label: o.label || "承接上局", blurb: "", setup: `【起点：承接《${ev.name}》】\n${o.setup || ""}`, tone: "", posts };
     g.policy = E.defaultPolicy(nx);
     g.chapters = [{ title: "第一回", text: "", state: s }];
     return "next";
