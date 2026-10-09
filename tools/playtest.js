@@ -6,6 +6,8 @@
 //                          [--model sonnet] [--effort medium] [--player-model haiku] [--player-effort low]
 //
 // 回归测试：node tools/playtest.js --era ruchuan --starts canon --strategies canon --player-model sonnet
+// 只测时代衔接（便宜）：node tools/playtest.js --from tools/fixtures/ruchuan-free-end.json --continue --turns 1
+//   从上一时代的终局样本出发，只跑一次过渡和下一时代的第一回。改代码后先跑免费的 node tools/check.js。
 // Each game is written to playtest-out/<start>-<strategy>-<n>.json; a summary prints at the end.
 const fs = require("fs");
 const path = require("path");
@@ -166,8 +168,10 @@ async function runGame(start, strategy, n) {
   const label = strategy + (arg("label") ? "-" + arg("label") : "");
   const tag = `${ERA}/${start}/${label}/${SIM_TAG}/${n}`;
   const file = path.join(OUT, `${ERA}-${start}-${label}-${SIM_TAG}-${n}.json`);
-  // --resume：从同名存档接着打（被中断的测试）
-  const old = process.argv.includes("--resume") && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")).game : null;
+  // --resume：从同名存档接着打（被中断的测试）；--from 文件：从任意存档（测试输出、网页导出或 tools/fixtures 里的样本）接着打
+  const from = arg("from");
+  const old = from ? JSON.parse(fs.readFileSync(path.resolve(process.cwd(), from), "utf8")).game
+    : process.argv.includes("--resume") && fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")).game : null;
   const g = old || E.newGame(ERA, start);
   if (!old) g.policy.text = STRATEGIES[strategy].policy;
   const result = { era: ERA, start, strategy, n, roles: ROLES, parseFailures: 0, error: null, game: g };
