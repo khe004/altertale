@@ -213,6 +213,23 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
     return rows.map(c => ({ id: c.id, name: c.name, ref: c.ref, kind: c.kind, ...(cs[c.id] || { status: "未到时", note: "" }) }));
   };
 
+  /* ───────── 评分：以原著结局为 60 分，低于 60 即败局 ───────── */
+
+  E.SCORE_ITEMS = ["时机", "人物", "地盘", "兵马", "民心", "大势"];
+  E.PASS = 60;
+  // 整理终章的评分：分项限在 -15～15，总分由代码按 60 + 各项之和算出；有评分时，成局与败局以及格线为准
+  function scoreEnding(e) {
+    if (!e || !Array.isArray(e.score) || !e.score.length) return;
+    const items = E.SCORE_ITEMS.map(k => {
+      const x = e.score.find(y => y && String(y.item || "").includes(k)) || {};
+      const d = Math.max(-15, Math.min(15, Math.round(Number(x.delta) || 0)));
+      return { item: k, delta: d, note: String(x.note || "") };
+    });
+    e.score = items;
+    e.total = Math.max(0, Math.min(100, E.PASS + items.reduce((n, x) => n + x.delta, 0)));
+    e.type = e.total < E.PASS ? "败局" : "成局";
+  }
+
   /* ───────── 规则与格式 ───────── */
 
   function simRules(g) {
@@ -229,7 +246,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 6. 敌方主动：每回先替各方（${ev.rivals}）谋划（写入 plans），按其目标与所知行动，再写事件。得知援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；玩家一方可以用计诱其误判。对手只能依其所知（plans 里的 knows）行事：料中玩家的奇计要有依据（细作回报、地势一望可知、玩家故技重施），没有依据就会被奇计所乘；只有谋略"绝顶"者才常能料敌于先。被调动往返奔走的兵马会疲乏、失期，不能每次都恰好赶回；守城的兵被抽走，城就虚了。
 7. 每回推演到下一个"决断时刻"为止，限在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间。决断时刻只有这几种：决战或攻坚之前；要城得失之后；重要来使（议和、请降、求援、结盟）；主将或谋主阵亡、被擒、叛降；前方遇到授权之外的大事遣使请命；${ev.player}上回的命令已有分晓、局面已非下令时可料。以下都不是决断时刻，写进事件后继续推进：粮草渐紧、敌军调动、小胜小败、谋士献策、对方增兵、来信催促、局势照旧延续（围城、对垒、行军）。奇袭急进可能十来日就到决断时刻，相持则可推进数月。相持不得连续两回原样延续：按粮草、援兵、人心和对方的耐心推出变化，如城破、出降、解围、撤兵、议和或一方转攻他处。写出其间三至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${ev.player}在本回末是否已得知（known）。
 8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照，不是进度：${ev.player}走得快，局势就快，不得为了凑回数或贴近原著时间而拖延、添设阻碍；也不要原地相持。一旦出现决定性结局（${ev.decisive}），本回即为终章，哪怕这才是第二回。原著的结局是：${ev.baseline || "（见原著）"}（约在${ev.endBy}）。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。
+9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照，不是进度：${ev.player}走得快，局势就快，不得为了凑回数或贴近原著时间而拖延、添设阻碍；也不要原地相持。一旦出现决定性结局（${ev.decisive}），本回即为终章，哪怕这才是第二回。原著的结局是：${ev.baseline || "（见原著）"}（约在${ev.endBy}）。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。终章都要按格式评分，原著结局为 60 分及格，低于 60 即败局。
 
 谋士进言与决断选项：
 10. 先写 assessment，冷静判断${ev.player}此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
@@ -264,7 +281,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "ending": null
 }
 说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
-若本回为终章：ending 写 {"type":"成局或败局","title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"]}，counsel 与 choices 写 []。`;
+若本回为终章：ending 写 {"type":"成局或败局","title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
+评分（score）以原著结局为基准：六项逐一与原著此时代的结局相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。`;
   }
 
   function narrateRules(g, ad, material) {
@@ -370,7 +388,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
 【原著节拍】${ev.player}这道命令与演义中的做法相同，本回照原著推演。演义中接下来是：
 ${beat.story}
 要求：本回推演到${beat.to}为止，不适用推演原则第7、9条的节奏。上面写到的事件、结果、人物去留与时间都照原著；你可以补充细节、人物言行和其他各方的动静，但不得改变结果，也不得写出下一段的事。canon 里把这些报为"已发生"（细节有出入可报"变形发生"）：${beat.fulfills.join("、") || "（无）"}。
-${nb ? (nb.wait ? `演义中${ev.player}接下来没有另发命令：choices 三项都不是原著做法，都不标 canon。` : `choices 的第一项必须是演义中${ev.player}接下来的做法：label 写"${nb.label}"，detail 写此举的利弊，"canon": true；另两项方向不同，不标 canon。`) : `本回为终章，照原著给出 ending，type 写"成局"${beat.ending ? `，title 写"${beat.ending}"` : ""}。`}` : "";
+${nb ? (nb.wait ? `演义中${ev.player}接下来没有另发命令：choices 三项都不是原著做法，都不标 canon。` : `choices 的第一项必须是演义中${ev.player}接下来的做法：label 写"${nb.label}"，detail 写此举的利弊，"canon": true；另两项方向不同，不标 canon。`) : `本回为终章，照原著给出 ending，type 写"成局"${beat.ending ? `，title 写"${beat.ending}"` : ""}，score 各项 delta 都写 0（照原著走完正好 60 分）。`}` : "";
     const budget = beat ? "" : n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限，只在决断时刻停下；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
     const last = beat ? "" : n >= ev.maxTurns ? `\n本回为终章，给出 ending。从此刻一直推演到本时代定局（${ev.decisive}）为止，不受上面的日数限制，可以跨越数月乃至一年以上；其间不再请${ev.player}决断，前方按此刻的兵力、已下达的命令、方略与各人性格行事，不得调来未奉命的人马。事件可以多写几条，按时间先后把这段路走完。` : "";
     const now = parseDate(cur.date, yearOf(cur.date));
@@ -456,6 +474,7 @@ ${simFormat(g)}`;
       ? s.choices.findIndex(o => o.by && String(o.by).includes(c.who)) + 1
       : s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
     if (s.ending && !s.ending.type) s.ending.type = "成局";
+    scoreEnding(s.ending);
     return s;
   }
 

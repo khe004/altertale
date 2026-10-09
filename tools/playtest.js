@@ -160,7 +160,7 @@ async function playEra(g, strategy, tag, result, write) {
     g.chapters.push({ title: `第${E.cn(g.chapters.length + 1)}回`, text: "", state });
     write();
     const keys = E.era(g).reportPlaces.map(k => `${k}:${state.places[k]}`).join(" ");
-    console.log(`[${tag}] ${E.era(g).name}第${E.cn(g.chapters.length)}回${E.railBeat(g) || (onRail && g.rail !== false) ? "（原著轨）" : ""} ${state.date} | ${keys} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? ` | ${state.ending.type || "终章"}：${state.ending.title}` : ""}`);
+    console.log(`[${tag}] ${E.era(g).name}第${E.cn(g.chapters.length)}回${E.railBeat(g) || (onRail && g.rail !== false) ? "（原著轨）" : ""} ${state.date} | ${keys} | 送达${state.delivered.length} 在途${state.orders.length} 删选项${state.dropped} 外文${state.latin} | ${state.chronicle}${state.ending ? ` | ${state.ending.type || "终章"}：${state.ending.title}${state.ending.total != null ? `（${state.ending.total}分：${state.ending.score.map(x => x.item + (x.delta >= 0 ? "+" : "") + x.delta).join(" ")}）` : ""}` : ""}`);
   }
 }
 
@@ -222,7 +222,7 @@ function summarize(r) {
   const last = r.game.chapters[r.game.chapters.length - 1].state;
   const keys = E.era(r.game).reportPlaces.map(k => `${k}:${last.places[k]}`).join(" ");
   return `${r.start}/${r.strategy}/${r.n}: ${E.era(r.game).name} ${r.game.chapters.length}回 ${last.date} ${keys} ` +
-    (last.ending ? `终章「${last.ending.title}」${last.ending.summary}` : r.error ? `出错：${r.error}` : "未到终章");
+    (last.ending ? `终章「${last.ending.title}」${last.ending.total != null ? `（${last.ending.total}分）` : ""}${last.ending.summary}` : r.error ? `出错：${r.error}` : "未到终章");
 }
 
 (async () => {

@@ -111,6 +111,15 @@ main { min-width: 0; }
 .past-ch > summary { cursor: pointer; }
 .years { padding-left: 1.2rem; }
 .years .when { color: var(--muted); margin-right: 0.5rem; }
+.score { border: 1px solid var(--line); border-radius: 4px; padding: 0.7rem 0.9rem; margin: 0.8rem 0; }
+.score-total b { font-size: 2rem; color: var(--indigo); margin-right: 0.3rem; }
+.score.fail .score-total b { color: var(--wu); }
+.score-total span { font-family: var(--font-ui); font-size: 0.85rem; color: var(--muted); }
+.score-items { list-style: none; padding: 0; margin: 0.5rem 0 0; display: grid; gap: 0.25rem; font-family: var(--font-ui); font-size: 0.85rem; }
+.score-items li { display: grid; grid-template-columns: 3em 3em 1fr; gap: 0.5rem; align-items: baseline; }
+.score-items .si { color: var(--muted); }
+.score-items .up { color: var(--indigo); } .score-items .down { color: var(--wu); }
+.score-items .sn { color: var(--ink); }
 .track { font-size: 0.85rem; color: var(--muted); margin: 0 0 0.7rem; }
 .assess { font-size: 0.95rem; color: var(--muted); margin: 0 0 0.9rem; padding-left: 0.8rem; border-left: 2px solid var(--line); }
 .choice.quiet { background: transparent; border-style: dashed; }
@@ -702,6 +711,18 @@ function renderPolicy(st) {
   </div>`;
 }
 
+// 评分：原著结局 60 分及格，各项与原著相比的得失；连着打时列出历代分数
+function renderScore(e) {
+  if (e.total == null) return "";
+  const sign = d => d > 0 ? `+${d}` : d < 0 ? `${d}` : "±0";
+  const past = (game.past || []).map(p => { const x = p.chapters[p.chapters.length - 1].state.ending; return x && x.total != null ? `《${esc(E.era(p).name)}》${x.total}` : ""; }).filter(Boolean);
+  return `<div class="score ${e.total < E.PASS ? "fail" : ""}">
+    <div class="score-total"><b>${e.total}</b><span>分　原著为 ${E.PASS} 分及格${e.total < E.PASS ? "，未及格：兴复汉室的大势就此断绝" : ""}</span></div>
+    <ul class="score-items">${e.score.map(x => `<li><span class="si">${esc(x.item)}</span><b class="${x.delta > 0 ? "up" : x.delta < 0 ? "down" : ""}">${sign(x.delta)}</b><span class="sn">${esc(x.note)}</span></li>`).join("")}</ul>
+    ${past.length ? `<p class="rp-m">历代：${past.join("　")}　《${esc(era().name)}》${e.total}</p>` : ""}
+  </div>`;
+}
+
 function renderEnding(st) {
   const e = st.ending;
   const nx = E.nextEra(game);
@@ -710,6 +731,7 @@ function renderEnding(st) {
     <div class="k">${e.type === "败局" ? "败局" : "终章"} · ${esc(era().name)} · 起于「${esc(E.startOf(game).label)}」</div>
     <h3>${esc(e.title)}</h3>
     <p>${esc(e.summary)}</p>
+    ${renderScore(e)}
     <h4>与原著对照</h4><p>${esc(e.vs_canon)}</p>
     ${renderCanonTable()}
     ${(e.turning_points || []).length ? `<h4>转折</h4><ol>${e.turning_points.map(t => `<li>${esc(t)}</li>`).join("")}</ol>` : ""}
