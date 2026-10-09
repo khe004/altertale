@@ -68,6 +68,19 @@ for (const file of files) {
 }
 console.log(`  共 ${turns} 回，复核命中 ${hits} 回（逐条看是真问题还是误报）`);
 
+// 承接开局：上一时代末的人物位置要延续，换了地方的要在其间大事里交代
+for (const file of files) {
+  let game; try { game = JSON.parse(fs.readFileSync(file, "utf8")).game; } catch (e) { continue; }
+  if (!game || !game.past || !game.past.length) continue;
+  const segs = [...game.past, game];
+  for (let i = 1; i < segs.length; i++) {
+    if (segs[i].start !== "inherited" || !AT.eras[segs[i - 1].era]) continue;
+    const s0 = segs[i].chapters[0].state;
+    const p = E.checkTransition(segs[i - 1], JSON.stringify({ setup: segs[i].inherited && segs[i].inherited.setup, years: s0.years, state: s0 }));
+    if (p.length) console.log(`  · ${path.basename(file)} ${AT.eras[segs[i].era].name}承接开局：${p.join("；")}`);
+  }
+}
+
 console.log("\n== 时代衔接 ==");
 for (const f of fs.readdirSync(path.join(__dirname, "fixtures"))) {
   const g = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", f), "utf8")).game;

@@ -64,6 +64,15 @@ function track(role, r) {
   fs.writeFileSync(LEDGER, JSON.stringify(ledger, null, 1) + "\n");
 }
 
+// 过渡推演，复核出人物位置没交代就带着问题重推一次
+async function transitionText(g) {
+  const prompt = E.buildTransitionPrompt(g), text = await claude(prompt, "transition");
+  const problems = E.checkTransition(g, text);
+  if (!problems.length) return text;
+  console.log("  过渡复核：" + problems.join("；"));
+  return claude(E.buildTransitionRepairPrompt(prompt, problems), "repair");
+}
+
 function claude(prompt, role) {
   const { model, effort } = ROLES[role];
   const args = ["-p", "--model", model, "--tools", "", "--output-format", "json"];
@@ -189,7 +198,7 @@ async function runGame(start, strategy, n) {
     await playEra(g, strategy, tag, result, write);
     while (process.argv.includes("--continue") && E.nextEra(g)) {
       const onRail = !!E.canonTransition(g);
-      const outcome = onRail ? E.applyCanonTransition(g) : E.applyTransition(g, await claude(E.buildTransitionPrompt(g), "transition"));
+      const outcome = onRail ? E.applyCanonTransition(g) : E.applyTransition(g, await transitionText(g));
       if (onRail) console.log(`[${tag}] 一路照原著，其间数年照原著快进`);
       write();
       const s0 = g.chapters[0].state;

@@ -1,6 +1,17 @@
 {
- "total": 46.31,
+ "total": 46.533,
  "runs": [
-  { "date": "2026-10-07 ~ 2026-10-09", "args": "补记：playtest-out 里 36 份日志的用量合计（更早没留日志、被杀掉、日志被覆盖的没算进去）", "calls": 0, "usd": 46.31 }
+  {
+   "date": "2026-10-07 ~ 2026-10-09",
+   "args": "补记：playtest-out 里 36 份日志的用量合计（更早没留日志、被杀掉、日志被覆盖的没算进去）",
+   "calls": 0,
+   "usd": 46.31
+  },
+  {
+   "date": "2026-10-09 03:18",
+   "args": "--era ruchuan --starts canon --strategies prudent --from tools/fixtures/ruchuan-kongming-jingzhou-end.json --continue --turns 0 --label kmtrans",
+   "calls": 2,
+   "usd": 0.223
+  }
  ]
 }

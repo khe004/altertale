@@ -669,7 +669,7 @@ ${cast.map(n => cardText(n, ad)).join("\n")}
 
 快进规则：
 1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${br.gap}）${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
-2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。
+2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。人物从上一时代末的位置出发：参考开局里的人物位置是原著的，不能照搬；开局时位置与上一时代末不同的人，years 里要写明他何时、因何调动。
 3. 若快进中出现比原著更差的结局（如益州得而复失、刘备身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给刘备第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中刘备此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
 
@@ -684,6 +684,31 @@ ${cast.map(n => cardText(n, ad)).join("\n")}
 years 写六至十二条，按时间先后。state 的格式：
 ${simFormat(tg)}`;
   };
+
+  // 复核过渡：上一时代末在场的人，开局换了地方，其间大事里却没有交代
+  E.checkTransition = function (g, raw) {
+    let o; try { o = parseJSON(raw); } catch (e) { return []; }
+    if (!o || o.ending || !o.state) return [];
+    const last = g.chapters[g.chapters.length - 1].state, problems = [];
+    // 其间大事按条、开局说明按分句看
+    const lines = [...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
+    const moved = /入|召|调|迁|移|赴|往|至|抵|投|归|还|返|回|屯|镇|驻|随|出|进|伐|攻|围|征|援|救|退|奔|走/;
+    const same = (a, b) => a.startsWith(b) || b.startsWith(a);
+    for (const f of o.state.figures || []) {
+      const p = (last.figures || []).find(x => x.name === f.name);
+      if (!p || !p.where || !f.where || /已故|死/.test(p.where + f.where) || same(String(p.where), String(f.where))) continue;
+      const dest = String(f.where).slice(0, 2);
+      // 提到此人，且在他名字之后写了去向（目的地或调动的字眼）
+      if (!lines.some(l => aliases(f.name).some(a => { const k = l.indexOf(a), rest = k < 0 ? "" : l.slice(k + a.length); return k >= 0 && (rest.includes(dest) || moved.test(rest)); })))
+        problems.push(`${f.name}上一时代末在${p.where}，开局却在${f.where}，其间大事里没有交代他何时、因何调动`);
+    }
+    return problems;
+  };
+  E.buildTransitionRepairPrompt = (prompt, problems) => `${prompt}
+
+【复核】你上一稿有以下不合理之处：
+${problems.map(p => "- " + p).join("\n")}
+请改正后重新输出完整 JSON：要么让此人留在原处，要么在 years 里补上他调动的时间与缘由（须合乎当时局势与人物处境）；开局局势、谋士进言与选项随之改写。`;
 
   // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
   E.applyTransition = function (g, raw) {
@@ -756,7 +781,7 @@ ${s.assessment || s.chronicle || ""}${s.ending ? `\n本回为终章，结局：$
 【谋士进言】（写成结尾朝堂上的一幕或拆读来信）
 ${(s.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
 
-请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，空一行后写正文，段落之间空一行。只输出回目和正文。`;
+请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，上下句字数相同（同为七字或同为八字），空一行后写正文，段落之间空一行。只输出回目和正文。`;
   };
 
   E.splitStory = function (raw) {

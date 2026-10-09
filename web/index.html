@@ -549,7 +549,15 @@ async function transition() {
       const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
       const res = await llm.call(prompt, () => {}, ctl.signal);
       recordUsage("transition", game.chapters.length, prompt, res, t0);
-      result = E.applyTransition(game, res.text);
+      let text = res.text;
+      const problems = E.checkTransition(game, text);
+      if (problems.length) {  // 人物位置没交代：带着问题重推一次
+        const fp = E.buildTransitionRepairPrompt(prompt, problems), t1 = Date.now();
+        const r2 = await llm.call(fp, () => {}, ctl.signal);
+        recordUsage("transition", game.chapters.length, fp, r2, t1);
+        text = r2.text;
+      }
+      result = E.applyTransition(game, text);
     }
     peek = false; showReport = false;
     save();
