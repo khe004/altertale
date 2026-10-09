@@ -672,6 +672,9 @@ ${problems.map(p => "- " + p).join("\n")}
     return "next";
   };
 
+  // 分支指定下一时代用哪个开局作参照（如夷陵不伐吴 → 北伐的"一路北伐"），没指定就用第一个
+  const refStartOf = (br, nx) => (br && br.start && nx.starts[br.start]) || Object.values(nx.starts)[0];
+
   // 历代人物的最后下落：每个时代的名单只列本时代的人，不在名单里的人沿用他上一次出现的地方（跨时代也一样）
   const segmentsOf = g => [...(g.past || []), g];
   E.lastKnown = function (g) {
@@ -694,7 +697,7 @@ ${problems.map(p => "- " + p).join("\n")}
   };
 
   E.buildTransitionPrompt = function (g) {
-    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
+    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const st = g.chapters[g.chapters.length - 1].state;
     const from = parseDate(st.date, yearOf(st.date)) ?? 0, to = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
@@ -773,7 +776,7 @@ ${simFormat(tg)}`;
         problems.push(`${f.name}最后在${p.where}（${p.era}，${p.date}），开局却在${f.where}，其间大事里没有交代他何时、因何调动`);
     }
     if (!nx) return problems;
-    const ref = Object.values(nx.starts)[0].state, ad = adOf(o.state.date || ref.date);
+    const ref = refStartOf(br, nx).state, ad = adOf(o.state.date || ref.date);
     // 刘备一方仍在世的人，开局里要有他（列入名单、在兵马里点名，或在其间大事里写明死讯）
     const listed = JSON.stringify([o.state.figures || [], (o.state.forces || []).map(f => [f.name, f.note])]);
     for (const n of mustCarry(g, nx, ad)) {
@@ -801,9 +804,9 @@ ${problems.map(p => "- " + p).join("\n")}
 
   // 连打时的坐镇：上一时代末仍在驻地坐镇的人，开局时还在原处就照旧坐镇；过渡中调走的人视为改任，不再受约束。
   // 下一时代参考开局写明的坐镇者（如原著荆州开局孔明镇成都），开局恰在其地的也算。
-  E.carryPosts = function (g, nx, figures) {
+  E.carryPosts = function (g, nx, figures, br) {
     // 按地名比对，不看地图：中间某个时代的地图上没有江陵，孔明坐镇江陵也照样延续下去
-    const prev = startOf(g).posts || era(g).posts || {}, refStart = Object.values(nx.starts)[0] || {}, ref = refStart.posts || nx.posts || {};
+    const prev = startOf(g).posts || era(g).posts || {}, refStart = refStartOf(br, nx) || {}, ref = refStart.posts || nx.posts || {};
     const known = E.lastKnown(g), at = (where, list) => list.some(n => String(where || "").startsWith(n)), out = {};
     for (const name of new Set([...Object.keys(prev), ...Object.keys(ref)])) {
       const f = (figures || []).find(x => x.name === name);
@@ -817,7 +820,7 @@ ${problems.map(p => "- " + p).join("\n")}
 
   // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
   E.applyTransition = function (g, raw) {
-    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
+    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const o = parseJSON(raw);
     const years = (Array.isArray(o.years) ? o.years : []).filter(y => y && y.what);
     const yEvents = years.map(y => ({ date: String(y.when || ""), who: "", where: "", what: String(y.what), result: "", known: true }));
@@ -829,7 +832,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const tg = { era: nx.id, start: "inherited", chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const s = normalize(tg, o.state || {}, JSON.parse(JSON.stringify(ref.state)));
     if (!s.choices.length) throw { code: "no_choices" };
-    const posts = E.carryPosts(g, nx, s.figures);
+    const posts = E.carryPosts(g, nx, s.figures, br);
     s.events = s.events.length ? s.events : yEvents;
     s.years = years;
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
