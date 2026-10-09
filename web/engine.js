@@ -352,10 +352,17 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state, beat = railBeat(g);
     return `把${ev.player}的这道命令拆成需要送出或派出的各项。全部用中文。
 地点只能从这些里选：${routeNodes(ev).join("、")}。
-每项写：part（这一项做什么，二十字以内）、from（命令或兵马从哪里出发，通常是${seatOf(g)}）、to（送达或抵达之地；传令给某人，就取此人此刻所在之地）、tier（只传令写"信使"；派数百至两三千精兵、轻骑、轻舟写"轻兵"；派上万人或带辎重的兵马写"大军"）。派兵的同时附带传令的，只写兵马一项。
+每项写：
+- part：这一项做什么，二十字以内；
+- from：命令或兵马从哪里出发。只传令写${ev.player}所在之地（${seatOf(g)}）；派兵写这支兵马此刻实际所在之地（看下面的兵马表与人物位置，不看兵马的名号：名为"成都兵"而已在汉中的，from 写汉中）；
+- to：送达或抵达之地；传令给某人，就取此人此刻所在之地；就地行动（在原地攻城、立营、设伏）写与 from 相同；
+- tier：只传令写"信使"；轻装急进、少带辎重的精兵轻骑（数百至五千上下）写"轻兵"；上万人或带粮草辎重缓行的兵马写"大军"；
+- after：这一项要等前面某一项办完才开始（如先回汉中领兵，再出子午道）时，写那一项的序号（从 1 数），否则不写。
+派兵的同时附带传令的，只写兵马一项。
 人物此刻所在：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
+兵马此刻所在：${(st.forces || []).map(f => `${f.name}在${f.where}（${f.troops}）`).join("；")}
 命令：${decision}
-只输出一个 JSON 数组，例如 [{"part":"令某将移兵某地","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"信使"}]${beat && !beat.wait ? `
+只输出一个 JSON 数组，例如 [{"part":"令某将回某地领兵","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"轻兵"},{"part":"领兵出某道袭某城","from":"${routeNodes(ev)[0]}","to":"${routeNodes(ev)[1]}","tier":"轻兵","after":1}]${beat && !beat.wait ? `
 另外判断：演义中${ev.player}此时的做法是「${beat.label}」。这道命令与它是否本质相同（派的人、去向和意图一致即算相同，措辞和细节不同无妨；多出或少了关键的一步就算不同）？在 JSON 数组之后另起一行，只写"原著：是"或"原著：否"。` : ""}`;
   };
 
@@ -366,23 +373,41 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     if (a < 0 || b < a) return [];
     try {
       const node = x => nodes.find(n => String(x || "").includes(n)) || null;
-      return JSON.parse(t.slice(a, b + 1)).filter(r => r && r.part).map(r => ({
-        part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
-        tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使"
-      }));
+      const list = JSON.parse(t.slice(a, b + 1)).filter(r => r && r.part);
+      return list.map((r, i) => {
+        const after = Number(r.after);
+        return {
+          part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
+          tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使",
+          ...(Number.isInteger(after) && after >= 1 && after <= i ? { after: after - 1 } : {})
+        };
+      });
     } catch (e) { return []; }
   };
 
-  // 新的军令表：沿用尚未送达的旧令，加上本回新令（发出日 = 当前回末）
+  // 新的军令表：沿用尚未送达的旧令，加上本回新令（发出日 = 当前回末）。
+  // 有 after 的项，等前一项办完（抵达）才从那里出发；就地行动（from 与 to 相同）不另算集结
   E.scheduleOrders = function (g, routes) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
     const now = parseDate(st.date, yearOf(st.date));
     const seat = seatOf(g);
-    const fresh = routes.map(r => {
-      const days = now == null || !r.to ? null : travelDays(ev, r.from, r.to, r.tier);
-      // 兵马不在玩家身边时，要先等命令由信使送到出发地
-      const relay = r.tier !== "信使" && r.from !== seat ? travelDays(ev, seat, r.from, "信使") || 0 : 0;
-      return { ...r, sent: now, arrive: days == null ? null : now + relay + days + (MUSTER[r.tier] || 0) };
+    const fresh = [];
+    routes.forEach(r => {
+      const prev = r.after != null ? fresh[r.after] : null;
+      const start = prev ? prev.arrive : now;
+      const from = prev && prev.to ? prev.to : r.from;
+      let arrive = null;
+      if (start != null && r.to) {
+        if (from === r.to) arrive = prev ? start : now + (r.tier !== "信使" && from !== seat ? travelDays(ev, seat, from, "信使") || 0 : 0);
+        else {
+          const days = travelDays(ev, from, r.to, r.tier);
+          // 兵马不在玩家身边时，要先等命令由信使送到出发地（接续前一项的，人已在那里）
+          const relay = !prev && r.tier !== "信使" && from !== seat ? travelDays(ev, seat, from, "信使") || 0 : 0;
+          arrive = days == null ? null : start + relay + days + (prev ? 0 : MUSTER[r.tier] || 0);
+        }
+      }
+      const o = { part: r.part, from, to: r.to, tier: r.tier, sent: now, arrive };
+      fresh.push(o);
     });
     return [...(st.orders || []), ...fresh];
   };
