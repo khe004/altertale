@@ -1,5 +1,5 @@
 {
- "total": 46.533,
+ "total": 47.3203,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -12,6 +12,18 @@
    "args": "--era ruchuan --starts canon --strategies prudent --from tools/fixtures/ruchuan-kongming-jingzhou-end.json --continue --turns 0 --label kmtrans",
    "calls": 2,
    "usd": 0.223
+  },
+  {
+   "date": "2026-10-09 05:54",
+   "args": "--era jingzhou --starts inherited --strategies prudent --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/user-jingzhou-end.json --continue --turns 1 --label user-beifa",
+   "calls": 1,
+   "usd": 0.1775
+  },
+  {
+   "date": "2026-10-09 06:11",
+   "args": "--era jingzhou --starts inherited --strategies prudent --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/user-jingzhou-end.json --continue --turns 1 --label user-beifa",
+   "calls": 5,
+   "usd": 0.6098
   }
  ]
 }
