@@ -865,7 +865,7 @@ function renderIntro() {
         <p class="tag">${esc(ev.tagline)}</p>
         <p>${esc(ev.intro)}</p>
         <div class="starts">
-          ${Object.entries(ev.starts).map(([k, o], m) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">起点${cn(m + 1)}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
+          ${Object.entries(ev.starts).filter(([, o]) => !o.hidden).map(([k, o], m) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">起点${cn(m + 1)}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
         </div>
       </section>`;
     }).join("")}
