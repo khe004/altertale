@@ -1,5 +1,5 @@
 {
- "total": 47.3203,
+ "total": 49.8917,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -24,6 +24,54 @@
    "args": "--era jingzhou --starts inherited --strategies prudent --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/user-jingzhou-end.json --continue --turns 1 --label user-beifa",
    "calls": 5,
    "usd": 0.6098
+  },
+  {
+   "date": "2026-10-09 16:56",
+   "args": "--era beifa --starts inherited --strategies script --script x|趁曹真尽提长安之兵屯郿、洛阳援军未到，三路并举：其一，魏延轻骑回汉中，领诸葛亮所督成都兵中精锐五千，携十日粮由子午道急袭长安，务在魏援到前入城；其二，诸葛亮遣成都兵二万由褒斜道出郿南与孤会合，孤与张飞、黄忠列阵郿南，每日挑战，牵住曹真不使回救长安；其三，马超留羌骑守祁山，扬言东出陈仓，使张郃不敢离城。另遣快使告关羽：樊城半月不下即退守襄阳，分兵五千回江陵，与赵云、庞统严设烽火，防陆逊袭荆州。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-0.json --turns 2 --label run",
+   "calls": 2,
+   "usd": 0.3871
+  },
+  {
+   "date": "2026-10-09 17:01",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|依法正之计，诱敌于谷：孤佯作粮尽，夜拔郿南营退入斜谷，营中弃置部分旧辎重，张飞殿后且战且走；黄忠领精兵三千伏于斜谷口两侧山上，首队成都兵一万屯谷中为后援并接济粮草，曹真或张郃追入谷口即两面夹击。同时魏延率汉中五千精兵出故道北上散关：张郃若离陈仓来截斜谷粮道或追击，即乘虚袭陈仓；张郃不动，则据散关扼陈仓、陇右之间。诸葛亮发次队一万护粮随后。马超退保祁山，安抚羌部。另遣邓芝再使东吴，重申盟好，许破魏后共分南阳，劝孙权勿受曹丕之封。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-3.json --turns 3 --label run",
+   "calls": 2,
+   "usd": 0.3649
+  },
+  {
+   "date": "2026-10-09 17:06",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|趁曹真新败、魏援未至，限十日破郿：张飞领一万夜渡渭水，屯郿东要道，截断郿与长安之间，既断曹真归路粮道，又迎击东来的魏援；孤与黄忠率二万并力攻郿营，攻东、南两面，围三阙一，独留西面通陈仓之路，使曹真西走而不得回长安；斜谷口留三千护粮道。魏延仍据散关，张郃若出陈仓接应曹真，即截其归路。诸葛亮尽发汉中存粮随军急运，并遣细作入长安，联络城中心怀汉室的士民与耿纪、韦晃旧党，许以重赏，伺机为内应。关羽固守襄阳，不得再攻樊城，水军只守汉水。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-4.json --turns 4 --label run",
+   "calls": 2,
+   "usd": 0.4309
+  },
+  {
+   "date": "2026-10-09 17:11",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|先破魏援，再趋长安：孤引本军九千东合张飞，共约一万七千，趁魏援立营未固并力击之；黄忠领四千、魏延留千人守散关自引三千移屯郿西，深堑高垒围困郿营，只守不攻，曹真出则坚拒。斜谷口加派哨骑，严防魏骑绕道袭粮仓。分遣民夫与老弱抢收渭南之麦充军粮。魏援若破，张飞即选轻骑三千疾趋长安，与城中内应约期举火开门，孤领大军继进；若援军不战而退，则一路尾追至长安城下。诸葛亮续运粮草，催发汉中余兵北上。关羽仍固守襄阳。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-5.json --turns 5 --label run",
+   "calls": 2,
+   "usd": 0.2389
+  },
+  {
+   "date": "2026-10-09 17:15",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|x|火号可疑，不入长安，先灭曹真：孤留五千屯灞上深沟高垒，监视长安，不与城中交战；张飞率轻骑三千东出华阴，扼潼关西口，河东兵来则沿途邀击、焚其辎重，迟滞其入长安，不与大战；孤自引六千回郿，合黄忠、魏延与汉中援兵约一万五千，四面合围郿营，断其水源樵采，曹真粮将尽，招降其部下士卒，许降者免死给粮，曹真若突围则于野外击之。马超自祁山遣骑护武都粮道，郭淮羌骑来扰即击之。关羽：汉水若涨，可相机攻樊城，但不得越过樊城北上，赵云之兵不得抽调。诸葛亮续运粮至郿。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-6.json --turns 6 --label run",
+   "calls": 2,
+   "usd": 0.2665
+  },
+  {
+   "date": "2026-10-09 17:18",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|x|x|拒懿困真，逼其自溃：孤率本军六千与汉中援兵三千，即于郿东依渭水连夜立垒掘堑，拒司马懿于营外，只守不出，懿来攻则弓弩拒之；黄忠、魏延五千紧守郿营四围，夜夜射招降榜，许曹真部下降者免死给食，曹真突围则截击；灞上留军五千多张旗帜、夜举火鼓、伐木造云梯，扬言乘虚攻长安，使司马懿首尾疑惧；张飞自华阴率轻骑回师，循渭南西进，袭司马懿营后粮道，与孤约期夹击；斜谷口由诸葛亮增兵一千，严防魏骑偷袭粮仓。诸葛亮所运之粮直送郿东大营。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-7.json --turns 7 --label run",
+   "calls": 2,
+   "usd": 0.3065
+  },
+  {
+   "date": "2026-10-09 17:22",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|x|x|x|困懿断粮，东西并举：懿营粮仅十日，不攻其坚营，绝其粮道。张飞轻骑与灞上留军五千会于郿、长安之间渭南大道，依水立垒，截断长安至懿营的粮道与归路；孤与魏延引八千五百屯郿东垒，正面压住司马懿；黄忠领四千三百并降卒守郿，降卒发给口粮、打散编入各营；懿若攻张飞之垒，孤即出郿东夹击其后；懿若北渡渭水，各军追击其半渡。马超守祁山不动。另令关羽：趁汉水秋涨，留六千守襄阳，自率万人以舟师攻樊城，若水淹魏营即急攻，牵制洛阳中军不得西援；赵云、庞统严守江陵、公安烽火，江上吴船有异即飞报关羽回师。诸葛亮运粮直送郿城。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-8.json --turns 8 --label run",
+   "calls": 2,
+   "usd": 0.3144
+  },
+  {
+   "date": "2026-10-09 17:26",
+   "args": "--era beifa --starts inherited --strategies script --script x|x|x|x|x|x|x|x|终局方略，取长安：其一，追懿不使入城：张飞领轻骑三千夜渡渭水，抢占咸阳渭桥，断司马懿入长安之路；孤与魏延引六千继渡渭水，压懿营，趁其饥疲三日内决战。其二，开故道：黄忠领四千合散关兵二千，乘张郃闻懿败胆落，急攻陈仓，得陈仓则故道通粮；马超自祁山遣羌骑二千东出，牵制郭淮不得救陈仓。其三，围长安：破懿之后，诸军合围长安，深沟连营，断其樵汲，不强攻；诸葛亮亲至郿督粮，分兵屯田渭滨，作久围之计；遍发檄文，告关中士民曹丕篡汉，汉王兴复旧都，降者保全，城中有献门者封侯。其四，东线：关羽趁汉水秋涨攻樊城，若水淹魏营则急取之，牵制洛阳不得再援关中；赵云、庞统严守江陵、公安。其五，遣使东吴，告以关中大捷，请孙权出合肥，共分魏地。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/bf-9.json --turns 9 --label run",
+   "calls": 2,
+   "usd": 0.2622
   }
  ]
 }
