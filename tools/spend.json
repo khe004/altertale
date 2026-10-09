@@ -1,5 +1,5 @@
 {
- "total": 51.2516,
+ "total": 52.2395,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -76,8 +76,14 @@
   {
    "date": "2026-10-09 23:01",
    "args": "--era jingzhou --starts inherited --strategies script --script 两路并进，东路为主攻：关羽留赵云守江陵、庞统守公安，自率主力二万五千北攻樊城，得樊城即进逼宛城，威胁许昌洛阳；遣使孙权，约其出兵合肥。西路孤率张飞、黄忠出褒斜屯郿南，只立营牵制，不急战；马超出祁山招抚羌胡。孔明督粮。|关羽乘势猛攻樊城、宛城，务使洛阳不敢西顾；西路坚守营垒，不与魏军浪战。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/user-jingzhou-end.json --continue --turns 3 --label eastpush",
-   "calls": 9,
-   "usd": 1.3599
+   "calls": 8,
+   "usd": 1.1385
+  },
+  {
+   "date": "2026-10-09 23:16",
+   "args": "--era yiling --starts canon --strategies canon --player-model sonnet --label reg",
+   "calls": 15,
+   "usd": 1.2093
   }
  ]
 }

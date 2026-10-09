@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 41），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 42），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -65,7 +65,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 ## 待办
 
 - 东西两线分支。
-- 夷陵已写成（2026-10-09），原著回归测试见 `playtest-out/log-yiling-reg.txt`；不伐吴、逼和两条只测过离线。
+- 夷陵已写成（2026-10-09），原著回归已通过（14 条原著事件全部发生，60 分，结局走「白帝托孤」终局分支，样本 `tools/fixtures/yiling-canon-end.json`）；不伐吴、逼和两条只测过离线。
 - 入川、汉中两段的分支。
 - 时间上限收束（刘备章武三年前后年老）目前只写在文字里。
 - 待议：荆州失守而关羽活时，回头夺荆州是不是刘备集团的最优解，复荆州这一枝的定位与入口要再想（作者说暂时先这样）。

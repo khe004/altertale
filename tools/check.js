@@ -85,7 +85,7 @@ console.log("\n== 时代衔接 ==");
 for (const f of fs.readdirSync(path.join(__dirname, "fixtures"))) {
   const g = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", f), "utf8")).game;
   const want = /canon-end/.test(f), got = !!E.canonTransition(g);
-  if (!E.nextEra(g)) { const b = E.nextBranch(g); console.log(`  ${f}：${b ? `下一段「${b.label}」尚未写成` : "没有下一时代"}`); continue; }
+  if (!E.nextEra(g)) { const b = E.nextBranch(g); console.log(`  ${f}：${b ? (b.final ? `终局「${b.label}」` : `下一段「${b.label}」尚未写成`) : "没有下一时代"}`); continue; }
   if (want !== got) fail(`${f}：应当${want ? "照原著快进" : "走推演过渡"}，实际${got ? "照原著快进" : "走推演过渡"}`);
   else console.log(`  ${f}：${got ? "照原著快进" : "推演过渡"} → ${E.nextEra(g).label}`);
   if (got) {
