@@ -15,7 +15,7 @@
     ...Object.fromEntries(["places", "capital", "rivers", "mountains", "routes", "factions", "factionNames", "reportPlaces", "cast", "delegates", "gauges", "playerTitle", "player", "seat", "mapTitle"].map(k => [k, base[k]])),
     id: "fujingzhou",
     name: "复荆州",
-    title: "异章·复荆州",
+    title: "天命未定·复荆州",
     template: true,
     ref: "原著中没有这一段（荆州失守而关羽未死）",
     tagline: "荆州失守，关羽却活着回来了。是夺回荆州，还是另图他策？",

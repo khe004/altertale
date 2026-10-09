@@ -1,7 +1,7 @@
 <!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>异章·荆州</title>
+<title>天命未定</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Sans+SC:wght@400;500&family=Noto+Serif+SC:wght@400;600&display=swap">
@@ -255,7 +255,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 
 <header class="top">
   <div class="top-inner">
-    <div class="brand"><span id="brandTitle">异章</span><small>改变一个选择，让故事重新演化</small></div>
+    <div class="brand"><span id="brandTitle">天命未定</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
     <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
     <button class="ui-btn" id="exportBtn" type="button" hidden>导出</button>
@@ -589,7 +589,7 @@ function render() {
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
   if (!game) {
-    $("#brandTitle").textContent = "异章";
+    $("#brandTitle").textContent = "天命未定";
     panel.hidden = true;
     $("#date").textContent = "";
     main.innerHTML = renderIntro();
@@ -856,7 +856,7 @@ function renderMap(places) {
 function renderIntro() {
   const saved = load();
   return `<div class="intro story">
-    <h1>异章</h1>
+    <h1>天命未定</h1>
     <p class="tag">改变一个选择，让故事重新演化。你是刘备。</p>
     ${ERA_ORDER.map((id, n) => {
       const ev = AT.eras[id];
