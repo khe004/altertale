@@ -216,6 +216,11 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   /* ───────── 评分：以原著结局为 60 分，低于 60 即败局 ───────── */
 
   E.SCORE_ITEMS = ["时机", "人物", "地盘", "兵马", "民心", "大势"];
+  // 交接清单：时代配置的 handoff 列出终章要交给下一段世界线的几件事及其可选值，如 { 孙刘: ["盟", "和", "破"] }
+  function cleanHandoff(ev, e) {
+    const spec = ev.handoff || {}, h = e.handoff || {};
+    e.handoff = Object.fromEntries(Object.entries(spec).map(([k, opts]) => [k, opts.find(o => String(h[k] || "").includes(o)) || opts[opts.length - 1]]));
+  }
   E.PASS = 60;
   // 整理终章的评分：分项限在 -15～15，总分由代码按 60 + 各项之和算出；有评分时，成局与败局以及格线为准
   function scoreEnding(e) {
@@ -246,7 +251,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 6. 敌方主动：每回先替各方（${ev.rivals}）谋划（写入 plans），按其目标与所知行动，再写事件。得知援军将至，他们会设法抢在援军到达之前发动，或截击援军，而不是放弃；只有计谋暴露或代价明显过高时才延后或改图，并写明原因。双方情报都有延迟，也会误判；玩家一方可以用计诱其误判。对手只能依其所知（plans 里的 knows）行事：料中玩家的奇计要有依据（细作回报、地势一望可知、玩家故技重施），没有依据就会被奇计所乘；只有谋略"绝顶"者才常能料敌于先。被调动往返奔走的兵马会疲乏、失期，不能每次都恰好赶回；守城的兵被抽走，城就虚了。
 7. 每回推演到下一个"决断时刻"为止，限在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间。决断时刻只有这几种：决战或攻坚之前；要城得失之后；重要来使（议和、请降、求援、结盟）；主将或谋主阵亡、被擒、叛降；前方遇到授权之外的大事遣使请命；${ev.player}上回的命令已有分晓、局面已非下令时可料。以下都不是决断时刻，写进事件后继续推进：粮草渐紧、敌军调动、小胜小败、谋士献策、对方增兵、来信催促、局势照旧延续（围城、对垒、行军）。奇袭急进可能十来日就到决断时刻，相持则可推进数月。相持不得连续两回原样延续：按粮草、援兵、人心和对方的耐心推出变化，如城破、出降、解围、撤兵、议和或一方转攻他处。写出其间三至八个关键事件，按时间先后。每个事件写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${ev.player}在本回末是否已得知（known）。
 8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
-9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照，不是进度：${ev.player}走得快，局势就快，不得为了凑回数或贴近原著时间而拖延、添设阻碍；也不要原地相持。一旦出现决定性结局（${ev.decisive}），本回即为终章，哪怕这才是第二回。原著的结局是：${ev.baseline || "（见原著）"}（约在${ev.endBy}）。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。终章都要按格式评分，原著结局为 60 分及格，低于 60 即败局。
+9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照，不是进度：${ev.player}走得快，局势就快，不得为了凑回数或贴近原著时间而拖延、添设阻碍；也不要原地相持。一旦出现决定性结局（${ev.decisive}），本回即为终章，哪怕这才是第二回。${ev.victory ? `胜利条件：${ev.victory.desc}；达成即为终章（胜局）。` : ""}原著的结局是：${ev.baseline || "（见原著）"}（约在${ev.endBy}）。败局线：${ev.lossLine || "比原著更差"}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。终章都要按格式评分，原著结局为 60 分及格，低于 60 即败局。
 
 谋士进言与决断选项：
 10. 先写 assessment，冷静判断${ev.player}此刻的处境：哪些城池、兵马、人物、筹码还在手里，对方此刻想要什么、凭什么会听。
@@ -281,8 +286,9 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "ending": null
 }
 说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
-若本回为终章：ending 写 {"type":"成局或败局","title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
-评分（score）以原著结局为基准：六项逐一与原著此时代的结局相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。`;
+若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
+评分（score）以原著结局为基准：六项逐一与原著此时代的结局相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
+handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
   }
 
   function narrateRules(g, ad, material) {
@@ -475,6 +481,11 @@ ${simFormat(g)}`;
       : s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
     if (s.ending && !s.ending.type) s.ending.type = "成局";
     scoreEnding(s.ending);
+    if (s.ending) {
+      cleanHandoff(ev, s.ending);
+      // 胜局：达成本时代的胜利条件（如取长安），且总分及格
+      if (ev.victory && ev.victory.when(s, g) && s.ending.type !== "败局") { s.ending.type = "胜局"; s.ending.victory = ev.victory.label; }
+    }
     return s;
   }
 
@@ -586,34 +597,42 @@ ${problems.map(p => "- " + p).join("\n")}
 - 刘备北伐：益州、汉中稳定、荆州在手时，刘备欲兴复汉室。原著：建安二十四年关羽北伐襄樊；隆中对设想"荆州之军向宛洛，益州之众出秦川"。
 - 刘备伐吴：关羽死、荆州失时，复仇之心驱使刘备伐吴（原著夷陵之战）。`;
 
-  E.nextEra = function (g) {
+  // 世界线分支：next 是一条或一组分支，各带 when(终局状态, 对局) 条件；pending 表示那段世界线尚未写成。
+  // 取第一条条件成立的分支；败局、胜局之后没有下一段。
+  const branchesOf = ev => !ev.next ? [] : Array.isArray(ev.next) ? ev.next : [ev.next];
+  E.nextBranch = function (g) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
-    if (!st.ending || st.ending.type === "败局" || !ev.next || !AT.eras[ev.next.era]) return null;
-    return { id: ev.next.era, label: ev.next.label, gap: ev.next.gap, era: AT.eras[ev.next.era] };
+    if (!st.ending || st.ending.type === "败局" || st.ending.type === "胜局") return null;
+    return branchesOf(ev).find(b => !b.when || b.when(st, g)) || null;
+  };
+  E.nextEra = function (g) {
+    const b = E.nextBranch(g);
+    if (!b || b.pending || !AT.eras[b.era]) return null;
+    return { id: b.era, label: b.label, gap: b.gap, era: AT.eras[b.era], branch: b };
   };
 
   // 一路照原著打完上一时代（始终在原著轨上、没有败）：其间数年照原著快进，下一时代从它的原著开局接着走原著轨，不调模型。
   // 返回下一时代原著开局的键，不符合就返回 null
   E.canonTransition = function (g) {
-    const ev = era(g), nx = ev.next && AT.eras[ev.next.era];
-    if (!nx || !ev.next.canonYears || g.rail === false || !(startOf(g) || {}).rails) return null;
+    const b = E.nextBranch(g), nx = b && !b.pending && AT.eras[b.era];
+    if (!nx || !b.canonYears || g.rail === false || !(startOf(g) || {}).rails) return null;
     const st = g.chapters[g.chapters.length - 1].state;
     if (!st.ending || st.ending.type === "败局") return null;
     return Object.keys(nx.starts).find(k => nx.starts[k].rails) || null;
   };
   E.applyCanonTransition = function (g) {
-    const k = E.canonTransition(g), ev = era(g);
+    const k = E.canonTransition(g), b = E.nextBranch(g);
     if (!k) return null;
     (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff });
-    const ng = E.newGame(ev.next.era, k);
-    ng.chapters[0].state.years = ev.next.canonYears;
+    const ng = E.newGame(b.era, k);
+    ng.chapters[0].state.years = b.canonYears;
     g.era = ng.era; g.start = k; g.rail = ng.rail; g.policy = ng.policy; g.chapters = ng.chapters;
     delete g.inherited; delete g.railOff;
     return "next";
   };
 
   E.buildTransitionPrompt = function (g) {
-    const ev = era(g), nx = AT.eras[ev.next.era], ref = Object.values(nx.starts)[0];
+    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const st = g.chapters[g.chapters.length - 1].state;
     const from = parseDate(st.date, yearOf(st.date)) ?? 0, to = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
@@ -634,10 +653,10 @@ ${log}
 本局末的局势：${JSON.stringify({ date: st.date, places: st.places, figures: st.figures, forces: st.forces, gauges: st.gauges, plans: st.plans, hidden: st.hidden })}
 
 【下一时代：${nx.name}（${nx.ref}）】
-原著中这个时代的背景：
+这个时代的背景：
 ${nx.setting}
-原著开局局势（仅供参照，本局要按上一时代的结局改写）：${JSON.stringify(ref.state)}
-原著中这个时代的原著事件：${nx.canonEvents.map(c => `[${c.id}] ${c.name}（前提：${c.pre}）`).join("；")}
+${nx.canonEvents.length ? "原著" : "参考"}开局局势（仅供参照，本局要按上一时代的结局改写）：${JSON.stringify(ref.state)}
+${nx.canonEvents.length ? `原著中这个时代的原著事件：${nx.canonEvents.map(c => `[${c.id}] ${c.name}（前提：${c.pre}）`).join("；")}` : "原著中没有这一段，没有原著事件；按驱动力、背景大事与人物推演。"}
 
 ${DRIVERS}
 
@@ -648,7 +667,7 @@ ${bg.map(b => `- [${b.id}] ${b.name}（原著${b.when}）。前提：${b.pre}。
 ${cast.map(n => cardText(n, ad)).join("\n")}
 
 快进规则：
-1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${ev.next.gap}）。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
+1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${br.gap}）${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
 2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。
 3. 若快进中出现比原著更差的结局（如益州得而复失、刘备身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给刘备第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中刘备此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
@@ -667,7 +686,7 @@ ${simFormat(tg)}`;
 
   // 应用过渡：成功则把当前时代收进 g.past，换成下一时代的开局；返回 "next" 或 "lost"
   E.applyTransition = function (g, raw) {
-    const ev = era(g), nx = AT.eras[ev.next.era], ref = Object.values(nx.starts)[0];
+    const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = Object.values(nx.starts)[0];
     const o = parseJSON(raw);
     const years = (Array.isArray(o.years) ? o.years : []).filter(y => y && y.what);
     const yEvents = years.map(y => ({ date: String(y.when || ""), who: "", where: "", what: String(y.what), result: "", known: true }));

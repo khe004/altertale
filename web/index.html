@@ -273,6 +273,8 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/eras/ruchuan.js"></script>
 <script src="data/eras/hanzhong.js"></script>
 <script src="data/eras/jingzhou.js"></script>
+<script src="data/eras/fujingzhou.js"></script>
+<script src="data/eras/beifa.js"></script>
 <script src="engine.js"></script>
 <script>
 "use strict";
@@ -282,7 +284,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou"];
+const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "beifa"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
@@ -723,12 +725,21 @@ function renderScore(e) {
   </div>`;
 }
 
+// 世界线到此：胜局；下一段尚未写成；或刘备线完结
+function renderLineEnd(e, nx) {
+  if (nx || e.type === "败局") return "";
+  const b = E.nextBranch(game);
+  if (e.type === "胜局") return `<div class="next-era"><p>汉军入长安，${esc(e.victory || "还于旧都")}。兴复汉室，自此有了根基——这一局，你赢了。</p></div>`;
+  if (b && b.pending) return `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。按这一局的结局，接下来的世界线是：<b>${esc(b.label)}</b>。这一段还没有写成，故事暂且到此。</p></div>`;
+  return `<div class="next-era"><p>${esc(era().name)}告一段落。刘备年事已高，未能还于旧都，天下三分之势已定，刘备线到此完结。</p></div>`;
+}
+
 function renderEnding(st) {
   const e = st.ending;
   const nx = E.nextEra(game);
   const hiddenAll = [...new Set(game.chapters.flatMap(c => c.state.hidden || []))];
   return `<div class="ending">
-    <div class="k">${e.type === "败局" ? "败局" : "终章"} · ${esc(era().name)} · 起于「${esc(E.startOf(game).label)}」</div>
+    <div class="k">${e.type === "败局" ? "败局" : e.type === "胜局" ? `胜局 · ${esc(e.victory || "")}` : "终章"} · ${esc(era().name)} · 起于「${esc(E.startOf(game).label)}」</div>
     <h3>${esc(e.title)}</h3>
     <p>${esc(e.summary)}</p>
     ${renderScore(e)}
@@ -739,6 +750,7 @@ function renderEnding(st) {
     <div class="reveals">${game.chapters.map((c, i) => (c.state.foreshadow || []).map(f => `<div class="reveal"><span class="where">第${cn(i + 1)}回</span><q>${esc(f.line)}</q><p>${esc(f.truth)}</p></div>`).join("")).join("")}</div>
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
+  ${renderLineEnd(e, nx)}
   ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（单刀赴会、湘水划界、定军山、进位汉中王……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
   <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>进入${esc(nx.label)}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
 }
@@ -848,7 +860,7 @@ function renderIntro() {
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">三个时代可以连着打：入川打完若没有输，接着进入汉中之争，再接荆州之战。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
+    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去，荆州保全就转入两路北伐，取长安即胜；失了荆州而关羽未死，就转入复荆州。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代的原著开局。</p>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>

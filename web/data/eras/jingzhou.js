@@ -1,5 +1,12 @@
 // 荆州时代配置：建安二十四年秋，关羽北伐襄樊至荆州易主。演义第七十三至七十七回。
 (function (AT) {
+  // 关羽是否已死：原著事件"关羽被擒杀"已发生，或人物表里写明已故
+  const guanyuDead = s => {
+    const c = (s.canon || {}).qinsha;
+    if (c && (c.status === "已发生" || c.status === "变形发生")) return true;
+    const f = (s.figures || []).find(x => x.name === "关羽");
+    return !!f && /已故|遇害|身亡|战死|被杀|殉/.test(`${f.where}${f.note || ""}`);
+  };
   AT.eras = AT.eras || {};
   AT.eras.jingzhou = {
     id: "jingzhou",
@@ -26,6 +33,14 @@
     mapTitle: "荆襄形势",
     gauges: { "后方": ["荆州后方", "荆州后方安稳程度"], "前线": ["襄樊前线", "刘军在襄樊前线的优势"], "孙刘": ["孙刘之好", "孙刘两家的关系"] },
     reportPlaces: ["江陵", "公安", "麦城", "樊城"],
+    // 终章交接给下一段世界线的情形
+    handoff: { "孙刘": ["盟", "和", "破"] },
+    // 世界线分支：荆州保全 → 两路北伐；失荆州而关羽死 → 夷陵（原著线终章，尚未写成）；失荆州而关羽活 → 复荆州
+    next: [
+      { era: "beifa", label: "两路北伐", gap: "建安二十五年", note: "荆州保全，曹操新丧，依隆中对两路北伐", when: s => (s.places || {})["江陵"] === "刘" },
+      { pending: true, label: "夷陵（原著线终章，尚未写成）", when: s => guanyuDead(s) },
+      { era: "fujingzhou", label: "复荆州", gap: "建安二十五年", note: "荆州失守而关羽未死，刘备欲夺回荆州", when: () => true }
+    ],
     delegates: ["关羽", "诸葛亮"],
     advisorsAt: "成都",
     cast: ["刘备", "诸葛亮", "法正", "黄权", "许靖", "糜竺", "关羽", "关平", "周仓", "廖化", "王甫", "赵累", "糜芳", "士仁", "张飞", "赵云", "黄忠", "马超", "魏延", "刘封", "孟达",
