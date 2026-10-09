@@ -228,7 +228,7 @@ function summarize(r) {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const jobs = [];
-  for (const start of arg("starts", "canon,kongming").split(","))
+  for (const start of arg("from") ? ["from"] : arg("starts", "canon,kongming").split(","))
     for (const strategy of arg("strategies", "prudent").split(","))
       for (let n = 1; n <= +arg("runs", "1"); n++) jobs.push(() => runGame(start, strategy, n));
   const results = [];
