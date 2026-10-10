@@ -286,7 +286,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
   "autonomous": [{"who":"人物","did":"未奉命令而自行做出的决定及结果，四十字以内"}],
   "places": ${placesEx},
-  "forces": [{"name":"某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内","known":true}],
+  "forces": [{"name":"我方某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内","known":true},{"name":"敌方某部","where":"地点","troops":"约数（玩家所知）","grain":"不详","note":"十二字以内","known":true},{"name":"敌方伏兵","where":"地点","troops":"实数","grain":"可支约两月","note":"玩家不知","known":false}],
   "figures": [{"name":"人物","where":"地点","note":"十二字以内的现状"}],
   "gauges": ${gaugesEx},
   "intel": ["${ev.player}此刻确知或听闻之事，三至六条"],
@@ -298,7 +298,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串"}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久；known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
+说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
 若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
 评分（score）以原著结局为基准：比较的对象是原著到这个时代结束时的样子——${ev.baseline || "（见原著）"}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
@@ -698,8 +698,28 @@ ${simFormat(g)}`;
       if (t1 != null && call.t != null && Number.isFinite(go) && call.t + go > t1)
         problems.push(`${f.name}坐镇${a}，召令送到再赶到${b}最快要${go}日，最早${fmtDate(call.t + go)}才到，本回末只到${s.date}`);
     }
+    // 暗线里的敌军实数（伏兵、暗中增兵、潜行的援军）不得在兵马表里当作玩家已知
+    for (const f of hiddenForcesShown(g, s)) problems.push(`兵马表里的"${f.name}"（${f.where}，${f.troops}）标成了玩家已知，但暗线里写着这支兵是暗中的，玩家并不知道：known 改写 false；若玩家确有探报，只按探报写模糊的兵数（如"数目不详"），不得写出暗线里的实数`);
     return problems;
   };
+
+  // 兵马表里标成已知的敌军，却写出了暗线里的实数：同一地点，兵数与暗线里的数对得上，而玩家所知与已知事件里并没有这个数。
+  // 我方兵马（名号或备注里有我方人物）不查；兵数写得模糊（不详、未知）的，算玩家只有探报，不查
+  function hiddenForcesShown(g, s) {
+    const ev = era(g), ad = adOf(s.date), nodes = routeNodes(ev);
+    const ours = ev.cast.filter(n => (titleAt(n, ad) || {}).faction === "刘");
+    const hidden = (s.hidden || []).map(String);
+    const known = JSON.stringify([s.intel || [], (s.events || []).filter(e => e.known !== false)]);
+    return (s.forces || []).filter(f => {
+      if (f.known === false) return false;
+      if (ours.some(n => `${f.name}${f.note || ""}`.includes(n))) return false;
+      if (/不详|未知|不明|不清/.test(String(f.troops || ""))) return false;
+      const w = nodes.find(n => String(f.where || "").includes(n));
+      const num = (String(f.troops || "").match(/[一二三四五六七八九十百千万两]+/) || [""])[0];
+      if (!w || num.length < 2 || known.includes(num)) return false;
+      return hidden.some(h => h.includes(w) && h.includes(num));
+    });
+  }
 
   E.buildRepairPrompt = (prompt, problems) => `${prompt}
 
