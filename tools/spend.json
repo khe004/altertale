@@ -1,5 +1,5 @@
 {
- "total": 52.2395,
+ "total": 52.361,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -84,6 +84,12 @@
    "args": "--era yiling --starts canon --strategies canon --player-model sonnet --label reg",
    "calls": 15,
    "usd": 1.2093
+  },
+  {
+   "date": "2026-10-10 00:55",
+   "args": "--era yiling --starts canon --strategies script --script 令黄忠率火枪营乘飞机突袭夷陵，张飞驾坦克为前驱，三日内踏平东吴 --turns 1 --label tank",
+   "calls": 2,
+   "usd": 0.1215
   }
  ]
 }
