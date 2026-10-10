@@ -1,5 +1,5 @@
 {
- "total": 52.361,
+ "total": 52.5614,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -90,6 +90,12 @@
    "args": "--era yiling --starts canon --strategies script --script 令黄忠率火枪营乘飞机突袭夷陵，张飞驾坦克为前驱，三日内踏平东吴 --turns 1 --label tank",
    "calls": 2,
    "usd": 0.1215
+  },
+  {
+   "date": "2026-10-10 00:56",
+   "args": "--era yiling --starts canon --strategies script --script 令赵云率三千人即刻出白帝，强攻江陵，十日破城；朕在成都静候捷报 --turns 1 --label luanming",
+   "calls": 2,
+   "usd": 0.2004
   }
  ]
 }
