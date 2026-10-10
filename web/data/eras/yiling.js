@@ -37,7 +37,7 @@
       { era: "beifa", label: "两路北伐", gap: "夺回荆州之后", note: "东征复夺荆州，孙刘议和，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { pending: true, label: "东西两线（复夺江陵而孙刘仍战，尚未写成）", when: s => (s.places || {})["江陵"] === "刘" },
       { era: "beifa", start: "yilu", label: "一路北伐", gap: "罢东征之后", note: "刘备没有东征，或陈兵峡口逼和之后罢兵，荆州仍在东吴手里，益州独力北伐", when: s => yearsLeft(s) },
-      { final: true, label: "三分之局", text: "刘备年老，东征无功，北伐未及。天下三分之势已定，刘备线到此完结。", when: () => true }
+      { final: true, label: "三分之局", text: "东征无功，北伐未及。天下三分之势已定，刘备线到此完结。", when: () => true }
     ],
     mapTitle: "夷陵形势",
     gauges: { "军势": ["东征之势", "蜀军东征的进展"], "粮运": ["峡江粮运", "出峡以后粮草接济的程度"], "人心": ["君臣人心", "群臣对东征的支持与蜀中人心"] },
@@ -213,10 +213,6 @@
       }
     }
   };
-  // 不伐吴而转图北伐，只在刘备年岁尚堪北伐时成立（章武二年以前）
-  const yearsLeft = s => {
-    if (liubeiGone(s)) return false;
-    const m = /章武([元一二三四])年/.exec(s.date || "");
-    return !m || ["元", "一", "二"].includes(m[1]);
-  };
+  // 不伐吴（或逼和、东征无功而退）而刘备在世，就转图北伐；年岁不设上限，原著里刘备是大败之后才忧愤成疾
+  const yearsLeft = s => !liubeiGone(s);
 })(globalThis.AT = globalThis.AT || {});
