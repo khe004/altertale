@@ -1,5 +1,5 @@
 {
- "total": 53.7638,
+ "total": 54.3148,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -120,6 +120,12 @@
    "args": "--model opus --label cmp（并行，补记）",
    "calls": 2,
    "usd": 0.53
+  },
+  {
+   "date": "2026-10-10 04:18",
+   "args": "--era jingzhou --starts x --strategies prudent --from tools/fixtures/jingzhou-dongxi-end.json --continue --turns 1 --label dongxi",
+   "calls": 5,
+   "usd": 0.551
   }
  ]
 }
