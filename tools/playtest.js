@@ -22,7 +22,7 @@ const arg = (name, def) => {
 
 // 加载与网页相同的人物池、时代配置与引擎
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 const ERA = arg("era", "jingzhou");
 

@@ -35,7 +35,7 @@
     next: [
       { final: true, label: "白帝托孤", text: "刘备于白帝城托孤孔明，驾崩于永安宫。刘备线到此完结。", when: s => liubeiGone(s) },
       { era: "beifa", label: "两路北伐", gap: "夺回荆州之后", note: "东征复夺荆州，孙刘议和，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
-      { pending: true, label: "东西两线（复夺江陵而孙刘仍战，尚未写成）", when: s => (s.places || {})["江陵"] === "刘" },
+      { era: "dongxi", label: "东西两线", gap: "复夺江陵之后", note: "东征复夺江陵而孙刘仍在交战，东拒东吴、北防曹魏", when: s => (s.places || {})["江陵"] === "刘" },
       { era: "beifa", start: "yilu", label: "一路北伐", gap: "罢东征之后", note: "刘备没有东征，或陈兵峡口逼和之后罢兵，荆州仍在东吴手里，益州独力北伐", when: s => yearsLeft(s) },
       { final: true, label: "三分之局", text: "东征无功，北伐未及。天下三分之势已定，刘备线到此完结。", when: () => true }
     ],

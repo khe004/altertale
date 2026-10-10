@@ -37,7 +37,8 @@
     handoff: { "孙刘": ["盟", "和", "破"] },
     next: [
       { era: "beifa", label: "两路北伐", gap: "夺回荆州之后", note: "荆州复归，孙刘未决裂，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
-      { pending: true, label: "东西两线（尚未写成）", when: () => true }
+      { era: "dongxi", label: "东西两线", gap: "夺回江陵之后", note: "夺回江陵而荆州未全复，或孙刘仍在交战，东拒东吴、北防曹魏", when: s => (s.places || {})["江陵"] === "刘" },
+      { final: true, label: "荆州终失", text: "江陵终究没能夺回，荆州归了东吴。刘备退保益州，天下三分之势已定，刘备线到此完结。", when: () => true }
     ],
     starts: {
       sample: {

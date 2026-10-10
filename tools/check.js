@@ -13,7 +13,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 
 let errors = 0;
