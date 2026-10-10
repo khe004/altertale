@@ -17,6 +17,7 @@
   --indigo-soft: #D5DDE6;
   --seal: #A33A30;
   --river: #9DB4C8;
+  --road: #9A7448;
   --shu: #3E7A4D;
   --wu: #B04A3C;
   --wei: #3A5D92;
@@ -32,13 +33,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
-    --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
+    --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A; --road: #C29A6A;
     --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --zhang: #C49A62; --lu: #A592C2; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #121820; --panel: #18202A; --ink: #DADDD6; --muted: #8C96A2; --line: #2B3540;
-  --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A;
+  --indigo: #93B2D6; --indigo-soft: #223246; --seal: #D4695E; --river: #35506A; --road: #C29A6A;
   --shu: #6FB07E; --wu: #DB7B6C; --wei: #7EA2D8; --war: #D2AE55; --zhang: #C49A62; --lu: #A592C2; --mount: #6E6A60; --mount-fill: #2A2E33; color-scheme: dark;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -971,6 +972,7 @@ function renderMap(places) {
   }).join("");
   return `<svg viewBox="0 0 400 236" role="img" aria-label="${esc(ev.mapTitle)}图">
     ${ev.rivers.map(r => `<path d="${r.d}" fill="none" stroke="var(--river)" stroke-width="${r.width}" stroke-linecap="round"/><text x="${r.label[1]}" y="${r.label[2]}" font-size="9" fill="var(--muted)">${r.label[0]}</text>`).join("")}
+    ${(ev.roads || []).map(r => `<path d="${r.d}" fill="none" stroke="var(--road)" stroke-width="1.4" stroke-dasharray="4 3" stroke-linecap="round"/><text x="${r.label[1]}" y="${r.label[2]}" font-size="8.5" fill="var(--road)">${r.label[0]}</text>`).join("")}
     ${peaks}
     ${nodes}
   </svg>`;
