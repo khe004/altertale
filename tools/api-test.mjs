@@ -137,3 +137,21 @@ test('小请求采用较小输出上限', async () => {
     await worker.fetch(request({ base: 'https://api.deepseek.com/v1', payload: { ...payload, max_tokens: 128 } }));
   });
 });
+test('GPT-6.1 Sol 使用 OpenAI 输出上限、推理档和实际用量参数', async () => {
+  await mocked(async (url, options) => {
+    assert.equal(String(url), 'https://api.openai.com/v1/chat/completions');
+    const body = JSON.parse(options.body);
+    assert.equal(body.max_tokens, undefined);
+    assert.equal(body.max_completion_tokens, 8000);
+    assert.equal(body.reasoning_effort, 'medium');
+    assert.equal(body.stream_options.include_usage, true);
+    return Response.json({ choices: [{ message: { content: '正文' } }] });
+  }, async () => {
+    const response = await worker.fetch(request({ base: 'https://api.openai.com/v1', key: 'test-key', payload: { ...payload, model: 'gpt-6.1-sol', max_tokens: 8000 } }));
+    assert.equal(response.status, 200);
+  });
+});
+test('未配置服务器 Key 时不会宣称模型已接通', async () => {
+  const response = await worker.fetch(new Request('https://site.example/api/config'), { OPENAI_BASE_URL: 'https://api.openai.com/v1', OPENAI_MODEL: 'gpt-6.1-sol' });
+  assert.equal((await response.json()).openai.configured, false);
+});

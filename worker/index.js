@@ -56,11 +56,17 @@ async function proxy(request, env, provider) {
     headers['x-api-key'] = key;
     headers['anthropic-version'] = '2023-06-01';
   } else if (key) headers.authorization = 'Bearer ' + key;
+  const limit = Math.min(8000, Math.max(32, Number(payload.max_tokens) || 8000));
+  const body = { model: payload.model, messages: payload.messages, stream: true };
+  if (provider === 'openai' && url.hostname === 'api.openai.com') {
+    body.max_completion_tokens = /^(gpt-[56]|o[134])/.test(payload.model) ? Math.max(1024, limit) : limit;
+    body.stream_options = { include_usage: true };
+    if (/^gpt-6\.1-sol/.test(payload.model)) body.reasoning_effort = limit <= 128 ? 'low' : 'medium';
+  } else body.max_tokens = limit;
   try {
     const upstream = await fetch(url, {
       method: 'POST', headers, redirect: 'error', signal: request.signal,
-      body: JSON.stringify({ model: payload.model, messages: payload.messages,
-        max_tokens: Math.min(8000, Math.max(32, Number(payload.max_tokens) || 8000)), stream: true })
+      body: JSON.stringify(body)
     });
     if (!upstream.ok) {
       let message = `模型服务返回 ${upstream.status}，请检查接口地址、Key、模型名和余额。`;
@@ -84,7 +90,7 @@ export default {
   async fetch(request, env = {}, ctx) {
     const path = new URL(request.url).pathname;
     if (path === '/api/config' && request.method === 'GET') return json({
-      hosted: true, openai: { configured: !!(env.OPENAI_BASE_URL && env.OPENAI_MODEL),
+      hosted: true, openai: { configured: !!(env.OPENAI_BASE_URL && env.OPENAI_MODEL && env.OPENAI_API_KEY),
         base: env.OPENAI_BASE_URL || '', model: env.OPENAI_MODEL || '', quick: env.OPENAI_QUICK_MODEL || '' }
     });
     if (path === '/api/openai' || path === '/api/anthropic') {
