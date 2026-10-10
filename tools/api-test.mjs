@@ -102,6 +102,30 @@ test('上游 401/429 不被改成成功，消息不泄露 Key', async () => {
     assert.equal(response.status, status); assert.ok(!(await response.text()).includes('test-key'));
   });
 });
+test('429 保留上游类型，明确区分额度不足与请求限流', async () => {
+  for (const kind of ['insufficient_quota', 'rate_limit_exceeded']) {
+    await mocked(async () => Response.json({ error: { message: 'upstream details', code: kind, type: kind } }, { status: 429 }), async () => {
+      const response = await worker.fetch(request({ base: 'https://api.openai.com/v1', key: 'test-key', payload }));
+      await assert.rejects(api.read(response, 'openai', 'm'), error => {
+        assert.equal(error.code, 'http_429');
+        assert.equal(error.upstreamCode, kind);
+        assert.equal(error.upstreamType, kind);
+        const copy = api.rateLimitCopy(error);
+        if (kind === 'insufficient_quota') assert.ok(copy.includes('额度不足') && copy.includes('Plus'));
+        else assert.ok(copy.includes('请求过于频繁') && !copy.includes('余额') && !copy.includes('充值'));
+        return true;
+      });
+    });
+  }
+  assert.ok(api.rateLimitCopy({ message: 'details' }).includes('暂时无法确认'));
+  assert.ok(api.rateLimitCopy({ upstreamType: 'rate_limit_error' }).includes('请求过于频繁'));
+});
+test('上游错误元数据同样隐藏 Key', async () => {
+  await mocked(async () => Response.json({ error: { message: 'test-key', code: 'test-key', type: 'test-key' } }, { status: 429 }), async () => {
+    const response = await worker.fetch(request({ base: 'https://api.openai.com/v1', key: 'test-key', payload }));
+    assert.ok(!(await response.text()).includes('test-key'));
+  });
+});
 test('跨站请求、无效设置不发送上游请求', async () => {
   await mocked(async () => { assert.fail('不应访问上游'); }, async () => {
     for (const [body, headers, status] of [

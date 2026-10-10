@@ -613,7 +613,7 @@ function errorCopy(e) {
   if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
   if (c === "refused") return "Claude 拒绝写这一回。换一种决断试试。";
   if (c === "http_401") return "API Key 无效，请重新填写。";
-  if (c === "http_429") return "模型服务限流或余额不足，请检查账户后再试。";
+  if (c === "http_429" || (c === "upstream_error" && (e.upstreamCode === "insufficient_quota" || e.upstreamCode === "rate_limit_exceeded" || e.upstreamType === "rate_limit_error"))) return AT.api.rateLimitCopy(e);
   if (c === "http_400" || c === "http_403" || c === "http_502" || c === "upstream_error" || c === "invalid_config" || c === "invalid_response" || c === "truncated") return e.message || "接口设置或返回格式有误，请检查接口地址与模型名。";
   if (c === "fetch_blocked" && window.ALTERTALE_HOSTED) return "连接中断，请检查网络后重试。";
   if (c === "fetch_blocked") return "请求被浏览器拦下：多半是这个接口不允许网页直接调用（跨域限制），或接口地址填错了。";

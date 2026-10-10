@@ -12,16 +12,24 @@
   };
   api.text = content => typeof content === 'string' ? content : Array.isArray(content) ? content.map(x => x.text || '').join('') : '';
   api.visible = text => text.replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<think>[\s\S]*$/gi, '').trim();
+  api.rateLimitCopy = error => {
+    const kind = error.upstreamCode || error.upstreamType;
+    if (kind === 'insufficient_quota' || kind === 'billing_hard_limit_reached')
+      return '模型 API 额度不足或已达到支出上限，请检查 API 平台的余额与额度。ChatGPT Plus 与 API 分开计费。';
+    if (kind === 'rate_limit_exceeded' || kind === 'rate_limit_error')
+      return '模型服务请求过于频繁，请稍后重试；如持续出现，请检查 API 的请求与 token 速率限制。';
+    return '模型服务返回 429，暂时无法确认是限流还是额度不足。' + (error.message ? '\n' + error.message : '请在 API 平台检查用量与账单。');
+  };
   api.read = async (response, provider, model, onText = () => {}, signal) => {
     if (!response.ok) {
-      let message = '';
-      try { const d = await response.json(); message = d.error?.message || d.message || ''; } catch {}
-      throw { code: 'http_' + response.status, message };
+      let message = '', upstreamCode = '', upstreamType = '';
+      try { const d = await response.json(); message = d.error?.message || d.message || ''; upstreamCode = d.error?.code || ''; upstreamType = d.error?.type || ''; } catch {}
+      throw { code: 'http_' + response.status, message, upstreamCode, upstreamType };
     }
     const meta = { model, tier: '', inTok: 0, outTok: 0 };
     let text = '';
     const consume = ev => {
-      if (ev.error || ev.type === 'error') throw { code: 'upstream_error', message: ev.error?.message || '模型服务返回错误。' };
+      if (ev.error || ev.type === 'error') throw { code: 'upstream_error', message: ev.error?.message || '模型服务返回错误。', upstreamCode: ev.error?.code || '', upstreamType: ev.error?.type || '' };
       if (provider === 'openai') {
         if (ev.model) meta.model = ev.model;
         if (ev.usage) {

@@ -69,13 +69,20 @@ async function proxy(request, env, provider) {
       body: JSON.stringify(body)
     });
     if (!upstream.ok) {
-      let message = `模型服务返回 ${upstream.status}，请检查接口地址、Key、模型名和余额。`;
+      let message = `模型服务返回 ${upstream.status}，请检查 API 平台的错误详情。`;
+      let code = '', type = '';
       try {
         const body = await upstream.json();
         if (typeof body.error?.message === 'string') message = body.error.message.slice(0, 600);
+        if (typeof body.error?.code === 'string') code = body.error.code.slice(0, 100);
+        if (typeof body.error?.type === 'string') type = body.error.type.slice(0, 100);
       } catch {}
-      if (key) message = message.split(key).join('[已隐藏]');
-      return json({ error: { message } }, upstream.status);
+      if (key) {
+        message = message.split(key).join('[已隐藏]');
+        code = code.split(key).join('[已隐藏]');
+        type = type.split(key).join('[已隐藏]');
+      }
+      return json({ error: { message, code, type } }, upstream.status);
     }
     return new Response(upstream.body, { status: upstream.status, headers: {
       'content-type': upstream.headers.get('content-type') || 'text/event-stream; charset=utf-8',
