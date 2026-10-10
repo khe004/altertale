@@ -277,6 +277,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/eras/beifa.js"></script>
 <script src="data/eras/yiling.js"></script>
 <script src="engine.js"></script>
+<script src="api.js"></script>
 <script>
 "use strict";
 
@@ -306,6 +307,7 @@ let peek = false;
 let narrating = -1;
 let showReport = false;
 let streamText = "";
+let hostedOAI = {};
 let llm = null;           // { kind, call(prompt, onText, signal) -> Promise<string> }
 
 const $ = s => document.querySelector(s);
@@ -358,11 +360,21 @@ async function initLLM() {
       }
     } catch (e) {}
   }
+  if (window.ALTERTALE_HOSTED) {
+    try {
+      const r = await fetch('/api/config', { cache: 'no-store' });
+      if (r.ok) hostedOAI = (await r.json()).openai || {};
+    } catch (e) {}
+  }
   setupKeyLLM();
   render();
 }
 
-const loadOAI = () => { try { return JSON.parse(localStorage.getItem(OAI_STORE) || "null") || {}; } catch (e) { return {}; } };
+const loadOAI = () => {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(OAI_STORE) || "null") || {}; } catch (e) {}
+  return { on: !!window.ALTERTALE_HOSTED, base: hostedOAI.base || "", model: hostedOAI.model || "", quick: hostedOAI.quick || "", ...saved };
+};
 // 本地运行：用了 OpenAI 兼容接口就走它，否则走 Anthropic Key
 function setupKeyLLM() {
   const o = loadOAI();
@@ -374,91 +386,9 @@ function setupKeyLLM() {
   try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
   llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : API_MODEL) } : null;
 }
-// OpenAI 兼容的 /chat/completions（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等），流式
-async function callOpenAI(o, prompt, onText, signal, model) {
-  const base = String(o.base).trim().replace(/\/+$/, "");
-  const url = /\/chat\/completions$/.test(base) ? base : base + "/chat/completions";
-  let res;
-  try {
-    res = await fetch(url, {
-      method: "POST", signal,
-      headers: { "content-type": "application/json", ...(o.key ? { authorization: "Bearer " + o.key } : {}) },
-      body: JSON.stringify({ model, max_tokens: 8000, stream: true, messages: [{ role: "user", content: prompt }] })
-    });
-  } catch (e) {
-    if (e && e.name === "AbortError") throw { code: "cancelled" };
-    throw { code: "fetch_blocked", message: String(e) };
-  }
-  if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "", text = "";
-  const meta = { model, tier: "", inTok: 0, outTok: 0 };
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop();
-    for (const line of lines) {
-      const t = line.trim();
-      if (!t.startsWith("data:")) continue;
-      const data = t.slice(5).trim();
-      if (data === "[DONE]") continue;
-      try {
-        const ev = JSON.parse(data);
-        if (ev.error) throw { code: "upstream_error", message: ev.error.message || String(ev.error) };
-        if (ev.model) meta.model = ev.model;
-        if (ev.usage) { meta.inTok = ev.usage.prompt_tokens || meta.inTok; meta.outTok = ev.usage.completion_tokens || meta.outTok; }
-        const d = ev.choices && ev.choices[0] && ev.choices[0].delta;
-        if (d && d.content) { text += d.content; onText(text); }
-      } catch (e) { if (e && e.code) throw e; }
-    }
-  }
-  // 有些推理模型会把思考包在 <think>…</think> 里，去掉
-  text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-  return { text, ...meta };
-}
-
-async function callAnthropic(key, prompt, onText, signal, model) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST", signal,
-    headers: {
-      "content-type": "application/json", "x-api-key": key,
-      "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
-    },
-    body: JSON.stringify({ model, max_tokens: 8000, stream: true, messages: [{ role: "user", content: prompt }] })
-  });
-  if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "", text = "";
-  const meta = { model, tier: "", inTok: 0, outTok: 0 };
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop();
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      try {
-        const ev = JSON.parse(line.slice(5));
-        if (ev.type === "message_start" && ev.message) {
-          meta.model = ev.message.model || meta.model;
-          const u = ev.message.usage || {};
-          meta.inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
-        } else if (ev.type === "message_delta" && ev.usage) {
-          meta.outTok = ev.usage.output_tokens || meta.outTok;
-        } else if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
-          text += ev.delta.text;
-          onText(text);
-        } else if (ev.type === "error") throw { code: "upstream_error", message: ev.error && ev.error.message };
-      } catch (e) { if (e && e.code) throw e; }
-    }
-  }
-  return { text, ...meta };
-}
+// Sites 走同源转发，本地或 Artifact 保持原来的直接调用方式。
+const callOpenAI = (o, prompt, onText, signal, model) => AT.api.call("openai", o, prompt, onText, signal, model);
+const callAnthropic = (key, prompt, onText, signal, model) => AT.api.call("anthropic", { key }, prompt, onText, signal, model);
 
 /* ───────── 用量记录 ───────── */
 
@@ -683,6 +613,9 @@ function errorCopy(e) {
   if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
   if (c === "refused") return "Claude 拒绝写这一回。换一种决断试试。";
   if (c === "http_401") return "API Key 无效，请重新填写。";
+  if (c === "http_429") return "模型服务限流或余额不足，请检查账户后再试。";
+  if (c === "http_400" || c === "http_403" || c === "http_502" || c === "upstream_error" || c === "invalid_config" || c === "invalid_response" || c === "truncated") return e.message || "接口设置或返回格式有误，请检查接口地址与模型名。";
+  if (c === "fetch_blocked" && window.ALTERTALE_HOSTED) return "连接中断，请检查网络后重试。";
   if (c === "fetch_blocked") return "请求被浏览器拦下：多半是这个接口不允许网页直接调用（跨域限制），或接口地址填错了。";
   if (c === "http_404") return "接口地址或模型名不对（404），请检查设置。";
   if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "推演结果不完整，可以重新推演这一回。";
@@ -796,7 +729,7 @@ function renderChoices(st) {
     ${renderTrack()}
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
-    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要填写 API（Anthropic Key 或 OpenAI 兼容接口）才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API</button></div>`}</div>` : ""}
+    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "需要先填写模型接口（Anthropic Key 或 OpenAI 兼容接口），才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API</button></div>`}</div>` : ""}
     <div class="choice-list">
       ${(st.choices || []).map((c, i) => {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
@@ -993,17 +926,17 @@ function renderIntro() {
     </details>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
     ${window.claude ? "" : `<div class="keybox">
-      <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
+      <label for="apiKey">填写模型接口后即可续写。设置保存在当前浏览器，Key 仅用于请求所选模型服务。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
       <div><button class="ui-btn" id="saveKey" type="button">保存 Key</button> <span id="keyMsg"></span></div>
-      <label><input id="oaiOn" type="checkbox" style="width:auto"> 改用 OpenAI 兼容接口（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等）</label>
+      <label><input id="oaiOn" type="checkbox" style="width:auto"> 使用 OpenAI 兼容接口（DeepSeek、通义、Kimi、OpenAI 等）</label>
       <div id="oaiBox" style="display:grid;gap:0.4rem">
-        <input id="oaiBase" autocomplete="off" placeholder="接口地址，如 https://api.deepseek.com/v1 或 http://localhost:11434/v1">
-        <input id="oaiKey" type="password" autocomplete="off" placeholder="API Key（本地 Ollama 可留空）">
-        <input id="oaiModel" autocomplete="off" placeholder="推演、说书用的模型名，如 deepseek-chat">
-        <input id="oaiQuick" autocomplete="off" placeholder="小活用的模型名（拆令、预检，可留空，同上）">
-        <div><button class="ui-btn" id="saveOai" type="button">保存接口设置</button> <span id="oaiMsg"></span></div>
-        <span>提示：推演规则是按 Claude 调的，换用别家模型时，推演质量与格式要自己试；有的接口不允许网页直接调用，会被浏览器拦下。</span>
+        <input id="oaiBase" autocomplete="off" aria-label="接口地址" placeholder="接口地址，如 https://api.deepseek.com/v1">
+        <input id="oaiKey" type="password" autocomplete="off" aria-label="OpenAI 兼容接口 API Key" placeholder="API Key">
+        <input id="oaiModel" autocomplete="off" aria-label="主模型名" placeholder="推演、说书用的模型名，如 deepseek-chat">
+        <input id="oaiQuick" autocomplete="off" aria-label="小活模型名" placeholder="小活用的模型名（拆令、预检，可留空，同上）">
+        <div><button class="ui-btn" id="saveOai" type="button">保存接口设置</button> <button class="ui-btn" id="testOai" type="button">测试连接（小请求）</button> <span id="oaiMsg" role="status" aria-live="polite"></span></div>
+        <span>${window.ALTERTALE_HOSTED ? "本站已处理跨域转发，请使用公网 HTTPS 接口；本机 Ollama 无法从云端访问。" : "本地直接调用需要接口允许跨域。"} 主模型负责推演、说书，小活模型负责拆令、预检。测试连接会调用一次主模型；小活模型不同则再测试一次，费用按服务商计费。</span>
       </div>
     </div>`}
   </div>`;
@@ -1054,9 +987,30 @@ function bindIntro() {
     on.onchange = () => { box.style.display = on.checked ? "grid" : "none"; const c = loadOAI(); c.on = on.checked; try { localStorage.setItem(OAI_STORE, JSON.stringify(c)); } catch (e) {} setupKeyLLM(); };
     so.onclick = () => {
       const c = { on: on.checked, base: $("#oaiBase").value.trim(), key: $("#oaiKey").value.trim(), model: $("#oaiModel").value.trim(), quick: $("#oaiQuick").value.trim() };
-      try { localStorage.setItem(OAI_STORE, JSON.stringify(c)); } catch (e) {}
+      if (c.on) {
+        try {
+          const url = new URL(AT.api.openaiURL(c.base));
+          if (!c.model) throw { code: "invalid_config", message: "请填写主模型名。" };
+          if (window.ALTERTALE_HOSTED && url.protocol !== "https:") throw { code: "invalid_config", message: "本站需要公网 HTTPS 接口。" };
+        } catch (e) { $("#oaiMsg").textContent = e.message || "请填写完整接口地址和模型名。"; return; }
+      }
+      try { localStorage.setItem(OAI_STORE, JSON.stringify(c)); } catch (e) { $("#oaiMsg").textContent = "浏览器无法保存设置，请允许本地存储后重试。"; return; }
       setupKeyLLM();
       $("#oaiMsg").textContent = c.base && c.model ? (llm && llm.kind === "openai" ? "已保存，正在使用此接口" : "已保存") : "接口地址与模型名不能为空";
+    };
+    $("#testOai").onclick = async () => {
+      const b = $("#testOai"), msg = $("#oaiMsg");
+      const c = { base: $("#oaiBase").value.trim(), key: $("#oaiKey").value.trim(), model: $("#oaiModel").value.trim(), quick: $("#oaiQuick").value.trim() };
+      if (!c.base || !c.model) { msg.textContent = "请先填写接口地址和主模型名。"; return; }
+      b.disabled = true; msg.textContent = "正在测试……";
+      const control = new AbortController(), timer = setTimeout(() => control.abort(), 60000);
+      try {
+        for (const model of [...new Set([c.model, c.quick || c.model])]) {
+          await AT.api.call("openai", c, "请只回复：连接成功", () => {}, control.signal, model, 128);
+        }
+        msg.textContent = "连接成功，主模型与小活模型均可用；保存设置后即可开局。";
+      } catch (e) { msg.textContent = errorCopy(e); }
+      finally { clearTimeout(timer); b.disabled = false; }
     };
   }
 }

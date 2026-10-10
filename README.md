@@ -59,3 +59,22 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 测试：`node tools/playtest.js --starts canon --strategies prudent,delegate` 只跑推演、不说书，用本机 `claude` CLI 自动打完整局，结果写入 `playtest-out/`。
 
 原型以“故事好看”为先，暂不包含上文开发顺序中的规划器与形式化世界模型。
+
+## Sites 部署
+
+Sites 版本保留原有游戏与浏览器存档。`worker/index.js` 处理 `/api/openai`、`/api/anthropic` 同源转发，避免模型服务的浏览器跨域限制；Key 不进入源码或打包资源，转发不记录 Key 或提示词。
+
+- 在开局页填写公网 HTTPS 接口地址（可填 `/v1` base 或完整 `/chat/completions` 地址）、Key、主模型名；小活模型可留空。
+- 点“测试连接（小请求）”检查主模型与小活模型，然后保存。测试按服务商正常计费。
+- 云端无法访问玩家电脑上的 `localhost` Ollama；直接打开 `web/index.html` 的本地模式仍支持本机接口。
+- 可选的站点默认值通过 Sites 运行时环境变量配置，变量名见 `.env.example`。Key 不写进 `.openai/hosting.json`。
+
+离线验证（不调用付费模型）：
+
+```sh
+node tools/check.js
+node --test tools/api-test.mjs
+node scripts/build-site.mjs
+```
+
+构建将 `web/` 的 11 个资源嵌入单个 `dist/server/index.js`，并保留 `dist/.openai/hosting.json`。部署前应先把对应源码提交同步到本项目的 Sites 源码仓库，再打包 `dist/` 并发布该提交。

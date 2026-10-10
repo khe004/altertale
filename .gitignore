@@ -1,1 +1,7 @@
 playtest-out/
+
+dist/
+.env
+.env.*
+!.env.example
+.openai/*.tar.gz
