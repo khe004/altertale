@@ -96,20 +96,48 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
   /* ───────── 人物池 ───────── */
 
   const card = name => AT.characters[name];
-  const titleAt = E.titleAt = function (name, ad) {
+  // 带上 g 时，刘备称帝与否看本局（局中登基才称"陛下"，没登基不因年份到了就改口；提前登基也照改）
+  const titleAt = E.titleAt = function (name, ad, g) {
     const c = card(name);
     if (!c) return null;
     let t = c.titles[0];
     let faction = c.faction;
     for (const x of c.titles) if (x[0] <= ad) { t = x; if (x[3]) faction = x[3]; }
+    if (g && name === era(g).player) {
+      const emperor = c.titles.find(x => x[1] === "皇帝");
+      const crowned = E.playerTitle(g) === "陛下";
+      if (emperor && crowned) t = emperor;
+      else if (emperor && t === emperor) t = c.titles.filter(x => x !== emperor && x[0] <= ad).pop() || t;
+    }
     return { title: t[1], address: t[2], faction };
+  };
+  // 刘备此刻的称呼：时代默认的称呼，局中登基、进位后跟着变（只升不降）。看到第 i 回为止的事件与刘备的处境
+  const TITLE_RANK = ["主公", "汉中王", "大王", "陛下"];
+  E.playerTitle = function (g, i) {
+    const ev = era(g), chs = [...(g.past || []).flatMap(p => p.chapters || []), ...(g.chapters || []).slice(0, (i == null ? g.chapters.length - 1 : i) + 1)];
+    let t = ev.playerTitle;
+    const up = x => { if (TITLE_RANK.indexOf(x) > TITLE_RANK.indexOf(t)) t = x; };
+    for (const p of g.past || []) up(era(p).playerTitle);  // 前几个时代已有的称呼（夷陵是陛下，接下来的北伐也是）
+    const CROWN = /称帝|即皇帝位|即帝位|登基|践祚|即位/;
+    for (const c of chs) {
+      const st = c.state || {};
+      if (/^章武/.test(String(st.date || ""))) up("陛下");  // 已用刘备的年号
+      for (const e of st.events || []) {
+        const who = String(e.who || ""), what = `${e.what || ""}${e.result || ""}`;
+        if ((/刘备|玄德|汉中王/.test(who) && CROWN.test(what) && !/劝|谏|议|请/.test(what)) || /(刘备|玄德|汉中王)[^，。；]{0,10}(称帝|即皇帝位|即帝位|登基|践祚)/.test(what)) up("陛下");
+        else if ((/刘备|玄德/.test(who) && /汉中王/.test(what)) || /(进位|自立为|称)汉中王/.test(what)) up(ev.playerTitle === "汉中王" ? "汉中王" : "大王");
+      }
+      const f = (st.figures || []).find(x => x.name === ev.player);
+      if (f && /皇帝|天子|称帝|登基|陛下|即位/.test(`${f.note || ""}`) && !/劝|欲|谋|未/.test(`${f.note || ""}`)) up("陛下");
+    }
+    return t;
   };
   const TIER_NAME = { 1: "第一档", 2: "第二档", 3: "第三档" };
 
-  function cardText(name, ad) {
+  function cardText(name, ad, g) {
     const c = card(name);
     if (!c) return `- ${name}`;
-    const t = titleAt(name, ad);
+    const t = titleAt(name, ad, g);
     const ab = c.abilities ? Object.entries(c.abilities).map(([k, v]) => k + v).join("、") : "";
     const parts = [
       `- ${name}〔${t.faction}〕${t.title}，称"${t.address}"。`,
@@ -140,12 +168,12 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
   const castText = (g, ad, extra) => {
     const ev = era(g), on = relevantCast(g, extra), off = ev.cast.filter(n => !on.includes(n));
     return `人物卡（${ad}年时的官爵与称谓；人物言行、才智与武艺一律按《三国演义》，不按史书；称谓必须合乎当年，不得用后来的封号、官职与谥号）：
-${on.map(n => cardText(n, ad)).join("\n")}${off.length ? `\n其他可能登场的人物（按演义设定，用到时照其人物卡的身份行事）：${off.map(n => `${n}（${titleAt(n, ad).title}）`).join("、")}` : ""}`;
+${on.map(n => cardText(n, ad, g)).join("\n")}${off.length ? `\n其他可能登场的人物（按演义设定，用到时照其人物卡的身份行事）：${off.map(n => `${n}（${titleAt(n, ad, g).title}）`).join("、")}` : ""}`;
   };
 
-  function titleTable(ev, ad, only) {
+  function titleTable(ev, ad, only, g) {
     return ev.cast.filter(card).filter(n => !only || only(n)).map(n => {
-      const c = card(n), t = titleAt(n, ad);
+      const c = card(n), t = titleAt(n, ad, g);
       return `- ${n}：${t.title}，称"${t.address}"${c.kin ? "；" + c.kin : ""}`;
     }).join("\n");
   }
@@ -317,7 +345,7 @@ handoff 写终局时交给下一段世界线的情形，每项只能取所列之
 7. 称谓与官爵必须合乎${ad}年当时，遵守下面的称谓表，不得用后来的封号、官职与谥号。
 
 称谓表（本回涉及的人物）：
-${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
+${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
   }
 
   /* ───────── 原著轨：一路照原著下令时，按原著节拍推演 ───────── */

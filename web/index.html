@@ -736,7 +736,7 @@ function render() {
       ${body}
       ${(i > 0 || !c.text) && known.length ? `<details class="events" ${c.text ? "" : "open"}><summary>本回军情 · ${known.length} 条</summary><ul>${known.map(e => `<li class="${e.known === false ? "secret" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.known === false ? `<em>暗</em>` : ""}</li>`).join("")}</ul></details>` : ""}
       ${(c.state.autonomous || []).length ? `<div class="auto"><h4>前方自决</h4><ul>${c.state.autonomous.map(a => `<li><b>${esc(a.who)}</b>${esc(a.did)}</li>`).join("")}</ul></div>` : ""}
-      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-resim="${i}" title="丢弃此后的推演，用同一道命令再推演一次">以此令重新推演</button><button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
+      ${c.decision ? `<div class="decision"><span>${esc(E.playerTitle(game, i))}之令</span><b>${esc(c.decision)}</b>${busy ? "" : `<button class="redo" type="button" data-resim="${i}" title="丢弃此后的推演，用同一道命令再推演一次">以此令重新推演</button><button class="redo" type="button" data-redo="${i}">回到此处另作决断</button>`}</div>` : ""}
     </section>`;
     if (c.decision) html += `<div class="divider">· · ·</div>`;
   });
@@ -746,7 +746,7 @@ function render() {
         <p class="writing" id="writing"><span>岁月流转，推演其间数年<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">先不推了</button></p>
       </section>`;
   } else if (busy === "sim") {
-    html += `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(game.pending)}</b></div>
+    html += `<div class="decision"><span>${esc(E.playerTitle(game))}之令</span><b>${esc(game.pending)}</b></div>
       <section class="chapter" id="live">
         <p class="writing" id="writing"><span>驿马奔驰，各方正在行动<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
       </section>`;
@@ -776,7 +776,7 @@ function renderPast() {
       ${p.chapters.map((c, i) => `<details class="past-ch"><summary>${esc(c.title || `第${cn(i + 1)}回`)}</summary>
         ${c.text ? `<div class="body">${paras(c.text)}</div>` : `<p class="rp-m">（这一回没有写成文字）</p>`}
         ${(c.state.events || []).length ? `<details class="events"><summary>本回军情 · ${c.state.events.length} 条</summary><ul>${c.state.events.map(e => `<li><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b>${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}</li>`).join("")}</ul></details>` : ""}
-        ${c.decision ? `<div class="decision"><span>${esc(E.era(p).playerTitle)}之令</span><b>${esc(c.decision)}</b></div>` : ""}
+        ${c.decision ? `<div class="decision"><span>${esc(E.playerTitle(p, i))}之令</span><b>${esc(c.decision)}</b></div>` : ""}
       </details>`).join("")}
       ${end ? `<p class="rp-m">终章「${esc(end.title)}」：${esc(end.summary)}</p>` : ""}
     </details>`;
@@ -800,7 +800,7 @@ function renderStream() {
 function renderChoices(st) {
   const off = !llm;
   return `<div class="choices">
-    <h3>${esc(era().playerTitle)}当如何决断</h3>
+    <h3>${esc(E.playerTitle(game))}当如何决断</h3>
     ${renderTrack()}
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
@@ -913,7 +913,7 @@ function renderReport() {
       <header><span class="rp-no">第${cn(i + 1)}回</span><span class="rp-date">${esc(s.date)}</span>
         <span class="rp-places">${keys.map(k => `<span class="rp-pl" style="background:var(${factions()[s.places[k]] || "--war"})">${k}·${esc(s.places[k])}</span>`).join("")}</span></header>
       <div class="rp-g">${Object.keys(era().gauges).map(k => `${k} <b>${s.gauges[k]}</b>${delta(k)}`).join("　")}</div>
-      ${i > 0 && evs.length ? `<h4>本回事件<span class="rp-m">　${evs.length} 条，当时${esc(era().playerTitle)}得知 ${evs.filter(e => e.known !== false).length} 条</span></h4>
+      ${i > 0 && evs.length ? `<h4>本回事件<span class="rp-m">　${evs.length} 条，当时${esc(E.playerTitle(game, i))}得知 ${evs.filter(e => e.known !== false).length} 条</span></h4>
       <ol class="rp-ev">${evs.map(e => `<li class="${e.known === false ? "dark" : ""}"><span class="when">${esc(e.date)}</span><b>${esc(e.who)}</b><span class="rp-m">@${esc(e.where)}</span> ${esc(e.what)}${e.why ? `<span class="rp-m">（${esc(e.why)}）</span>` : ""} → ${esc(e.result)}${e.known === false ? "<em>暗</em>" : ""}</li>`).join("")}</ol>` : ""}
       ${(s.autonomous || []).length ? `<h4>前方自决</h4><ul>${s.autonomous.map(a => `<li><b>${esc(a.who)}</b> ${esc(a.did)}</li>`).join("")}</ul>` : ""}
       ${(s.foreshadow || []).length ? `<h4>伏笔</h4><ul>${s.foreshadow.map(f => `<li>「${esc(f.line)}」<span class="rp-m"> → ${esc(f.truth)}</span></li>`).join("")}</ul>` : ""}
@@ -921,7 +921,7 @@ function renderReport() {
       ${(s.delivered || []).length ? `<h4>本回送达的军令</h4><ul>${s.delivered.map(o => `<li>${esc(E.orderLine(o))}</li>`).join("")}</ul>` : ""}
       ${(s.counsel || []).length ? `<h4>谋士进言</h4><ul>${s.counsel.map(c => `<li><b>${esc(c.who)}</b><span class="rp-m">（${esc(c.how)}）</span> ${esc(c.says)}</li>`).join("")}</ul>` : ""}
       ${(s.choices || []).length ? `<h4>当时的选项</h4><ul>${s.choices.map(o => `<li><b>${esc(o.label)}</b><span class="rp-m">　${esc(o.detail)}</span></li>`).join("")}</ul>` : ""}
-      ${c.decision ? `<div class="decision"><span>${esc(era().playerTitle)}之令</span><b>${esc(c.decision)}</b></div>` : ""}
+      ${c.decision ? `<div class="decision"><span>${esc(E.playerTitle(game, i))}之令</span><b>${esc(c.decision)}</b></div>` : ""}
     </article>`;
   };
   return `<div class="story report">
@@ -930,7 +930,7 @@ function renderReport() {
     ${(game.past || []).length ? `<p class="rp-m">此前：${game.past.map(p => { const l = p.chapters[p.chapters.length - 1].state.ending; return `《${esc(E.era(p).name)}》${l ? "「" + esc(l.title) + "」" : ""}`; }).join("　")}</p>` : ""}
     ${(current().state.years || []).length ? `<h4>其间数年</h4><ul>${current().state.years.map(y => `<li><span class="rp-m">${esc(y.when)}</span> ${esc(y.what)}</li>`).join("")}</ul>` : ""}
     ${renderCanonTable()}
-    <p class="rp-m">灰色带“暗”字的事件，是那一回结束时${esc(era().playerTitle)}还不知道的。</p>
+    <p class="rp-m">灰色带“暗”字的事件，是那一回结束时${esc(E.playerTitle(game))}还不知道的。</p>
     ${chs.map(chapter).join("")}
   </div>`;
 }
@@ -948,10 +948,10 @@ function renderPanel(st) {
     ${(st.forces || []).some(f => done || f.known !== false) ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.filter(f => done || f.known !== false).map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.grain ? `<span class="grain">粮：${esc(f.grain)}</span>` : ""}${f.note ? `　${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
     ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
-    <section><h3>${esc(era().playerTitle)}所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
+    <section><h3>${esc(E.playerTitle(game))}所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
     <section class="hidden-box"><h3>暗线</h3>${done || peek
       ? `<ul>${(st.hidden || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
-      : `<p>此刻另有 ${(st.hidden || []).length} 条${esc(era().playerTitle)}不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
+      : `<p>此刻另有 ${(st.hidden || []).length} 条${esc(E.playerTitle(game))}不知道的暗线；正文中已埋下 ${game.chapters.reduce((n, c) => n + (c.state.foreshadow || []).length, 0)} 处伏笔，终章逐条揭晓。</p><p><button class="redo-link" id="peekBtn" type="button">现在就看</button></p>`}
       ${peek && !done ? `<ul>${game.chapters.flatMap((c, i) => (c.state.foreshadow || []).map(f => `<li>第${cn(i + 1)}回「${esc(f.line)}」：${esc(f.truth)}</li>`)).join("")}</ul>` : ""}</section>
     ${renderUsage()}
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
