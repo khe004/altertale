@@ -548,6 +548,16 @@ async function narrate(i) {
     if (!out.text) throw { code: "empty_completion" };
     out.text = (await Promise.all(out.text.split(/\n+/).filter(Boolean).map(p => fixLatin(p, i)))).join("\n\n");
     if (out.title) out.title = await fixLatin(out.title, i);
+    // 回目、结尾诗句字数不等：快速档单独改一次
+    const fmt = E.storyFormatProblems(out.title, out.text);
+    if (fmt.length) {
+      try {
+        const fp = E.buildStoryFormatFixPrompt(out.title, out.text, fmt), t1 = Date.now();
+        const r2 = await llm.call(fp, () => {}, ctl.signal, { tier: "quick" });
+        recordUsage("format", i, fp, r2, t1);
+        Object.assign(out, E.applyStoryFormatFix(out.title, out.text, r2.text));
+      } catch (e) { if (e && e.code === "cancelled") throw e; }
+    }
     game.chapters[i].title = out.title || game.chapters[i].title;
     game.chapters[i].text = out.text;
     save();

@@ -929,6 +929,38 @@ ${(s.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") ||
 请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，上下句字数相同（同为七字或同为八字），空一行后写正文，段落之间空一行。只输出回目和正文。`;
   };
 
+  // 回目与结尾"正是"诗句：上下句字数要相同（回目同为七字或八字）。模型常写错，由代码量过，不合就用快速档单独改
+  const hanLen = s => String(s || "").replace(/[\s，。、；：！？“”"'‘’,.!?;:·…—]/g, "").length;
+  const titleHalves = title => String(title || "").replace(/^第[^回]*回/, "").trim().split(/[\s　]+/).filter(Boolean);
+  const coupletLine = text => String(text || "").split(/\n+/).map(x => x.trim()).filter(x => /^正是/.test(x)).pop() || "";
+  const coupletHalves = line => line.replace(/^正是[：:]?/, "").replace(/[。.]$/, "").split(/[，,；;]/).map(x => x.trim()).filter(Boolean);
+  E.storyFormatProblems = function (title, text) {
+    const out = [], t = titleHalves(title), c = coupletHalves(coupletLine(text));
+    if (t.length === 2 && (hanLen(t[0]) !== hanLen(t[1]) || ![7, 8].includes(hanLen(t[0]))))
+      out.push(`回目"${t.join("　")}"上句${hanLen(t[0])}字、下句${hanLen(t[1])}字，要改成同为七字或同为八字`);
+    if (c.length === 2 && hanLen(c[0]) !== hanLen(c[1]))
+      out.push(`结尾诗句"${c.join("，")}"上句${hanLen(c[0])}字、下句${hanLen(c[1])}字，要改成字数相同`);
+    return out;
+  };
+  E.buildStoryFormatFixPrompt = (title, text, problems) => `下面是一回章回小说的回目与结尾诗句，有字数不合的地方：
+${problems.map(p => "- " + p).join("\n")}
+回目：${title}
+结尾：${coupletLine(text) || "（无）"}
+请改正：回目上下句同为七字或同为八字，结尾诗句上下句字数相同。意思、对仗、人名地名尽量保留，全部用中文。只输出两行，不要别的文字：
+第一行：回目，形如"第某回　上句　下句"（回次照原样）
+第二行：结尾诗句，形如"正是：上句，下句。"（原文没有结尾诗句就写"无"）`;
+  // 把改好的回目与诗句换回去；改后仍不合就保留原样
+  E.applyStoryFormatFix = function (title, text, raw) {
+    const lines = String(raw || "").split("\n").map(x => x.trim()).filter(Boolean);
+    const nt = (lines.find(x => /^第[^回]*回/.test(x)) || "").replace(/^#+\s*/, "");
+    const nc = lines.find(x => /^正是/.test(x)) || "";
+    let t2 = title, x2 = text;
+    if (nt && titleHalves(nt).length === 2 && !E.storyFormatProblems(nt, "").length) t2 = nt;
+    const old = coupletLine(text);
+    if (old && nc && coupletHalves(nc).length === 2 && !E.storyFormatProblems("", nc).length) x2 = text.replace(old, nc);
+    return { title: t2, text: x2 };
+  };
+
   E.splitStory = function (raw) {
     const lines = String(raw).trim().split("\n");
     const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();

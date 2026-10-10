@@ -68,6 +68,17 @@ for (const file of files) {
 }
 console.log(`  共 ${turns} 回，复核命中 ${hits} 回（逐条看是真问题还是误报）`);
 
+// 回目与结尾诗句字数（只看写成了文字的回）
+for (const file of files) {
+  let game; try { game = JSON.parse(fs.readFileSync(file, "utf8")).game; } catch (e) { continue; }
+  if (!game || !game.chapters) continue;
+  for (const seg of [...(game.past || []), game]) for (const c of seg.chapters || []) {
+    if (!c.text) continue;
+    const p = E.storyFormatProblems(c.title, c.text);
+    if (p.length) console.log(`  · ${path.basename(file)} ${c.title}：${p.join("；")}`);
+  }
+}
+
 // 承接开局：上一时代末的人物位置要延续，换了地方的要在其间大事里交代
 for (const file of files) {
   let game; try { game = JSON.parse(fs.readFileSync(file, "utf8")).game; } catch (e) { continue; }
