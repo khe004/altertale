@@ -344,6 +344,10 @@ async function exportGame(g, btn) {
 /* ───────── 语言模型 ───────── */
 
 async function initLLM() {
+  if (window.ALTERTALE_LOCAL) {
+    await AT.chatgpt.init(() => { setupKeyLLM(); render(); });
+    return;
+  }
   if (window.claude && typeof window.claude.use === "function") {
     try {
       const sample = await window.claude.use("sample");
@@ -377,6 +381,7 @@ const loadOAI = () => {
 };
 // 本地运行：用了 OpenAI 兼容接口就走它，否则走 Anthropic Key
 function setupKeyLLM() {
+  if (window.ALTERTALE_LOCAL) { llm = AT.chatgpt.provider(); return; }
   const o = loadOAI();
   if (o.on && o.base && o.model) {
     llm = { kind: "openai", call: (p, onText, signal, opts = {}) => callOpenAI(o, p, onText, signal, opts.tier === "quick" ? (o.quick || o.model) : o.model) };
@@ -421,7 +426,7 @@ function renderUsage() {
   return `<section><h3>用量</h3><table class="usage">
     <tr><td></td><td>次</td><td>${exact ? "输入 tokens" : "输入字数"}</td><td>${exact ? "输出 tokens" : "输出字数"}</td><td>耗时</td></tr>
     ${line("route")}${line("sim")}${line("narrate")}${line("fix")}${line("transition")}</table>
-    <p class="note">${exact ? "按 API 返回的实际 tokens 统计。" : "claude.ai 不返回 tokens，这里按字数统计；中文大致一字一 token。"}含已放弃分支上的调用，不含中途取消的调用。</p></section>`;
+    <p class="note">${exact ? "按 API 返回的实际 tokens 统计。" : "当前连接未返回完整 tokens，这里按字数统计。"}含已放弃分支上的调用，不含中途取消的调用。${window.ALTERTALE_LOCAL ? " ChatGPT 套餐的实际限额请查看管理用量。" : ""}</p></section>`;
 }
 
 /* ───────── 一回的流程：先推演、存档，再说书 ───────── */
@@ -608,6 +613,7 @@ async function transition() {
 
 function errorCopy(e) {
   const c = e && e.code;
+  if (c === "chatgpt_error") return e.message || "ChatGPT 连接失败，请检查登录与套餐授权。";
   if (c === "not_granted" || c === "sampling_disabled") return "未获准调用 Claude，故事无法继续。请在本页的权限设置中允许后刷新。";
   if (c === "rate_limited") return "调用太频繁或已达用量上限，请稍后再试。";
   if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
@@ -626,6 +632,7 @@ function errorCopy(e) {
 /* ───────── 渲染 ───────── */
 
 function render() {
+  if (window.ALTERTALE_LOCAL) AT.chatgpt.render(!!busy);
   const main = $("#main"), panel = $("#panel");
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
@@ -729,7 +736,7 @@ function renderChoices(st) {
     ${renderTrack()}
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
-    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "需要先填写模型接口（Anthropic Key 或 OpenAI 兼容接口），才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API</button></div>`}</div>` : ""}
+    ${off ? `<div class="notice"><span>${window.ALTERTALE_LOCAL ? "请在页面上方登录 ChatGPT 并授权使用套餐，再继续推演。" : window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "需要先填写模型接口（Anthropic Key 或 OpenAI 兼容接口），才能续写故事。"}</span>${window.claude || window.ALTERTALE_LOCAL ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API</button></div>`}</div>` : ""}
     <div class="choice-list">
       ${(st.choices || []).map((c, i) => {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
@@ -925,7 +932,7 @@ function renderIntro() {
       <p><button class="ui-btn" id="importPaste" type="button">读入粘贴的存档</button> <span id="importMsg" class="rp-m"></span></p>
     </details>
     ${saved && saved.chapters ? `<p><button class="ui-btn" id="resumeBtn" type="button">继续上次的故事（${esc(E.era(saved).name)} · 起于「${esc(E.startOf(saved).label)}」，已到第${cn(saved.chapters.length)}回）</button> <button class="ui-btn" id="exportSavedBtn" type="button">导出这一局</button></p>` : ""}
-    ${window.claude ? "" : `<div class="keybox">
+    ${window.claude || window.ALTERTALE_LOCAL ? "" : `<div class="keybox">
       <label for="apiKey">填写模型接口后即可续写。设置保存在当前浏览器，Key 仅用于请求所选模型服务。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
       <div><button class="ui-btn" id="saveKey" type="button">保存 Key</button> <span id="keyMsg"></span></div>

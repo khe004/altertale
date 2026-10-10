@@ -1,6 +1,8 @@
 playtest-out/
 
 dist/
+node_modules/
+.chatgpt/
 .env
 .env.*
 !.env.example

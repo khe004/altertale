@@ -60,6 +60,42 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 
 原型以“故事好看”为先，暂不包含上文开发顺序中的规划器与形式化世界模型。
 
+## 用 ChatGPT Plus 在本机推演
+
+本地版本通过官方 [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source) 使用你授权的 ChatGPT 套餐用量，不需要 OpenAI API Key 或 API 余额。项目仍按原流程工作：拆令 → 推演结构化事实 → 复核与存档 → 写成章回；这些步骤全部使用所选 OpenAI 模型。
+
+需要 Node.js **22.12 或更新版本**。在你的电脑上运行：
+
+```sh
+git clone --branch feat/chatgpt-plus-local https://github.com/khe004/altertale.git altertale-plus
+cd altertale-plus
+npm ci
+npm start
+```
+
+1. 用浏览器打开 `http://127.0.0.1:8787`。
+2. 点击 **Continue with ChatGPT**，在打开的官方登录页选择你的 Plus / Pro 账户，并允许本应用使用 ChatGPT 套餐。
+3. 登录后从账户实际可用的模型中选择。优先选 `gpt-6.1-sol`；如果账户没有它，页面会显示其他可选模型。
+4. 点“测试推演连接”，再选时代开局或继续存档。测试也占用少量套餐用量。
+
+达到 ChatGPT 套餐或应用限额后会停止调用。点“管理用量”查看重置时间及应用限额。登录身份与授权使用套餐是两个权限；只登录身份时不会启用推演，也不会自动转为付费 API。模型与权限以当前账户的实际结果为准。
+
+游戏记录保存在浏览器里。Sites 和本机页面的存档互不相通；在 Sites 点“导出”，再在本机开局页导入即可继续。保持同一个端口与浏览器即可继续本机存档；端口被占用时可用 `ALTERTALE_PORT=8788 npm start`，此时浏览器存档属于新地址。
+
+登录 SDK 管理独立的应用注册、PKCE、身份验证、刷新与退出。加密的登录状态位于 `~/.config/altertale/chatgpt`，密钥由 macOS Keychain、Windows Credential Manager 或 Linux Secret Service 保存。凭证不交给网页，不使用 Codex 的登录文件，不写进仓库。macOS 首次访问 Keychain 可能要求你授权；Linux 必须运行并解锁 Secret Service，不能依靠无桌面环境的临时 kernel keyring。
+
+退出登录会清除本机选中连接的凭证并尝试撤销远端授权。也可以在 ChatGPT 设置 → 安全与登录 → 登录连接中撤销本应用。关闭终端或按 Ctrl+C 会停止本机服务。
+
+这里沿用官方本地 SDK，来源及其 **Noncommercial License** 见 [vendor/siwc](vendor/siwc/README.md)，适用于个人非商业本地试玩。该通用开源接入面向本地运行，不能把本机登录凭证上传到 Sites 来共享；远程托管应用应走另外的获批接入流程或 API 计费方式。
+
+验证：
+
+```sh
+npm run check
+```
+
+本地集成测试用模拟登录和模型结果验证授权、流式完成、取消与加密；不消耗套餐。真实账户的登录、模型权限与一回推演需要你在本机授权后验证。
+
 ## Sites 部署
 
 Sites 版本保留原有游戏与浏览器存档。`worker/index.js` 处理 `/api/openai`、`/api/anthropic` 同源转发，避免模型服务的浏览器跨域限制；Key 不进入源码或打包资源，转发不记录 Key 或提示词。
@@ -77,4 +113,4 @@ node --test tools/api-test.mjs
 node scripts/build-site.mjs
 ```
 
-构建将 `web/` 的 11 个资源嵌入单个 `dist/server/index.js`，并保留 `dist/.openai/hosting.json`。部署前应先把对应源码提交同步到本项目的 Sites 源码仓库，再打包 `dist/` 并发布该提交。
+构建将 `web/` 资源嵌入单个 `dist/server/index.js`，并保留 `dist/.openai/hosting.json`。本机 ChatGPT 登录入口仅由本地服务器注入，Sites 仍使用 API 接口。部署前应先把对应源码提交同步到本项目的 Sites 源码仓库，再打包 `dist/` 并发布该提交。

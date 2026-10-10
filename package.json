@@ -1,0 +1,23 @@
+{
+  "name": "altertale",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["vendor/siwc"],
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "postinstall": "npm run build:siwc",
+    "build:siwc": "tsc -p vendor/siwc/tsconfig.json",
+    "start": "node tools/local-server.mjs",
+    "test:local": "node tools/local-test.mjs",
+    "check": "node tools/check.js && node tools/api-test.mjs && npm run test:local"
+  },
+  "dependencies": {
+    "@siwc/local": "file:vendor/siwc",
+    "@napi-rs/keyring": "2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "typescript": "^7.0.2"
+  }
+}
