@@ -286,7 +286,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
   "autonomous": [{"who":"人物","did":"未奉命令而自行做出的决定及结果，四十字以内"}],
   "places": ${placesEx},
-  "forces": [{"name":"某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内"}],
+  "forces": [{"name":"某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内","known":true}],
   "figures": [{"name":"人物","where":"地点","note":"十二字以内的现状"}],
   "gauges": ${gaugesEx},
   "intel": ["${ev.player}此刻确知或听闻之事，三至六条"],
@@ -298,7 +298,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串"}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部及其已知的敌军，兵力用约数，grain 写存粮可支多久。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
+说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久；known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
 若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
 评分（score）以原著结局为基准：比较的对象是原著到这个时代结束时的样子——${ev.baseline || "（见原著）"}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
@@ -421,7 +421,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
     return `你在审核一个三国策略游戏里玩家下的手令。玩家扮演${ev.player}，此刻是${st.date}，身在${seatOf(g)}。全部用中文，不得夹杂英文字母。
 人物此刻所在与现状：${(st.figures || []).map(f => `${f.name}：${f.where}（${f.note || ""}）`).join("；")}
-兵马此刻所在：${(st.forces || []).map(f => `${f.name}在${f.where}，${f.troops}`).join("；")}
+兵马此刻所在：${(st.forces || []).filter(f => f.known !== false).map(f => `${f.name}在${f.where}，${f.troops}`).join("；")}
 各方：${Object.values(ev.factionNames || {}).join("、")}；人物卡里所属势力不是"${ev.player}"一方的人，不归${ev.player}指挥。
 手令：${decision}
 
@@ -444,7 +444,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
   E.buildAdvisePrompt = function (g) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state, ad = adOf(st.date);
     // 玩家看得到的：局势面板（地图、大势、兵马、人物、在途军令、所知）与正文里已知的事；暗线、敌方谋划、伏笔的真相都不给
-    const seen = { date: st.date, places: st.places, gauges: st.gauges, forces: st.forces, figures: st.figures, in_transit: st.in_transit, intel: st.intel };
+    const seen = { date: st.date, places: st.places, gauges: st.gauges, forces: (st.forces || []).filter(f => f.known !== false).map(({ known, ...f }) => f), figures: st.figures, in_transit: st.in_transit, intel: st.intel };
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).filter(e => e.known !== false).map(evLine).join("\n") || c.state.chronicle || ""}${(c.state.foreshadow || []).length ? `\n（正文细节：${c.state.foreshadow.map(f => f.line).join("；")}）` : ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
     return `你是${ev.player}帐下最有见识的军师，替${ev.player}拟一道此刻最好的手令。全部用中文，不得夹杂英文字母。
 

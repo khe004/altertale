@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 47），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 48），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -76,6 +76,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 ## 最近修过的问题（供对照）
 
 - 孔明未奉召却出现在成都：坐镇规则 + `checkSim`；本对话又在时代过渡处补了 `checkTransition`（作者存档：入川结局孔明在江陵，汉中开局被照搬原著放到成都）。
+- 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
 - 北伐兵少、庞统张飞不见、张飞召而不至（作者存档 beifa-20261008）：过渡只看上一时代末的名单，庞统不在北伐登场名单、张飞在荆州一章没出场，就被丢掉；益州主力在荆州一章没记录，开局就没了；整局日期只写季节，引擎解析不了，军令驿程和行军复核全部失效，日期还倒退。已修：见流水线第 3、6 条；北伐登场名单加庞统，回数 6 → 10，关中开局下调为约三万（长安、陈仓、天水分守），洛阳中军西援需一两月，设定写明奇袭得手的条件。

@@ -882,7 +882,7 @@ function renderPanel(st) {
     <section class="map"><h3>${esc(era().mapTitle)}</h3>${renderMap(st.places)}
       <div class="legend">${Object.entries(factions()).map(([k, v]) => `<span><i style="background:var(${v})"></i>${esc((era().factionNames || {})[k] || k)}</span>`).join("")}</div></section>
     <section><h3>大势</h3><div class="gauges">${Object.entries(era().gauges).map(([k, v]) => gauge(k, v[0])).join("")}</div></section>
-    ${(st.forces || []).length ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.grain ? `<span class="grain">粮：${esc(f.grain)}</span>` : ""}${f.note ? `　${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
+    ${(st.forces || []).some(f => done || f.known !== false) ? `<section><h3>兵马</h3><dl class="figures forces">${st.forces.filter(f => done || f.known !== false).map(f => `<div class="fig"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.troops)}${f.grain ? `<span class="grain">粮：${esc(f.grain)}</span>` : ""}${f.note ? `　${esc(f.note)}` : ""}</dd></div>`).join("")}</dl></section>` : ""}
     <section><h3>人物</h3><dl class="figures">${(st.figures || []).map(f => `<div class="fig ${f.where === "已故" ? "dead" : ""}"><dt>${esc(f.name)}</dt><dd><b>${esc(f.where)}</b>　${esc(f.note)}</dd></div>`).join("")}</dl></section>
     ${(st.in_transit || []).length ? `<section><h3>在途军令</h3><ul class="intel">${st.in_transit.map(o => `<li>${esc(o.order)}<span class="eta">　${esc(o.eta)}</span></li>`).join("")}</ul></section>` : ""}
     <section><h3>${esc(era().playerTitle)}所知</h3><ul class="intel">${(st.intel || []).map(x => `<li>${esc(x)}</li>`).join("")}</ul></section>
