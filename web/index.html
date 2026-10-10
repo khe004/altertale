@@ -298,6 +298,7 @@ let game = null;          // { start, chapters: [{title, text, state, decision}]
 let busy = false;
 let ownDraft = "";        // 手令输入框里的草稿（重绘时保留）
 let orderCheck = null;    // 下令前预检的结果 { decision, verdict, issues }
+let advice = null;        // 军师拟令 { order, reasons }
 let ctl = null;
 let lastError = null;
 let peek = false;
@@ -442,6 +443,23 @@ function renderUsage() {
 
 /* ───────── 一回的流程：先推演、存档，再说书 ───────── */
 
+// 军师拟令：用推演档，只据玩家所知拟一道手令，填进输入框，玩家可改后再发
+async function adviseOrder() {
+  if (busy || !llm) return;
+  busy = "advise"; advice = null; orderCheck = null; lastError = null;
+  render();
+  try {
+    const ap = E.buildAdvisePrompt(game), t0 = Date.now();
+    const res = await llm.call(ap, () => {}, undefined);
+    recordUsage("advise", game.chapters.length, ap, res, t0);
+    const a = E.parseAdvice(res.text);
+    if (a) { advice = a; ownDraft = a.order; }
+  } catch (e) {}
+  busy = false;
+  render();
+  document.getElementById("ownOrder")?.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 // 亲书手令先用快速档预检：无效的不发，有疑的提示玩家确认；选项与"不另发令"不经预检
 async function checkThenDecide(decision) {
   decision = String(decision || "").trim();
@@ -507,7 +525,7 @@ async function decide(decision) {
     current().policy = JSON.parse(JSON.stringify(game.policy));
     game.chapters.push({ title: `第${cn(game.chapters.length + 1)}回`, text: "", state });
     delete game.pending;
-    ownDraft = ""; orderCheck = null;
+    ownDraft = ""; orderCheck = null; advice = null;
     save();
   } catch (e) {
     game.rail = railWas.rail; game.railOff = railWas.railOff;
@@ -736,8 +754,10 @@ function renderChoices(st) {
       <label for="ownOrder">或者亲书一道手令（谁去、做什么、怎么做）</label>
       <textarea id="ownOrder" placeholder="${esc(era().orderExample || "")}">${esc(ownDraft)}</textarea>
       ${busy === "check" ? `<p class="rp-m">谋士正在审阅这道手令<span class="dots"></span></p>` : ""}
+      ${busy === "advise" ? `<p class="rp-m">军师正在拟令<span class="dots"></span></p>` : ""}
+      ${advice && !busy ? `<div class="notice"><span>军师拟了上面这道手令（只据你此刻所知），可改后再发：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       ${orderCheck && !busy ? `<div class="notice"><span>${orderCheck.verdict === "无效" ? "这道手令行不通，没有发出：" : "这道手令有几处可能落空："}</span><ul>${orderCheck.issues.map(x => `<li>${esc(x)}</li>`).join("") || "<li>命令里没有可执行的部署</li>"}</ul>${orderCheck.verdict === "无效" ? `<span>请改写后再发。</span>` : `<div class="row"><button class="ui-btn" id="forceBtn" type="button">仍然下达</button><span class="rp-m">或修改后重新发出</span></div>`}</div>` : ""}
-      <div class="row"><button class="primary" id="ownBtn" type="button" ${off || busy ? "disabled" : ""}>发出手令</button></div>
+      <div class="row"><button class="primary" id="ownBtn" type="button" ${off || busy ? "disabled" : ""}>发出手令</button><button class="ui-btn" id="adviseBtn" type="button" ${off || busy ? "disabled" : ""}>请军师拟令</button></div>
     </div>
   </div>`;
 }
@@ -1004,6 +1024,8 @@ function bindStory() {
   if (ta) ta.oninput = () => { ownDraft = ta.value; };
   const own = $("#ownBtn");
   if (own) own.onclick = () => checkThenDecide($("#ownOrder").value);
+  const adv = $("#adviseBtn");
+  if (adv) adv.onclick = adviseOrder;
   const force = $("#forceBtn");
   if (force) force.onclick = () => { const d = orderCheck && orderCheck.decision; orderCheck = null; if (d) decide(d); };
   const stop = $("#stopBtn");

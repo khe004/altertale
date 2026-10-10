@@ -439,6 +439,60 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n))}`;
     } catch (e) { return { verdict: "可行", issues: [] }; }
   };
 
+  /* ───────── 军师拟令：只用刘备此刻所知，替玩家拟一道手令 ───────── */
+
+  E.buildAdvisePrompt = function (g) {
+    const ev = era(g), st = g.chapters[g.chapters.length - 1].state, ad = adOf(st.date);
+    // 玩家看得到的：局势面板（地图、大势、兵马、人物、在途军令、所知）与正文里已知的事；暗线、敌方谋划、伏笔的真相都不给
+    const seen = { date: st.date, places: st.places, gauges: st.gauges, forces: st.forces, figures: st.figures, in_transit: st.in_transit, intel: st.intel };
+    const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）\n${(c.state.events || []).filter(e => e.known !== false).map(evLine).join("\n") || c.state.chronicle || ""}${(c.state.foreshadow || []).length ? `\n（正文细节：${c.state.foreshadow.map(f => f.line).join("；")}）` : ""}${c.decision ? `\n${ev.player}命令：${c.decision}` : ""}`).join("\n\n");
+    return `你是${ev.player}帐下最有见识的军师，替${ev.player}拟一道此刻最好的手令。全部用中文，不得夹杂英文字母。
+
+【时代背景】
+${ev.setting}
+
+【驿程】
+${travelText(ev)}
+
+【人物】
+${castText(g, ad)}
+
+【起点】
+${startOf(g).setup}
+
+【至今的经过】（只有${ev.player}知道的事）
+${log}
+
+【此刻局势】
+${JSON.stringify(seen)}
+
+【方略与授权】
+方略：${(g.policy.text || "").trim() || "（未另立方略）"}
+授权：${ev.delegates.map(d => `${d}：${g.policy.powers[d] || "便宜行事"}`).join("；")}
+
+【谋士进言】
+${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
+
+【可选的三策】
+${(st.choices || []).map((c, i) => `${i + 1}. ${c.label}：${c.plan}（${c.detail}）`).join("\n")}
+
+本时代的胜负：${ev.victory ? `胜利条件：${ev.victory.desc}。` : ""}原著结局是：${ev.baseline}。败局线：${ev.lossLine}。
+
+要求：
+1. 只能依据上面${ev.player}知道的事判断，不得假设对方未曾暴露的打算；对方的意图只能从已知的迹象推断，推断要说出依据。
+2. 手令要能执行：只调自己一方在世、可调的人马，兵力不超过实有，行程合乎驿程；对敌方、盟友只能遣使劝说。可以取三策之一，也可以合几策之长、另出新计。
+3. 像高明的主公亲书的手令：谁去、带多少兵、去哪、做什么，几路如何呼应，有什么应变（若某事发生则如何），一百到二百五十字。
+4. 理由写三到五条，说清为什么这样下，以及主要的风险。
+只输出一个 JSON 对象：{"order":"手令全文","reasons":["理由一","理由二"]}`;
+  };
+  E.parseAdvice = function (raw) {
+    try {
+      const o = parseJSON(raw);
+      const order = String(o.order || "").trim();
+      return order ? { order, reasons: (Array.isArray(o.reasons) ? o.reasons : []).map(String).filter(Boolean).slice(0, 6) } : null;
+    } catch (e) { return null; }
+  };
+
   /* ───────── 推演：只出事实 ───────── */
 
   const evLine = e => `[${e.date || ""}] ${e.who || ""}@${e.where || ""}：${e.what || ""}${e.result ? " → " + e.result : ""}${e.known === false ? "（玩家不知）" : ""}`;
