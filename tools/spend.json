@@ -1,5 +1,5 @@
 {
- "total": 52.5614,
+ "total": 53.7638,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -96,6 +96,30 @@
    "args": "--era yiling --starts canon --strategies script --script 令赵云率三千人即刻出白帝，强攻江陵，十日破城；朕在成都静候捷报 --turns 1 --label luanming",
    "calls": 2,
    "usd": 0.2004
+  },
+  {
+   "date": "2026-10-10 01:55",
+   "args": "--era yiling --starts x --strategies script --script x|x|x|x|x|夷道已得，孙桓在手，见好即收：张飞、张苞守夷道，与吴班水军互为犄角，不过猇亭一步；朕与关兴守夷陵城西高处营寨，营外割草掘沟，严防火攻；遣使至武昌告诸葛瑾：吴已允还宜都，若再还江陵、公安，缚送糜芳、士仁，即送还孙桓，孙刘复盟共讨曹丕；限四十日回音。黄权、吴班护粮船，诸葛亮续运粮草。张飞仍不得鞭挞士卒，令张苞随侍。 --from /tmp/claude-0/-home-user-altertale/d061f59b-ad12-5cdd-bf75-a56dc38918cd/scratchpad/yl6.json --turns 6 --model haiku --label cmp",
+   "calls": 2,
+   "usd": 0.0324
+  },
+  {
+   "date": "2026-10-10",
+   "args": "--model sonnet --label cmp（并行，补记）",
+   "calls": 2,
+   "usd": 0.31
+  },
+  {
+   "date": "2026-10-10",
+   "args": "--model sonnet --label cmp2（并行，补记）",
+   "calls": 2,
+   "usd": 0.33
+  },
+  {
+   "date": "2026-10-10",
+   "args": "--model opus --label cmp（并行，补记）",
+   "calls": 2,
+   "usd": 0.53
   }
  ]
 }
