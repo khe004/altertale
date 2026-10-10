@@ -289,6 +289,7 @@ const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
+const OAI_STORE = "altertale-openai-compat";   // OpenAI 兼容接口：{ on, base, key, model, quick }
 const API_MODEL = "claude-sonnet-5-5";
 const QUICK_MODEL = "claude-haiku-5-5";  // 只用于拆解命令驿程、改正夹杂的外文这类小活
 
@@ -361,10 +362,62 @@ async function initLLM() {
   render();
 }
 
+const loadOAI = () => { try { return JSON.parse(localStorage.getItem(OAI_STORE) || "null") || {}; } catch (e) { return {}; } };
+// 本地运行：用了 OpenAI 兼容接口就走它，否则走 Anthropic Key
 function setupKeyLLM() {
+  const o = loadOAI();
+  if (o.on && o.base && o.model) {
+    llm = { kind: "openai", call: (p, onText, signal, opts = {}) => callOpenAI(o, p, onText, signal, opts.tier === "quick" ? (o.quick || o.model) : o.model) };
+    return;
+  }
   let key = "";
   try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
   llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : API_MODEL) } : null;
+}
+// OpenAI 兼容的 /chat/completions（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等），流式
+async function callOpenAI(o, prompt, onText, signal, model) {
+  const base = String(o.base).trim().replace(/\/+$/, "");
+  const url = /\/chat\/completions$/.test(base) ? base : base + "/chat/completions";
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST", signal,
+      headers: { "content-type": "application/json", ...(o.key ? { authorization: "Bearer " + o.key } : {}) },
+      body: JSON.stringify({ model, max_tokens: 8000, stream: true, messages: [{ role: "user", content: prompt }] })
+    });
+  } catch (e) {
+    if (e && e.name === "AbortError") throw { code: "cancelled" };
+    throw { code: "fetch_blocked", message: String(e) };
+  }
+  if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
+  const reader = res.body.getReader();
+  const dec = new TextDecoder();
+  let buf = "", text = "";
+  const meta = { model, tier: "", inTok: 0, outTok: 0 };
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    const lines = buf.split("\n");
+    buf = lines.pop();
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t.startsWith("data:")) continue;
+      const data = t.slice(5).trim();
+      if (data === "[DONE]") continue;
+      try {
+        const ev = JSON.parse(data);
+        if (ev.error) throw { code: "upstream_error", message: ev.error.message || String(ev.error) };
+        if (ev.model) meta.model = ev.model;
+        if (ev.usage) { meta.inTok = ev.usage.prompt_tokens || meta.inTok; meta.outTok = ev.usage.completion_tokens || meta.outTok; }
+        const d = ev.choices && ev.choices[0] && ev.choices[0].delta;
+        if (d && d.content) { text += d.content; onText(text); }
+      } catch (e) { if (e && e.code) throw e; }
+    }
+  }
+  // 有些推理模型会把思考包在 <think>…</think> 里，去掉
+  text = text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+  return { text, ...meta };
 }
 
 async function callAnthropic(key, prompt, onText, signal, model) {
@@ -630,6 +683,8 @@ function errorCopy(e) {
   if (c === "session_expired") return "登录已过期，请重新登录 claude.ai。";
   if (c === "refused") return "Claude 拒绝写这一回。换一种决断试试。";
   if (c === "http_401") return "API Key 无效，请重新填写。";
+  if (c === "fetch_blocked") return "请求被浏览器拦下：多半是这个接口不允许网页直接调用（跨域限制），或接口地址填错了。";
+  if (c === "http_404") return "接口地址或模型名不对（404），请检查设置。";
   if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "推演结果不完整，可以重新推演这一回。";
   if (c === "empty_completion") return "说书人没写出东西。";
   return "驿路不通（连接出错）。可以重试。";
@@ -741,7 +796,7 @@ function renderChoices(st) {
     ${renderTrack()}
     ${st.assessment ? `<p class="assess">${esc(st.assessment)}</p>` : ""}
     ${(st.counsel || []).length ? `<div class="counsel"><h4>谋士进言</h4>${st.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how)}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
-    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要 Anthropic API Key 才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API Key</button></div>`}</div>` : ""}
+    ${off ? `<div class="notice"><span>${window.claude ? "正在连接 Claude……若长时间无反应，请在 claude.ai 中打开本页。" : "本地运行需要填写 API（Anthropic Key 或 OpenAI 兼容接口）才能续写故事。"}</span>${window.claude ? "" : `<div class="row"><button class="ui-btn" id="keyBtn" type="button">填写 API</button></div>`}</div>` : ""}
     <div class="choice-list">
       ${(st.choices || []).map((c, i) => {
         const by = (st.counsel || []).filter(x => Number(x.choice) === i + 1).map(x => x.who);
@@ -941,6 +996,15 @@ function renderIntro() {
       <label for="apiKey">本地运行时，故事由 Claude API 续写。Key 只保存在这台电脑的浏览器里。</label>
       <input id="apiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
       <div><button class="ui-btn" id="saveKey" type="button">保存 Key</button> <span id="keyMsg"></span></div>
+      <label><input id="oaiOn" type="checkbox" style="width:auto"> 改用 OpenAI 兼容接口（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等）</label>
+      <div id="oaiBox" style="display:grid;gap:0.4rem">
+        <input id="oaiBase" autocomplete="off" placeholder="接口地址，如 https://api.deepseek.com/v1 或 http://localhost:11434/v1">
+        <input id="oaiKey" type="password" autocomplete="off" placeholder="API Key（本地 Ollama 可留空）">
+        <input id="oaiModel" autocomplete="off" placeholder="推演、说书用的模型名，如 deepseek-chat">
+        <input id="oaiQuick" autocomplete="off" placeholder="小活用的模型名（拆令、预检，可留空，同上）">
+        <div><button class="ui-btn" id="saveOai" type="button">保存接口设置</button> <span id="oaiMsg"></span></div>
+        <span>提示：推演规则是按 Claude 调的，换用别家模型时，推演质量与格式要自己试；有的接口不允许网页直接调用，会被浏览器拦下。</span>
+      </div>
     </div>`}
   </div>`;
 }
@@ -980,6 +1044,19 @@ function bindIntro() {
       try { localStorage.setItem(KEY_STORE, $("#apiKey").value.trim()); } catch (e) {}
       setupKeyLLM();
       $("#keyMsg").textContent = llm ? "已保存" : "已清除";
+    };
+  }
+  const so = $("#saveOai");
+  if (so) {
+    const o = loadOAI(), on = $("#oaiOn"), box = $("#oaiBox");
+    on.checked = !!o.on; $("#oaiBase").value = o.base || ""; $("#oaiKey").value = o.key || ""; $("#oaiModel").value = o.model || ""; $("#oaiQuick").value = o.quick || "";
+    box.style.display = on.checked ? "grid" : "none";
+    on.onchange = () => { box.style.display = on.checked ? "grid" : "none"; const c = loadOAI(); c.on = on.checked; try { localStorage.setItem(OAI_STORE, JSON.stringify(c)); } catch (e) {} setupKeyLLM(); };
+    so.onclick = () => {
+      const c = { on: on.checked, base: $("#oaiBase").value.trim(), key: $("#oaiKey").value.trim(), model: $("#oaiModel").value.trim(), quick: $("#oaiQuick").value.trim() };
+      try { localStorage.setItem(OAI_STORE, JSON.stringify(c)); } catch (e) {}
+      setupKeyLLM();
+      $("#oaiMsg").textContent = c.base && c.model ? (llm && llm.kind === "openai" ? "已保存，正在使用此接口" : "已保存") : "接口地址与模型名不能为空";
     };
   }
 }

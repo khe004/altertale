@@ -21,13 +21,15 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 48），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 49），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
 - 新加时代文件要同时加进：`web/index.html` 的 script 标签（`ERA_ORDER` 只管开局页上可选的时代）、`tools/check.js` 与 `tools/playtest.js` 的加载列表、发布的 `files`。
 
 ## 代码地图
+
+- 调用模型：claude.ai 上用 `window.claude`（sample）；本地用 Anthropic Key（`callAnthropic`）或 OpenAI 兼容接口（`callOpenAI`，设置存 localStorage `altertale-openai-compat`，主模型与小活模型分开，会去掉 `<think>`）。
 
 - `web/engine.js`：全部推演逻辑（提示词、解析、复核、原著轨、评分、分支、过渡）。
 - `web/index.html`：界面与调用流程（推演 → 复核 → 必要时重推 → 说书 → 外文修复）。开局页可导入存档（选文件，或粘贴文件内容：claude.ai 框架里选文件可能用不了）；承接开局的时代里有"回到上一时代终章，重新进入"（`E.undoTransition`），规则改了以后让作者重新过渡。

@@ -52,7 +52,9 @@ AlterTale 是一个以小说为世界基线的剧情反事实游戏项目。玩�
 - 每回分两步：先**推演**（Claude 只输出结构化的事件与局势：谁在哪做了什么、为什么、结果、刘备是否得知，以及兵马、城池、选项），立即存档；再**说书**（另一次调用把已定事件写成章回体，不得改动事实）。
 - 推演的记忆是事件记录而非小说原文；玩家可设方略与授权，前方将帅据此自决；命令按驿马时日在途。
 - 可以回到任一回另作决断，形成分支；约八到十二回收束到结局，并与原著对照。
-- 在 claude.ai 中作为 Artifact 打开时直接调用 Claude；本地用浏览器打开时需填写 Anthropic API Key（只存在本机浏览器）。
+- 在 claude.ai 中作为 Artifact 打开时直接调用 Claude；本地用浏览器打开 `web/index.html` 时，在开局页底部填写 API（只存在本机浏览器）：
+  - Anthropic API Key：推演、说书用 `claude-sonnet-5-5`，拆令、预检等小活用 `claude-haiku-5-5`；
+  - 或勾选"改用 OpenAI 兼容接口"，填接口地址（如 `https://api.deepseek.com/v1`、本地 Ollama 的 `http://localhost:11434/v1`）、Key、主模型名与小活模型名。推演规则按 Claude 调校，换用别家模型时效果要自行试；不允许网页直接调用（跨域）的接口会被浏览器拦下。
 
 测试：`node tools/playtest.js --starts canon --strategies prudent,delegate` 只跑推演、不说书，用本机 `claude` CLI 自动打完整局，结果写入 `playtest-out/`。
 
