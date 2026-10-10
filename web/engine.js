@@ -799,7 +799,9 @@ ${problems.map(p => "- " + p).join("\n")}
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const st = g.chapters[g.chapters.length - 1].state;
-    const from = parseDate(st.date, yearOf(st.date)) ?? 0, to = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
+    const from = parseDate(st.date, yearOf(st.date)) ?? 0, ref0 = parseDate(ref.state.date, yearOf(ref.state.date)) ?? from;
+    // 参考开局可能比上一时代的终局还早（如夷陵打到章武二年，一路北伐的参考开局是章武元年）：背景大事看此后一年
+    const to = ref0 > from ? ref0 : from + 365;
     const bg = (AT.background || []).filter(b => bgDay(b) > from && bgDay(b) <= to + 120);
     const known = E.lastKnown(g);
     const names = new Set([...Object.keys(known), ...(ref.state.figures || []).map(f => f.name)]);
@@ -894,6 +896,10 @@ ${simFormat(tg)}`;
       problems.push(`${w}本有刘备一方的兵马（参考开局：${f.name}，${f.troops}），开局里${w}一支兵也没有：兵马不会凭空消失，要么保留，要么在其间大事里写明调往何处`);
     }
     return problems;
+  };
+  // 过渡稿能不能用：是完整的 JSON，且有结局或有开局与选项
+  E.parsesAsTransition = function (raw) {
+    try { const o = parseJSON(raw); return !!o && (!!o.ending || (!!o.state && Array.isArray(o.state.choices) && o.state.choices.length > 0)); } catch (e) { return false; }
   };
   E.buildTransitionRepairPrompt = (prompt, problems) => `${prompt}
 

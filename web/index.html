@@ -351,7 +351,7 @@ async function initLLM() {
           kind: "claude",
           call: async (prompt, onText, signal, opts = {}) => {
             const r = await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false, ...(opts.tier ? { modelTier: opts.tier } : {}) });
-            return { text: r.text, model: "claude.ai", tier: r.modelTierApplied || "default" };
+            return { text: r.text, truncated: !!r.truncated, model: "claude.ai", tier: r.modelTierApplied || "default" };
           }
         };
         render();
@@ -413,6 +413,7 @@ async function callOpenAI(o, prompt, onText, signal, model) {
         if (ev.usage) { meta.inTok = ev.usage.prompt_tokens || meta.inTok; meta.outTok = ev.usage.completion_tokens || meta.outTok; }
         const d = ev.choices && ev.choices[0] && ev.choices[0].delta;
         if (d && d.content) { text += d.content; onText(text); }
+        if (ev.choices && ev.choices[0] && ev.choices[0].finish_reason === "length") meta.truncated = true;
       } catch (e) { if (e && e.code) throw e; }
     }
   }
@@ -428,7 +429,7 @@ async function callAnthropic(key, prompt, onText, signal, model) {
       "content-type": "application/json", "x-api-key": key,
       "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
     },
-    body: JSON.stringify({ model, max_tokens: 8000, stream: true, messages: [{ role: "user", content: prompt }] })
+    body: JSON.stringify({ model, max_tokens: 16000, stream: true, messages: [{ role: "user", content: prompt }] })
   });
   if (!res.ok) throw { code: "http_" + res.status, message: await res.text() };
   const reader = res.body.getReader();
@@ -451,6 +452,7 @@ async function callAnthropic(key, prompt, onText, signal, model) {
           meta.inTok = (u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0);
         } else if (ev.type === "message_delta" && ev.usage) {
           meta.outTok = ev.usage.output_tokens || meta.outTok;
+          if (ev.delta && ev.delta.stop_reason === "max_tokens") meta.truncated = true;
         } else if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta") {
           text += ev.delta.text;
           onText(text);
@@ -656,13 +658,17 @@ async function transition() {
       const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
       const res = await llm.call(prompt, () => {}, ctl.signal);
       recordUsage("transition", game.chapters.length, prompt, res, t0);
-      let text = res.text;
-      const problems = E.checkTransition(game, text);
-      if (problems.length) {  // 人物位置没交代：带着问题重推一次
-        const fp = E.buildTransitionRepairPrompt(prompt, problems), t1 = Date.now();
-        const r2 = await llm.call(fp, () => {}, ctl.signal);
-        recordUsage("transition", game.chapters.length, fp, r2, t1);
-        text = r2.text;
+      if (res.truncated) throw { code: "truncated" };
+      const draft = res.text;
+      let text = draft;
+      const problems = E.checkTransition(game, draft);
+      if (problems.length) {  // 人物位置没交代：带着问题重推一次；重推失败（出错、截断、不成 JSON）就用初稿
+        try {
+          const fp = E.buildTransitionRepairPrompt(prompt, problems), t1 = Date.now();
+          const r2 = await llm.call(fp, () => {}, ctl.signal);
+          recordUsage("transition", game.chapters.length, fp, r2, t1);
+          if (!r2.truncated && E.parsesAsTransition(r2.text)) text = r2.text;
+        } catch (e) { if (e && e.code === "cancelled") throw e; }
       }
       result = E.applyTransition(game, text);
     }
@@ -686,6 +692,7 @@ function errorCopy(e) {
   if (c === "http_401") return "API Key 无效，请重新填写。";
   if (c === "fetch_blocked") return "请求被浏览器拦下：多半是这个接口不允许网页直接调用（跨域限制），或接口地址填错了。";
   if (c === "http_404") return "接口地址或模型名不对（404），请检查设置。";
+  if (c === "truncated") return "这一段推演太长，被截断了。可以重新推演。";
   if (c === "no_state" || c === "no_choices" || e instanceof SyntaxError) return "推演结果不完整，可以重新推演这一回。";
   if (c === "empty_completion") return "说书人没写出东西。";
   return "驿路不通（连接出错）。可以重试。";

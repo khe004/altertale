@@ -1,5 +1,5 @@
 {
- "total": 54.3148,
+ "total": 54.5848,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -126,6 +126,12 @@
    "args": "--era jingzhou --starts x --strategies prudent --from tools/fixtures/jingzhou-dongxi-end.json --continue --turns 1 --label dongxi",
    "calls": 5,
    "usd": 0.551
+  },
+  {
+   "date": "2026-10-10 05:00",
+   "args": "夷陵→一路北伐 过渡单测（tools/fixtures/yiling-yilu-end.json，补记）",
+   "calls": 1,
+   "usd": 0.27
   }
  ]
 }

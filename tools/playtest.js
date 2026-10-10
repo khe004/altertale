@@ -70,7 +70,8 @@ async function transitionText(g) {
   const problems = E.checkTransition(g, text);
   if (!problems.length) return text;
   console.log("  过渡复核：" + problems.join("；"));
-  return claude(E.buildTransitionRepairPrompt(prompt, problems), "repair");
+  const fixed = await claude(E.buildTransitionRepairPrompt(prompt, problems), "repair").catch(() => "");
+  return E.parsesAsTransition(fixed) ? fixed : text;
 }
 
 function claude(prompt, role) {

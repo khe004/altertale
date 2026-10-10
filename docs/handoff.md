@@ -21,9 +21,9 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 52），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 53），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
-  `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`engine.js` → 对应的 `web/...` 文件。
+  `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
 - 新加时代文件要同时加进：`web/index.html` 的 script 标签（`ERA_ORDER` 只管开局页上可选的时代）、`tools/check.js` 与 `tools/playtest.js` 的加载列表、发布的 `files`。
 
@@ -46,7 +46,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 3. 推演（Sonnet）→ `checkSim` 复核（行军快过驿程、坐镇者未奉命离任、俘虏无故脱身、日期须写年月且不得倒退、一回不得远超日数上限）→ 有问题带着问题重推一次。日期只写季节也能解析（春初 = 正月上旬），章武、黄初年号折成建安。
 4. 说书 → 逐段 `fixLatin` 去外文。
 5. 时代结束：评分（原著 = 60 及格，六项各 ±15；低于 60 为败局"没能兴复汉室"；取长安为胜局"还于旧都"）→ 按 `ev.next` 分支进入下一时代。
-6. 过渡：一路照原著打完 → 照原著快进（不调模型）；否则推演快进。过渡提示词带上历代人物的最后下落（`E.lastKnown`，跨全部 `g.past`）和各时代末的兵马；`checkTransition` 复核：换了地方要在其间大事里交代、刘备一方在世且在下一时代登场名单里的人不得消失、参考开局里刘备一方驻兵的要地不得一兵不剩。不合格带问题重推一次。坐镇（`posts`）由 `E.carryPosts` 延续：上一时代末仍在驻地的人，开局还在原处就照旧坐镇（按地名比对，中间时代地图上没有该地也不丢）；过渡中调走的视为改任；参考开局写明的坐镇者开局恰在其地也算。
+6. 过渡：一路照原著打完 → 照原著快进（不调模型）；否则推演快进。过渡提示词带上历代人物的最后下落（`E.lastKnown`，跨全部 `g.past`）和各时代末的兵马；`checkTransition` 复核：换了地方要在其间大事里交代、刘备一方在世且在下一时代登场名单里的人不得消失、参考开局里刘备一方驻兵的要地不得一兵不剩。不合格带问题重推一次；重推出错、被截断或不成 JSON 就用初稿。过渡输出长（约九千字），网页检查 `truncated`（claude.ai 的 sample）与 `stop_reason: max_tokens`（Anthropic Key，`max_tokens` 已提到 16000），截断时报"这一段推演太长"。参考开局比上一时代终局还早时（夷陵打到章武二年，一路北伐参考开局是章武元年），背景大事取终局后一年。坐镇（`posts`）由 `E.carryPosts` 延续：上一时代末仍在驻地的人，开局还在原处就照旧坐镇（按地名比对，中间时代地图上没有该地也不丢）；过渡中调走的视为改任；参考开局写明的坐镇者开局恰在其地也算。
 
 ## 测试分档（先便宜后贵）
 
@@ -81,5 +81,6 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。`checkSim` 另查：敌军标成已知，兵数却是暗线里的实数（同地点、数对得上、玩家所知与已知事件里没有这个数）→ 带问题重推；兵数写"不详"的不查。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
+- 夷陵终局到一路北伐推演不出来（作者存档，样本 `tools/fixtures/yiling-yilu-end.json`）：CLI 上过渡能跑通（$0.27），网页没检查输出截断，初稿有问题时还要再整份重推一遍，任一份被截或超时就整体失败。已修：见流水线第 6 条。
 - 北伐兵少、庞统张飞不见、张飞召而不至（作者存档 beifa-20261008）：过渡只看上一时代末的名单，庞统不在北伐登场名单、张飞在荆州一章没出场，就被丢掉；益州主力在荆州一章没记录，开局就没了；整局日期只写季节，引擎解析不了，军令驿程和行军复核全部失效，日期还倒退。已修：见流水线第 3、6 条；北伐登场名单加庞统，回数 6 → 10，关中开局下调为约三万（长安、陈仓、天水分守），洛阳中军西援需一两月，设定写明奇袭得手的条件。
 - 世界线收束过强：决断点规则、回数上限 8、最后一回快进到时代结局；原著复现靠原著轨（双轨）。
