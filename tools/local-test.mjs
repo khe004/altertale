@@ -12,7 +12,7 @@ import { ConnectionStore } from '../vendor/siwc/dist/storage.js';
 import { streamResponse } from '../vendor/siwc/dist/responses.js';
 
 const session = { status: 'connected', sharing: true, identity: { email: 'test@example.invalid' } };
-const models = [{ slug: 'gpt-6.1-sol', displayName: 'GPT-6.1 Sol' }];
+const models = [{ slug: 'gpt-6.1-sol', displayName: 'GPT-6.1 Sol' }, { slug: 'gpt-6-luna', displayName: 'GPT-6 Luna' }];
 async function serve(overrides, task) {
   const calls = [];
   const client = {
@@ -79,9 +79,12 @@ test('本地登录后用 6.1 Sol 从网页完成流式调用，兼容现有 LLM 
     await window.AT.chatgpt.init(() => {});
     const provider = window.AT.chatgpt.provider(); assert.equal(provider.kind, 'chatgpt');
     const chunks = [], result = await provider.call('完整的推演提示词', text => chunks.push(text));
-    assert.equal(result.text, '天命未定'); assert.equal(result.model, 'gpt-6.1-sol'); assert.equal(result.tier, 'ChatGPT 套餐');
+    assert.equal(result.text, '天命未定'); assert.equal(result.model, 'gpt-6.1-sol'); assert.ok(result.tier.includes('low'));
     assert.deepEqual(chunks.slice(0, 2), ['天命', '天命未定']);
-    assert.equal(calls[1].input, '完整的推演提示词');
+    assert.equal(calls[1].input, '完整的推演提示词'); assert.equal(calls[1].reasoningEffort, 'low');
+    const quick = await provider.call('拆令', () => {}, undefined, { tier: 'quick' });
+    assert.equal(quick.model, 'gpt-6-luna'); assert.ok(quick.tier.includes('low'));
+    assert.equal(calls[2].model, 'gpt-6-luna'); assert.equal(calls[2].reasoningEffort, 'low');
     window.AT.chatgpt.render(false); assert.ok(box.innerHTML.includes('使用 ChatGPT 套餐'));
   });
 });
@@ -134,17 +137,17 @@ test('保存凭证使用系统密钥加密，重启可解密；密钥丢失或�
     assert.equal(await readFile(join(directory, 'chatgpt-auth.json'), 'utf8'), onDisk);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
-test('官方 SDK 走 public Responses，store=false/stream=true，必须完成；不传旧接口参数', async () => {
+test('官方 SDK 走 public Responses，支持推理档，store=false/stream=true，必须完成；不传旧接口参数', async () => {
   const previous = globalThis.fetch; let completed = true;
   globalThis.fetch = async (url, options) => {
     assert.equal(String(url), 'https://api.openai.com/v1/responses');
     const body = JSON.parse(options.body); assert.equal(body.store, false); assert.equal(body.stream, true);
-    assert.ok(Array.isArray(body.input)); assert.ok(!('max_output_tokens' in body)); assert.ok(!('max_tokens' in body));
+    assert.ok(Array.isArray(body.input)); assert.equal(body.reasoning.effort, 'low'); assert.ok(!('max_output_tokens' in body)); assert.ok(!('max_tokens' in body));
     const events = [{ type: 'response.output_text.delta', delta: '正文' }, ...(completed ? [{ type: 'response.completed', response: { status: 'completed' } }] : [])];
     return new Response(events.map(e => 'data: ' + JSON.stringify(e) + '\n\n').join(''), { headers: { 'content-type': 'text/event-stream' } });
   };
   try {
-    const options = { model: 'gpt-6.1-sol', input: '推演' }, signal = new AbortController().signal;
+    const options = { model: 'gpt-6.1-sol', input: '推演', reasoningEffort: 'low' }, signal = new AbortController().signal;
     assert.equal((await streamResponse('synthetic-token', options, signal)).text, '正文');
     completed = false; await assert.rejects(streamResponse('synthetic-token', options, signal), error => error.code === 'stream_interrupted');
   } finally { globalThis.fetch = previous; }

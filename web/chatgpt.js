@@ -2,7 +2,8 @@
 (function (root) {
   'use strict';
   if (!root.ALTERTALE_LOCAL) return;
-  const api = root.AT.api, MODEL_STORE = 'altertale-chatgpt-model';
+  const api = root.AT.api, MODEL_STORE = 'altertale-chatgpt-model-v2';
+  const MAIN_EFFORT = 'low', QUICK_MODEL = 'gpt-6-luna', QUICK_EFFORT = 'low';
   const state = { session: { status: 'disconnected', sharing: false }, models: [], model: '', message: '', connecting: false, testing: false };
   let change = () => {}, box;
   const esc = text => String(text || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -36,15 +37,17 @@
       if (!state.session.sharing || !state.model) return null;
       return { kind: 'chatgpt', call: controller.call };
     },
-    async call(prompt, onText = () => {}, signal) {
+    async call(prompt, onText = () => {}, signal, options = {}) {
       try {
+        const quick = options.tier === 'quick';
+        const model = quick && state.models.some(item => item.slug === QUICK_MODEL) ? QUICK_MODEL : state.model;
         const response = await fetch('/api/chatgpt/generate', { method: 'POST', headers: { 'content-type': 'application/json' },
-          signal, body: JSON.stringify({ prompt, model: state.model }) });
+          signal, body: JSON.stringify({ prompt, model, reasoningEffort: quick && model === QUICK_MODEL ? QUICK_EFFORT : MAIN_EFFORT }) });
         if (!response.ok) {
           const data = await response.json(); throw { code: 'chatgpt_error', message: data.error?.message || 'ChatGPT 请求失败。' };
         }
-        const result = await api.read(response, 'openai', state.model, onText, signal);
-        return { ...result, tier: 'ChatGPT 套餐' };
+        const result = await api.read(response, 'openai', model, onText, signal);
+        return { ...result, tier: `ChatGPT 套餐 · ${quick && model === QUICK_MODEL ? QUICK_EFFORT : MAIN_EFFORT}` };
       } catch (e) {
         if (signal?.aborted || e.name === 'AbortError') throw { code: 'cancelled' };
         if (e.code === 'upstream_error') throw { code: 'chatgpt_error', message: e.message };
@@ -65,7 +68,7 @@
         ${s.sharing ? `<label>推演模型 <select id="chatgptModel" ${disabled ? 'disabled' : ''}>${state.models.map(m => `<option value="${esc(m.slug)}" ${m.slug === state.model ? 'selected' : ''}>${esc(m.displayName)} · ${esc(m.slug)}</option>`).join('')}</select></label>
           <div class="row"><button class="ui-btn" id="testChatGPT" type="button" ${disabled || !state.model ? 'disabled' : ''}>测试推演连接</button><button class="ui-btn" id="refreshChatGPT" type="button" ${disabled ? 'disabled' : ''}>刷新模型列表</button></div>` : ''}
         <span role="status" aria-live="polite">${esc(state.message)}</span>
-        <small>推演、说书、拆令和复核均使用所选模型，计入 ChatGPT 套餐用量。达到限额后会停止，可在“管理用量”查看。</small>`;
+        <small>推演、说书和复核默认使用所选模型 · low；拆令、预检和改字优先使用 GPT-6 Luna · low。均计入 ChatGPT 套餐用量。</small>`;
       const find = id => box.querySelector('#' + id);
       const action = async (message, task) => {
         state.message = message; change();

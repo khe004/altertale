@@ -72,6 +72,8 @@ export function createLocalServer({ runtimeFactory = makeRuntime, webRoot = WEB 
         if (path === '/api/chatgpt/generate' && req.method === 'POST') {
           if (signingIn || generating) throw failure('busy', 409);
           if (typeof body?.prompt !== 'string' || !body.prompt.trim() || typeof body?.model !== 'string') throw failure('invalid_request');
+          const reasoningEffort = body.reasoningEffort;
+          if (reasoningEffort !== undefined && !['low', 'medium', 'high', 'xhigh', 'max'].includes(reasoningEffort)) throw failure('invalid_request');
           generating = true;
           try {
             const session = await chatgpt.getSession();
@@ -81,6 +83,7 @@ export function createLocalServer({ runtimeFactory = makeRuntime, webRoot = WEB 
             res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-store, no-transform', 'x-content-type-options': 'nosniff' });
             const send = value => { if (!res.destroyed) res.write('data: ' + JSON.stringify(value) + '\n\n'); };
             const result = await chatgpt.streamResponse({ model: body.model, input: body.prompt, signal: control.signal,
+              ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
               onDelta: delta => send({ model: body.model, choices: [{ delta: { content: delta } }] }) });
             // The SDK requires response.completed. Failures never produce DONE.
             if (!result.text.trim()) throw failure('empty_completion');
