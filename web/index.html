@@ -919,7 +919,7 @@ function renderReport() {
       ${(s.autonomous || []).length ? `<h4>前方自决</h4><ul>${s.autonomous.map(a => `<li><b>${esc(a.who)}</b> ${esc(a.did)}</li>`).join("")}</ul>` : ""}
       ${(s.foreshadow || []).length ? `<h4>伏笔</h4><ul>${s.foreshadow.map(f => `<li>「${esc(f.line)}」<span class="rp-m"> → ${esc(f.truth)}</span></li>`).join("")}</ul>` : ""}
       ${(s.plans || []).length && i > 0 ? `<h4>各方谋划</h4><ul>${s.plans.map(p => `<li><b>${esc(p.side)}</b>〔${esc(p.status)}〕${esc(p.plan)}<span class="rp-m">　所知：${esc(p.knows)}</span></li>`).join("")}</ul>` : ""}
-      ${(s.delivered || []).length ? `<h4>本回送达的军令</h4><ul>${s.delivered.map(o => `<li>${esc(E.orderLine(o))}</li>`).join("")}</ul>` : ""}
+      ${(s.delivered || []).length ? `<h4>本回送达的军令</h4><ul>${s.delivered.map(o => `<li>${esc(E.orderLine(o, E.reignOf(game)))}</li>`).join("")}</ul>` : ""}
       ${(s.counsel || []).length ? `<h4>谋士进言</h4><ul>${s.counsel.map(c => `<li><b>${esc(c.who)}</b><span class="rp-m">（${esc(c.how)}）</span> ${esc(c.says)}</li>`).join("")}</ul>` : ""}
       ${(s.choices || []).length ? `<h4>当时的选项</h4><ul>${s.choices.map(o => `<li><b>${esc(o.label)}</b><span class="rp-m">　${esc(o.detail)}</span></li>`).join("")}</ul>` : ""}
       ${c.decision ? `<div class="decision"><span>${esc(E.playerTitle(game, i))}之令</span><b>${esc(c.decision)}</b></div>` : ""}

@@ -38,10 +38,17 @@
     const at = /[早初孟]/.test(q[1] || "") || q[3] === "初" ? 5 : /[暮晚季]/.test(q[1] || "") || /[末季尽]/.test(q[3] || "") ? 85 : 45;
     return (y - 24) * 360 + SEASON[q[2]] * 30 + at;
   };
-  const fmtDate = E.fmtDate = function (n) {
+  // reign 为"章武"时（刘备已称帝），建安二十六年以后写成章武纪年
+  const fmtDate = E.fmtDate = function (n, reign) {
     const y = 24 + Math.floor(n / 360), r = n - (y - 24) * 360, mo = Math.floor(r / 30) + 1, d = r - (mo - 1) * 30;
-    return `建安${cnBig(y)}年${mo === 1 ? "正" : cnBig(mo)}月${d <= 10 ? "上旬" : d <= 20 ? "中旬" : "下旬"}`;
+    const yr = reign === "章武" && y > 25 ? `章武${y === 26 ? "元" : cnBig(y - 25)}` : `建安${cnBig(y)}`;
+    return `${yr}年${mo === 1 ? "正" : cnBig(mo)}月${d <= 10 ? "上旬" : d <= 20 ? "中旬" : "下旬"}`;
   };
+  // 已称帝的局里，模型写成"建安二十八年"的日期改回章武纪年（章武元年 = 建安二十六年）
+  const toReign = (str, reign) => reign !== "章武" ? str : String(str || "").replace(/建安([元一二三四五六七八九十]+)年/g, (m, n) => {
+    const y = cnNum(n);
+    return y > 25 ? `章武${y === 26 ? "元" : cnBig(y - 25)}年` : m;
+  });
   const yearOf = E.yearOf = str => yearIn(str) || 24;
   const adOf = str => 195 + yearOf(str);
 
@@ -132,6 +139,8 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     }
     return t;
   };
+  // 本局刘备一方用的年号
+  const reignOf = E.reignOf = g => E.playerTitle(g) === "陛下" ? "章武" : "建安";
   const TIER_NAME = { 1: "第一档", 2: "第二档", 3: "第三档" };
 
   function cardText(name, ad, g) {
@@ -308,7 +317,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
     const ids = canonIds(g);
     return `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
 {
-  "date": "本回末的时间，写明年、月、旬，如 建安二十四年九月下旬（不要只写季节）",
+  "date": "本回末的时间，写明年、月、旬，如 ${reignOf(g) === "章武" ? "章武二年九月下旬" : "建安二十四年九月下旬"}（不要只写季节）${reignOf(g) === "章武" ? "。刘备已称帝，纪年一律用章武（章武元年即建安二十六年），不再用建安" : ""}",
   "plans": [{"side":"某方","goal":"目标，二十字以内","plan":"当前谋划，四十字以内","status":"筹备|待发|已发动|改图|搁置","knows":"他们此刻掌握的玩家一方情报，可含误判，三十字以内"}],
   "events": [{"date":"九月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
@@ -441,7 +450,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
     return [...(st.orders || []), ...fresh];
   };
 
-  const orderLine = E.orderLine = o => `「${o.part}」${o.tier}自${o.from}${o.to ? "往" + o.to : ""}，${o.sent != null ? fmtDate(o.sent) + "发出，" : ""}${o.arrive != null ? `约${fmtDate(o.arrive)}${o.tier === "信使" ? "送达" : "抵达"}` : "日程按常理估算"}`;
+  const orderLine = E.orderLine = (o, reign) => `「${o.part}」${o.tier}自${o.from}${o.to ? "往" + o.to : ""}，${o.sent != null ? fmtDate(o.sent, reign) + "发出，" : ""}${o.arrive != null ? `约${fmtDate(o.arrive, reign)}${o.tier === "信使" ? "送达" : "抵达"}` : "日程按常理估算"}`;
 
   /* ───────── 下令前预检：命令里有没有做不到的部分（快速档，送去推演之前提示玩家） ───────── */
 
@@ -542,7 +551,8 @@ ${nb ? (nb.wait ? `演义中${ev.player}接下来没有另发命令：choices �
     const budget = beat ? "" : n < ev.maxTurns ? `\n本局最多${cnBig(ev.maxTurns)}回，这是第${cn(n)}回。回数有限，只在决断时刻停下；但不得替${ev.player}做本该由他做的大决定，也不得为了凑回数而拖延。` : "";
     const last = beat ? "" : n >= ev.maxTurns ? `\n本回为终章，给出 ending。从此刻一直推演到本时代定局（${ev.decisive}）为止，不受上面的日数限制，可以跨越数月乃至一年以上；其间不再请${ev.player}决断，前方按此刻的兵力、已下达的命令、方略与各人性格行事，不得调来未奉命的人马。事件可以多写几条，按时间先后把这段路走完。` : "";
     const now = parseDate(cur.date, yearOf(cur.date));
-    const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0])}至${fmtDate(now + ev.turnSpan[1])}）`;
+    const reign = reignOf(g);
+    const span = now == null ? "" : `（即推演到约${fmtDate(now + ev.turnSpan[0], reign)}至${fmtDate(now + ev.turnSpan[1], reign)}）`;
     const ad = adOf(cur.date);
     return `${simRules(g)}
 
@@ -583,7 +593,7 @@ ${JSON.stringify(st)}
 ${decision}
 
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
-${(orders || []).map(orderLine).join("\n") || "（无在途军令）"}
+${(orders || []).map(o => orderLine(o, reign)).join("\n") || "（无在途军令）"}
 
 ${beat ? `请推演第${cn(n)}回，照原著节拍推演到${beat.to}。` : `请推演第${cn(n)}回${n >= ev.maxTurns ? "（终章）。" : `，推演到下一个需要${ev.player}决断的时刻，`}${n >= ev.maxTurns ? "" : `在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。`}`}${budget}${last}${rail}
 
@@ -614,6 +624,9 @@ ${simFormat(g)}`;
     if (!Array.isArray(s.plans) || !s.plans.length) s.plans = prev.plans || [];
     for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "counsel"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
     s.date = s.date || prev.date;
+    const reign = reignOf(g);
+    s.date = toReign(s.date, reign);
+    for (const e of s.events) if (e && e.date) e.date = toReign(e.date, reign);
     const all = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label) : [];
     const ok = all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
     s.choices = ok.slice(0, 3);
@@ -663,7 +676,7 @@ ${simFormat(g)}`;
     const list = orders || prev.orders || [];
     s.orders = list.filter(o => o.arrive != null && (now == null || o.arrive > now));
     s.delivered = list.filter(o => o.arrive != null && now != null && o.arrive <= now);
-    s.in_transit = s.orders.map(o => ({ order: o.part, eta: `${fmtDate(o.arrive)}${o.tier === "信使" ? "送达" : "抵"}${o.to}（${o.tier}）` }));
+    s.in_transit = s.orders.map(o => ({ order: o.part, eta: `${fmtDate(o.arrive, reignOf(g))}${o.tier === "信使" ? "送达" : "抵"}${o.to}（${o.tier}）` }));
     s.latin = latinWords(s).length;
     return s;
   };
@@ -696,7 +709,7 @@ ${simFormat(g)}`;
     const y = yearOf(prev.date), t1 = parseDate(s.date, y), tPrev = parseDate(prev.date, y);
     const seen = lastSeen(g), posts = postsOf(g);
     // 日期：要写明年月（军令驿程和行军复核都靠它），不得倒退，非终章不得远超本回的日数上限
-    if (!/年/.test(s.date || "") || t1 == null) problems.push(`本回末的日期"${s.date || ""}"要写明年、月、旬（如 ${fmtDate((tPrev ?? 0) + ev.turnSpan[0])}）`);
+    if (!/年/.test(s.date || "") || t1 == null) problems.push(`本回末的日期"${s.date || ""}"要写明年、月、旬（如 ${fmtDate((tPrev ?? 0) + ev.turnSpan[0], reignOf(g))}）`);
     else if (tPrev != null && t1 < tPrev) problems.push(`本回末是${s.date}，比上一回末的${prev.date}还早，日期倒退了`);
     else if (tPrev != null && !s.ending && !railBeat(g) && t1 - tPrev > ev.turnSpan[1] + 30) problems.push(`本回从${prev.date}推到${s.date}，过了${t1 - tPrev}日，超过每回${ev.turnSpan[1]}日的上限，应当更早停在决断时刻`);
     // 每道命令（含方略）下达的时间
@@ -724,7 +737,7 @@ ${simFormat(g)}`;
       // 奉召：召令从前方送到驻地，再赶到目的地
       const go = travelDays(ev, b, a, "信使") + travelDays(ev, a, b, "轻兵");
       if (t1 != null && call.t != null && Number.isFinite(go) && call.t + go > t1)
-        problems.push(`${f.name}坐镇${a}，召令送到再赶到${b}最快要${go}日，最早${fmtDate(call.t + go)}才到，本回末只到${s.date}`);
+        problems.push(`${f.name}坐镇${a}，召令送到再赶到${b}最快要${go}日，最早${fmtDate(call.t + go, reignOf(g))}才到，本回末只到${s.date}`);
     }
     // 暗线里的敌军实数（伏兵、暗中增兵、潜行的援军）不得在兵马表里当作玩家已知
     for (const f of hiddenForcesShown(g, s)) problems.push(`兵马表里的"${f.name}"（${f.where}，${f.troops}）标成了玩家已知，但暗线里写着这支兵是暗中的，玩家并不知道：known 改写 false；若玩家确有探报，只按探报写模糊的兵数（如"数目不详"），不得写出暗线里的实数`);
@@ -1020,7 +1033,7 @@ ${JSON.stringify(s.events)}
 ${JSON.stringify(s.autonomous)}
 
 【本回送达的军令】
-${(s.delivered || []).map(orderLine).join("\n") || "（无）"}
+${(s.delivered || []).map(o => orderLine(o, reignOf(g))).join("\n") || "（无）"}
 
 【必须埋下的伏笔】
 ${JSON.stringify(s.foreshadow)}
