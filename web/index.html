@@ -249,6 +249,31 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
   aside.collapsed { display: none; }
   .map svg { background: var(--paper); }
 }
+/* 调用记录：每次发给模型的完整提示词，按【】段落拆开看大小 */
+.calls { position: fixed; inset: 0; z-index: 50; overflow-y: auto; background: var(--paper); color: var(--ink); font-family: var(--font-ui); padding: 1rem 16px 3rem; }
+.calls-in { max-width: 60rem; margin: 0 auto; }
+.calls .rp-top { margin-bottom: 0.4rem; justify-content: flex-start; }
+.calls .rp-top h2 { margin-right: auto; }
+.calls-acts { display: flex; gap: 0.4rem; }
+.calls .note { font-size: 0.78rem; }
+.call { border-top: 1px solid var(--line); padding: 0.5rem 0; }
+.call > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline; font-size: 0.85rem; }
+.call > summary b { font-weight: 500; color: var(--indigo); }
+.call > summary .rp-m { font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.call .warn { color: var(--seal); }
+.call-body { padding: 0.5rem 0 0 0.8rem; }
+.call-acts { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0 0.6rem; }
+.sec { margin: 0.1rem 0; }
+.sec > summary { cursor: pointer; list-style: none; display: grid; grid-template-columns: minmax(7rem, 14rem) 7.5rem 1fr; gap: 0.6rem; align-items: center; font-size: 0.8rem; }
+.sec > summary::-webkit-details-marker { display: none; }
+.sec > summary span:first-child::before { content: "▸ "; color: var(--muted); }
+.sec[open] > summary span:first-child::before { content: "▾ "; }
+.sec > summary span:nth-child(2) { white-space: nowrap; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sec .bar { height: 0.45rem; background: var(--indigo-soft); border-radius: 2px; overflow: hidden; }
+.sec .bar i { display: block; height: 100%; background: var(--indigo); }
+.sec.reply > summary .bar i { background: var(--seal); }
+.calls pre { white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; line-height: 1.55; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); padding: 0.6rem; margin: 0.3rem 0 0.6rem; }
+@media (max-width: 560px) { .sec > summary { grid-template-columns: 1fr auto; row-gap: 0.15rem; } .sec .bar { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) {
   .writing .dots::after { animation: none; }
   .gauge .bar i { transition: none; }
@@ -260,6 +285,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
     <div class="brand"><span id="brandTitle">天命未定</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
     <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
+    <button class="ui-btn" id="callsBtn" type="button" hidden>提示词</button>
     <button class="ui-btn" id="exportBtn" type="button" hidden>导出</button>
     <button class="ui-btn" id="restartBtn" type="button" hidden>另开一局</button>
   </div>
@@ -269,6 +295,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
   <main id="main"></main>
   <aside id="panel" class="collapsed" hidden></aside>
 </div>
+<div id="calls" class="calls" hidden role="dialog" aria-label="调用记录"></div>
 
 <script src="data/characters.js"></script>
 <script src="data/background.js"></script>
@@ -320,7 +347,15 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const paras = t => String(t).split(/\n+/).map(s => s.trim()).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join("");
 const current = () => game.chapters[game.chapters.length - 1];
 
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(game)); } catch (e) {} }
+function save() {
+  let data;
+  try { data = JSON.stringify(game); } catch (e) { return; }
+  try { localStorage.setItem(STORE_KEY, data); }
+  catch (e) {
+    // 存档优先：本机空间不够时，先丢掉调用记录再存
+    try { localStorage.removeItem(LOG_STORE); localStorage.setItem(STORE_KEY, data); } catch (e2) {}
+  }
+}
 function load() { try { return JSON.parse(localStorage.getItem(STORE_KEY) || "null"); } catch (e) { return null; } }
 
 // 导出整局：正文、推演状态、原著对照与用量都在 game 里
@@ -329,7 +364,15 @@ async function exportGame(g, btn) {
   const d = new Date(), pad = n => String(n).padStart(2, "0");
   const filename = `altertale-${g.era || "game"}-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
   const data = JSON.stringify({ app: "altertale", exportedAt: d.toISOString(), game: g }, null, 1);
-  const flash = t => { if (!btn) return; const o = btn.textContent; btn.textContent = t; setTimeout(() => btn.textContent = o, 2000); };
+  await saveFile(filename, data, btn, "application/json");
+}
+
+const stamp = () => { const d = new Date(), pad = n => String(n).padStart(2, "0"); return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}`; };
+const flashBtn = (btn, t) => { if (!btn) return; const o = btn.dataset.label || btn.textContent; btn.dataset.label = o; btn.textContent = t; setTimeout(() => { btn.textContent = o; }, 2000); };
+
+// 交给浏览器保存一个文件：claude.ai 上走 downloads，本地走 a[download]
+async function saveFile(filename, data, btn, type) {
+  const flash = t => flashBtn(btn, t);
   let dl = null;
   try { dl = window.claude && typeof window.claude.use === "function" ? await window.claude.use("downloads") : null; } catch (e) {}
   if (dl) {
@@ -338,7 +381,7 @@ async function exportGame(g, btn) {
     return;
   }
   try {
-    const url = URL.createObjectURL(new Blob([data], { type: "application/json" }));
+    const url = URL.createObjectURL(new Blob([data], { type: type || "application/json" }));
     const a = document.createElement("a");
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -471,6 +514,40 @@ async function callAnthropic(key, prompt, onText, signal, model) {
 
 /* ───────── 用量记录 ───────── */
 
+// 调用记录：每次调用实际发出的提示词和模型的原始回复，只存本机（另一个键，不进存档、不随导出）。
+// 最多留 LOG_MAX 条、约 LOG_CHARS 字；本机空间不够时先让给存档。
+const LOG_STORE = "altertale-call-log";
+const LOG_MAX = 40, LOG_CHARS = 1500000;
+const ROLE_NAMES = { route: "拆令", check: "预检", advise: "拟令", sim: "推演", repair: "复核后重推", narrate: "说书", fix: "改字", format: "改格式", gap: "其间决断", transition: "过渡" };
+let callLog = (() => { try { const a = JSON.parse(localStorage.getItem(LOG_STORE) || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } })();
+let callsOpen = false;
+
+function saveLog() {
+  while (callLog.length > LOG_MAX) callLog.shift();
+  let size = callLog.reduce((n, c) => n + c.prompt.length + c.text.length, 0);
+  while (callLog.length > 1 && size > LOG_CHARS) { const c = callLog.shift(); size -= c.prompt.length + c.text.length; }
+  for (;;) {
+    try { localStorage.setItem(LOG_STORE, JSON.stringify(callLog)); return; }
+    catch (e) { if (callLog.length <= 1) { try { localStorage.removeItem(LOG_STORE); } catch (e2) {} return; } callLog.shift(); }
+  }
+}
+
+function logCall(role, chapter, prompt, res, ms) {
+  const c = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    at: Date.now(), era: game ? game.era : "", eraName: game ? era().name : "", role, chapter,
+    model: res.model || "", tier: res.tier || "", inTok: res.inTok || 0, outTok: res.outTok || 0, ms,
+    truncated: !!res.truncated, prompt, text: res.text || ""
+  };
+  callLog.push(c);
+  saveLog();
+  $("#callsBtn").hidden = false;
+  if (callsOpen) {
+    const list = $("#callList");
+    if (list) { list.insertAdjacentHTML("afterbegin", callItem(c)); const n = $("#callCount"); if (n) n.textContent = String(callLog.length); }
+  }
+}
+
 // Every completed call is kept, including ones on branches later abandoned: that usage was spent.
 function recordUsage(role, chapter, prompt, res, t0) {
   (game.usage = game.usage || []).push({
@@ -478,6 +555,7 @@ function recordUsage(role, chapter, prompt, res, t0) {
     inChars: prompt.length, outChars: res.text.length,
     inTok: res.inTok || 0, outTok: res.outTok || 0, ms: Date.now() - t0
   });
+  logCall(role, chapter, prompt, res, Date.now() - t0);
   save();
 }
 
@@ -748,6 +826,7 @@ function render() {
   const main = $("#main"), panel = $("#panel");
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
+  $("#callsBtn").hidden = !callLog.length;
   if (!game) {
     $("#brandTitle").textContent = "天命未定";
     panel.hidden = true;
@@ -1213,6 +1292,104 @@ function restart() {
   render();
   window.scrollTo(0, 0);
 }
+
+/* ───────── 调用记录（提示词查看器） ───────── */
+
+// 按行首的【段名】切开提示词；末尾的"请推演第…回"与输出格式单列，免得算进上一段
+function promptSections(p) {
+  const cuts = [{ name: "开头", at: 0 }];
+  for (const m of p.matchAll(/^【([^】\n]{1,24})】/gm)) cuts.push({ name: m[1], at: m.index });
+  const tail = [[/^请(?:推演|写|拆|审|拟)/m, "本回要求"], [/^只输出一个 ?JSON/m, "输出格式"]];
+  for (const [re, name] of tail) {
+    const m = re.exec(p);
+    if (m && m.index > 0 && !cuts.some(c => c.at === m.index)) cuts.push({ name, at: m.index });
+  }
+  cuts.sort((a, b) => a.at - b.at);
+  const out = cuts.map((c, i) => ({ name: c.name, text: p.slice(c.at, i + 1 < cuts.length ? cuts[i + 1].at : p.length) })).filter(s => s.text.trim());
+  if (out.length === 1) out[0].name = "全文";
+  return out;
+}
+
+const fmtN = n => n >= 10000 ? (n / 10000).toFixed(1) + "万" : String(n);
+const findCall = id => callLog.find(c => c.id === id);
+const callTitle = c => `${c.eraName ? "《" + c.eraName + "》" : ""}第${cn(Math.max(1, c.chapter))}回 · ${ROLE_NAMES[c.role] || c.role}`;
+
+function callItem(c) {
+  const t = new Date(c.at), pad = n => String(n).padStart(2, "0");
+  const when = `${t.getMonth() + 1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  const size = c.inTok ? `输入 ${fmtN(c.inTok)} tokens（${fmtN(c.prompt.length)} 字）· 输出 ${fmtN(c.outTok)} tokens` : `输入 ${fmtN(c.prompt.length)} 字 · 输出 ${fmtN(c.text.length)} 字`;
+  return `<details class="call" data-call="${c.id}"><summary><b>${esc(callTitle(c))}</b>
+    <span class="rp-m">${when} · ${esc(c.model)}${c.tier && c.tier !== "default" ? " · " + esc(c.tier) : ""} · ${size} · ${Math.round(c.ms / 1000)} 秒</span>${c.truncated ? `<span class="warn rp-m">回复被截断</span>` : ""}</summary>
+    <div class="call-body"></div></details>`;
+}
+
+function callBody(c) {
+  const secs = promptSections(c.prompt), total = c.prompt.length || 1;
+  const max = Math.max(...secs.map(s => s.text.length), c.text.length, 1);
+  const row = (name, len, i, cls) => `<details class="sec${cls ? " " + cls : ""}" data-sec="${i}"><summary><span>${esc(name)}</span><span>${fmtN(len)} 字${cls ? "" : ` · ${Math.round(len * 100 / total)}%`}</span><span class="bar"><i style="width:${(len * 100 / max).toFixed(1)}%"></i></span></summary><pre></pre></details>`;
+  return `<div class="call-acts">
+      <button class="ui-btn" type="button" data-act="copy">复制提示词</button>
+      <button class="ui-btn" type="button" data-act="save">下载这次调用</button>
+    </div>
+    ${secs.map((s, i) => row(s.name, s.text.length, i)).join("")}
+    ${row("模型回复", c.text.length, "reply", "reply")}`;
+}
+
+function renderCalls() {
+  const box = $("#calls");
+  if (!callsOpen) { box.hidden = true; box.innerHTML = ""; return; }
+  box.hidden = false;
+  box.innerHTML = `<div class="calls-in">
+    <div class="rp-top"><h2>调用记录</h2><span class="calls-acts">
+      <button class="ui-btn" type="button" data-act="saveAll">全部下载</button>
+      <button class="ui-btn" type="button" data-act="clear">清空</button>
+      <button class="ui-btn" type="button" data-act="close">关闭</button></span></div>
+    <p class="note">每次发给模型的完整提示词，按【】段落拆开，可展开看原文；最新的在上面。共 <span id="callCount">${callLog.length}</span> 条，只存在本机浏览器，不进存档，最多留 ${LOG_MAX} 条。中途取消、连接出错的调用不记。</p>
+    <div id="callList">${callLog.slice().reverse().map(callItem).join("") || `<p class="rp-m">还没有调用。</p>`}</div></div>`;
+}
+
+function openCalls(on) {
+  callsOpen = on;
+  document.body.style.overflow = on ? "hidden" : "";
+  renderCalls();
+}
+
+const callsBox = $("#calls");
+// 展开时才填内容：一次推演的提示词近两万字，几十条一起放进页面太重
+callsBox.addEventListener("toggle", e => {
+  const d = e.target;
+  if (!d.open) return;
+  if (d.classList.contains("call")) {
+    const body = d.querySelector(".call-body"), c = findCall(d.dataset.call);
+    if (body && c && !body.childElementCount) body.innerHTML = callBody(c);
+  } else if (d.classList.contains("sec")) {
+    const pre = d.querySelector("pre"), c = findCall(d.closest(".call").dataset.call);
+    if (!pre || !c || pre.textContent) return;
+    const k = d.dataset.sec;
+    pre.textContent = k === "reply" ? c.text : promptSections(c.prompt)[+k].text;
+  }
+}, true);
+callsBox.addEventListener("click", async e => {
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const act = b.dataset.act, el = b.closest(".call"), c = el && findCall(el.dataset.call);
+  if (act === "close") openCalls(false);
+  else if (act === "clear") {
+    if (b.dataset.armed !== "1") { b.dataset.armed = "1"; b.textContent = "再点一次确认"; setTimeout(() => { if (b.isConnected) { b.dataset.armed = ""; b.textContent = "清空"; } }, 3000); return; }
+    callLog = []; try { localStorage.removeItem(LOG_STORE); } catch (e2) {}
+    $("#callsBtn").hidden = true; openCalls(false);
+  } else if (act === "saveAll") {
+    await saveFile(`altertale-calls-${stamp()}.json`, JSON.stringify({ app: "altertale", kind: "calls", exportedAt: new Date().toISOString(), calls: callLog }, null, 1), b, "application/json");
+  } else if (act === "save" && c) {
+    const head = `${callTitle(c)}\n${new Date(c.at).toLocaleString()} · ${c.model}${c.tier ? " · " + c.tier : ""} · 输入 ${c.inTok || c.prompt.length}${c.inTok ? " tokens" : " 字"} · 输出 ${c.outTok || c.text.length}${c.outTok ? " tokens" : " 字"}${c.truncated ? " · 回复被截断" : ""}`;
+    await saveFile(`altertale-${c.role}-${stamp()}.txt`, `${head}\n\n==================== 提示词 ====================\n\n${c.prompt}\n\n==================== 模型回复 ====================\n\n${c.text}\n`, b, "text/plain;charset=utf-8");
+  } else if (act === "copy" && c) {
+    try { await navigator.clipboard.writeText(c.prompt); flashBtn(b, "已复制"); }
+    catch (e2) { flashBtn(b, "复制失败，可用下载"); }
+  }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && callsOpen) openCalls(false); });
+$("#callsBtn").onclick = () => openCalls(!callsOpen);
 
 $("#restartBtn").onclick = restart;
 $("#exportBtn").onclick = () => exportGame(game, $("#exportBtn"));
