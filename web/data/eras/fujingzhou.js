@@ -6,7 +6,7 @@
   const ref = JSON.parse(JSON.stringify(base.starts.canon.state));
   Object.assign(ref, {
     date: "建安二十五年正月",
-    places: { ...ref.places, "江陵": "孙", "公安": "孙", "麦城": "孙" },
+    places: { ...ref.places, "江陵": "孙", "公安": "孙", "麦城": "孙", "夷道": "孙", "枝江": "孙", "当阳": "孙", "临沮": "孙", "武陵": "孙" },
     events: [{ date: "建安二十四年冬", who: "吕蒙", where: "江陵", what: "白衣渡江，取江陵、公安", why: "乘关羽北伐", result: "荆州失守，关羽退走", known: true }],
     choices: [], counsel: [], canon: {}, foreshadow: [], hidden: [], intel: []
   });

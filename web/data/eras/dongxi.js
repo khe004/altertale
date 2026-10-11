@@ -11,11 +11,11 @@
   const lostJiangling = s => (s.places || {})["江陵"] !== "刘";
   const fromFujingzhou = g => (g.past || []).some(p => p.era === "fujingzhou");
 
-  const places = { ...base.places, "长沙": [300, 234], "武昌": [346, 196] };
+  const places = { ...base.places, "长沙": [292, 226], "武昌": [340, 202] };
   const ref = JSON.parse(JSON.stringify(base.starts.canon.state));
   Object.assign(ref, {
     date: "建安二十五年三月",
-    places: { ...ref.places, "樊城": "曹", "襄阳": "曹", "麦城": "刘", "江陵": "刘", "公安": "孙", "陆口": "孙", "长沙": "孙", "武昌": "孙", "建业": "孙" },
+    places: { ...ref.places, "樊城": "曹", "襄阳": "曹", "麦城": "刘", "江陵": "刘", "公安": "孙", "夷道": "刘", "枝江": "刘", "当阳": "刘", "临沮": "刘", "武陵": "孙", "陆口": "孙", "长沙": "孙", "武昌": "孙", "建业": "孙" },
     figures: [
       { name: "刘备", where: "成都", note: "汉中王" },
       { name: "诸葛亮", where: "成都", note: "军师将军" },
