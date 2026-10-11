@@ -25,6 +25,7 @@ for (const [id, ev] of Object.entries(AT.eras)) {
   for (const p of Object.keys(ev.places)) if (!nodes.includes(p)) fail(`${id}：地名 ${p} 不在驿程表里`);
   for (const n of nodes) if (!(n in ev.places)) fail(`${id}：驿程表的 ${n} 不在地图上`);
   for (const n of ev.cast) if (!AT.characters[n]) fail(`${id}：${n} 没有人物卡`);
+  for (const [k, st] of Object.entries(ev.starts)) for (const p of Object.keys(ev.places)) if (!(p in (st.state.places || {}))) fail(`${id}：开局 ${k} 没写 ${p} 归谁（地图上会显示成交战）`);
   for (const b of ev.canonPath || []) for (const x of b.fulfills) if (!ids.has(x)) fail(`${id}：节拍里的事件 ${x} 不在事件池`);
   for (const c of ev.canonEvents) for (const x of c.after || []) if (!ids.has(x)) fail(`${id}：${c.id} 的前置 ${x} 不在事件池`);
   if (ev.canonPath && ev.canonPath.length > ev.maxTurns) fail(`${id}：节拍 ${ev.canonPath.length} 个，多于回数上限 ${ev.maxTurns}`);
