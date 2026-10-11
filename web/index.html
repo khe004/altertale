@@ -323,6 +323,7 @@ const KEY_STORE = "altertale-anthropic-key";
 const OAI_STORE = "altertale-openai-compat";   // OpenAI 兼容接口：{ on, base, key, model, quick }
 const API_MODEL = "claude-sonnet-5-5";
 const QUICK_MODEL = "claude-haiku-5-5";  // 只用于拆解命令驿程、改正夹杂的外文这类小活
+const COMPLEX_MODEL = "claude-opus-5-5";  // 只用于军师拟令（claude.ai 上对应 complex 档）
 
 /* ───────── 状态 ───────── */
 
@@ -424,7 +425,7 @@ function setupKeyLLM() {
   }
   let key = "";
   try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
-  llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : API_MODEL) } : null;
+  llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : opts.tier === "complex" ? COMPLEX_MODEL : API_MODEL) } : null;
 }
 // OpenAI 兼容的 /chat/completions（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等），流式
 async function callOpenAI(o, prompt, onText, signal, model) {
@@ -592,10 +593,10 @@ async function adviseOrder() {
   render();
   try {
     const ap = E.buildAdvisePrompt(game, adviseIntent), t0 = Date.now();
-    const res = await llm.call(ap, () => {}, undefined);
+    const res = await llm.call(ap, () => {}, undefined, { tier: "complex" });  // 军师拟令用最强的一档（Opus）
     recordUsage("advise", game.chapters.length, ap, res, t0);
     const a = E.parseAdvice(res.text);
-    if (a) { advice = a; ownDraft = a.order; }
+    if (a) { advice = { ...a, tier: res.tier }; ownDraft = a.order; }
   } catch (e) {}
   busy = false;
   render();
@@ -954,7 +955,7 @@ function renderChoices(st) {
       <textarea id="ownOrder" placeholder="${esc(era().orderExample || "")}">${esc(ownDraft)}</textarea>
       ${busy === "check" ? `<p class="rp-m">谋士正在审阅这道手令<span class="dots"></span></p>` : ""}
       ${busy === "advise" ? `<p class="rp-m">军师正在拟令<span class="dots"></span></p>` : ""}
-      ${advice && !busy ? `<div class="notice"><span>军师拟了上面这道手令（只据你此刻所知），可改后再发：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${advice && !busy ? `<div class="notice"><span>军师拟了上面这道手令（只据你此刻所知），可改后再发${llm && llm.kind === "claude" && advice.tier && advice.tier !== "complex" ? `（你的账户用不了最强的一档，这次由${advice.tier === "quick" ? "快速" : "默认"}档拟）` : ""}：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       ${orderCheck && !busy ? `<div class="notice"><span>${orderCheck.verdict === "无效" ? "这道手令行不通，没有发出：" : "这道手令有几处可能落空："}</span><ul>${orderCheck.issues.map(x => `<li>${esc(x)}</li>`).join("") || "<li>命令里没有可执行的部署</li>"}</ul>${orderCheck.verdict === "无效" ? `<span>请改写后再发。</span>` : `<div class="row"><button class="ui-btn" id="forceBtn" type="button">仍然下达</button><span class="rp-m">或修改后重新发出</span></div>`}</div>` : ""}
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off || busy ? "disabled" : ""}>发出手令</button><button class="ui-btn" id="adviseBtn" type="button" ${off || busy ? "disabled" : ""}>请军师拟令</button></div>
       <input class="advise-intent" id="adviseIntent" type="text" maxlength="200" value="${esc(adviseIntent)}" placeholder="可选：告诉军师你的打算，如“目标打下江陵”“挑拨魏吴”；不填就由军师全权拟">
