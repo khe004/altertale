@@ -32,6 +32,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 调用模型：claude.ai 上用 `window.claude`（sample）；本地用 Anthropic Key（`callAnthropic`）或 OpenAI 兼容接口（`callOpenAI`，设置存 localStorage `altertale-openai-compat`，主模型与小活模型分开，会去掉 `<think>`）。
 
 - `web/engine.js`：全部推演逻辑（提示词、解析、复核、原著轨、评分、分支、过渡）。
+- 调用记录（顶栏"提示词"）：`recordUsage` 顺带把每次调用的完整提示词与原始回复记进本机 localStorage `altertale-call-log`（最多 40 条、约 150 万字，不进存档、不随导出；本机空间不够时 `save()` 先删它保存档）。查看时按行首【段名】拆段，显示各段字数与占比，展开才填原文；可复制、单条下载 txt、全部下载 json。作者对推演有疑问时，可请他下载那一回的调用发来。
 - `web/index.html`：界面与调用流程（推演 → 复核 → 必要时重推 → 说书 → 外文修复）。开局页可导入存档（选文件，或粘贴文件内容：claude.ai 框架里选文件可能用不了）；承接开局的时代里有"回到上一时代终章，重新进入"（`E.undoTransition`），规则改了以后让作者重新过渡。
 - `web/data/characters.js`：人物卡（按年份的称谓、性格、才能、目标）；`background.js`：背景大事。
 - `web/data/eras/*.js`：各时代。`ruchuan` 入川、`hanzhong` 汉中、`jingzhou` 荆州、`yiling` 夷陵（四段原著线，可连打，夷陵以白帝托孤收尾）；`beifa` 北伐（手写分支，两个开局：`sample` 两路北伐、`yilu` 一路北伐）；`dongxi` 东西两线（半模板，借荆州地图加长沙、武昌，江陵在手而孙刘交恶；结局：复盟荆州全→两路北伐，江陵失→夷陵或复荆州，从复荆州来又失→终局，相持→终局）；`fujingzhou` 复荆州（模板分支，借荆州的地图人物，开局由过渡生成，只能从荆州分支进入）。
