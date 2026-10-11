@@ -66,6 +66,13 @@ function track(role, r) {
 
 // 过渡推演，复核出人物位置没交代就带着问题重推一次
 async function transitionText(g) {
+  // 其间决断点：先推到决断点，按演义做法（没有就第一项）拍板
+  if (!g.gap && E.gapPoint(g)) {
+    const gp = E.applyGap(g, await claude(E.buildGapPrompt(g), "transition"));
+    const c = gp.choices.find(x => x.canon) || gp.choices[0];
+    gp.decision = c.plan ? `${c.label}：${c.plan}` : c.label;
+    console.log(`  其间决断「${gp.name}」：${gp.decision.slice(0, 80)}`);
+  }
   const prompt = E.buildTransitionPrompt(g), text = await claude(prompt, "transition");
   const problems = E.checkTransition(g, text);
   if (!problems.length) return text;

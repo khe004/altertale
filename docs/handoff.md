@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 57），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 59），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -46,7 +46,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 3. 推演（Sonnet）→ `checkSim` 复核（行军快过驿程、坐镇者未奉命离任、俘虏无故脱身、日期须写年月且不得倒退、一回不得远超日数上限）→ 有问题带着问题重推一次。日期只写季节也能解析（春初 = 正月上旬），章武、黄初年号折成建安。
 4. 说书 → 逐段 `fixLatin` 去外文。
 5. 时代结束：评分（原著 = 60 及格，六项各 ±15；低于 60 为败局"没能兴复汉室"；取长安为胜局"还于旧都"）→ 按 `ev.next` 分支进入下一时代。
-6. 过渡：一路照原著打完 → 照原著快进（不调模型）；否则推演快进。过渡提示词带上历代人物的最后下落（`E.lastKnown`，跨全部 `g.past`）和各时代末的兵马；`checkTransition` 复核：换了地方要在其间大事里交代、刘备一方在世且在下一时代登场名单里的人不得消失、参考开局里刘备一方驻兵的要地不得一兵不剩。不合格带问题重推一次；重推出错、被截断或不成 JSON 就用初稿。过渡输出长（约九千字），网页检查 `truncated`（claude.ai 的 sample）与 `stop_reason: max_tokens`（Anthropic Key，`max_tokens` 已提到 16000），截断时报"这一段推演太长"。参考开局比上一时代终局还早时（夷陵打到章武二年，一路北伐参考开局是章武元年），背景大事取终局后一年。坐镇（`posts`）由 `E.carryPosts` 延续：上一时代末仍在驻地的人，开局还在原处就照旧坐镇（按地名比对，中间时代地图上没有该地也不丢）；过渡中调走的视为改任；参考开局写明的坐镇者开局恰在其地也算。
+6. 过渡：一路照原著打完 → 照原著快进（不调模型）；否则推演快进。过渡提示词带上历代人物的最后下落（`E.lastKnown`，跨全部 `g.past`）和各时代末的兵马；`checkTransition` 复核：换了地方要在其间大事里交代、刘备一方在世且在下一时代登场名单里的人不得消失、参考开局里刘备一方驻兵的要地不得一兵不剩。不合格带问题重推一次；重推出错、被截断或不成 JSON 就用初稿。过渡输出长（约九千字），网页检查 `truncated`（claude.ai 的 sample）与 `stop_reason: max_tokens`（Anthropic Key，`max_tokens` 已提到 16000），截断时报"这一段推演太长"。参考开局比上一时代终局还早时（夷陵打到章武二年，一路北伐参考开局是章武元年），背景大事取终局后一年。其间决断：分支的 `gapChoices`（各带 `name`、`at`、`pre`、`canon`、`when`）里第一条前提成立的，过渡先推到决断前夕（`E.buildGapPrompt` → `E.applyGap`，结果存 `g.gap`），结局页显示处境、进言、三个选项、"交孔明与群臣议定"和亲书手令；拍板后（`g.gap.decision`）再推到下一时代开局，决断前后的大事合进开局的 `years`。照原著快进不停；一个空档最多停一次。现有：入川→汉中（孙权讨荆州；曹操取汉中后是否北上），汉中→荆州（关羽北伐与否），夷陵→一路北伐（罢兵之后）。坐镇（`posts`）由 `E.carryPosts` 延续：上一时代末仍在驻地的人，开局还在原处就照旧坐镇（按地名比对，中间时代地图上没有该地也不丢）；过渡中调走的视为改任；参考开局写明的坐镇者开局恰在其地也算。
 
 ## 测试分档（先便宜后贵）
 

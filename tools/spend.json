@@ -1,5 +1,5 @@
 {
- "total": 54.5848,
+ "total": 54.8288,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -132,6 +132,12 @@
    "args": "夷陵→一路北伐 过渡单测（tools/fixtures/yiling-yilu-end.json，补记）",
    "calls": 1,
    "usd": 0.27
+  },
+  {
+   "date": "2026-10-11",
+   "args": "其间决断实测：ruchuan-free-end → 孙权讨荆州 → 汉中开局（补记）",
+   "calls": 2,
+   "usd": 0.244
   }
  ]
 }

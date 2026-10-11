@@ -300,6 +300,7 @@ const QUICK_MODEL = "claude-haiku-5-5";  // 只用于拆解命令驿程、改正
 let game = null;          // { start, chapters: [{title, text, state, decision}] }
 let busy = false;
 let ownDraft = "";        // 手令输入框里的草稿（重绘时保留）
+let gapDraft = "";        // 其间决断的手令草稿
 let orderCheck = null;    // 下令前预检的结果 { decision, verdict, issues }
 let advice = null;        // 军师拟令 { order, reasons }
 let ctl = null;
@@ -655,7 +656,14 @@ async function transition() {
   let result = null;
   try {
     if (E.canonTransition(game)) result = E.applyCanonTransition(game);  // 照原著快进，开局正文已预写
-    else {
+    else if (!game.gap && E.gapPoint(game)) {  // 第一段：快进到其间的决断点，停下等玩家拍板
+      const prompt = E.buildGapPrompt(game), t0 = Date.now();
+      const res = await llm.call(prompt, () => {}, ctl.signal);
+      recordUsage("gap", game.chapters.length, prompt, res, t0);
+      if (res.truncated) throw { code: "truncated" };
+      E.applyGap(game, res.text);
+      save();
+    } else {
       const prompt = E.buildTransitionPrompt(game), t0 = Date.now();
       const res = await llm.call(prompt, () => {}, ctl.signal);
       recordUsage("transition", game.chapters.length, prompt, res, t0);
@@ -682,6 +690,36 @@ async function transition() {
   render();
   window.scrollTo(0, 0);
   if (result && !current().text) await narrate(game.chapters.length - 1);
+}
+
+// 其间决断：记下命令，接着推演到下一时代开局
+function gapDecide(text) {
+  if (!game.gap || busy || !text.trim()) return;
+  game.gap.decision = text.trim();
+  gapDraft = "";
+  save();
+  transition();
+}
+
+function renderGap() {
+  const gp = game.gap, off = !llm || !!busy;
+  if (gp.decision) return `<div class="choices gap"><h3>其间决断 · ${esc(gp.name)}</h3><div class="decision"><span>${esc(E.playerTitle(game))}之令</span><b>${esc(gp.decision)}</b></div>
+    <div class="row"><button class="redo-link" id="gapRedo" type="button" ${off ? "disabled" : ""}>另作决断</button></div></div>`;
+  return `<div class="choices gap">
+    <h3>其间决断 · ${esc(gp.name)}<small class="rp-m">　${esc(gp.date)}</small></h3>
+    ${gp.years.length ? `<ul class="years">${gp.years.map(y => `<li><span class="when">${esc(y.when)}</span>${esc(y.what)}</li>`).join("")}</ul>` : ""}
+    ${gp.situation ? `<p class="assess">${esc(gp.situation)}</p>` : ""}
+    ${gp.counsel.length ? `<div class="counsel"><h4>谋士进言</h4>${gp.counsel.map(c => `<div class="cs"><span class="who">${esc(c.who)}<small>${esc(c.how || "")}</small></span><p>${esc(c.says)}</p></div>`).join("")}</div>` : ""}
+    <div class="choice-list">
+      ${gp.choices.map((c, i) => `<button class="choice" type="button" data-gap="${i}" ${off ? "disabled" : ""}><b>${c.canon ? `<span class="star" title="演义中的做法">★</span>` : ""}${esc(c.label)}${c.by ? `<em class="by">${esc(c.by)}之议</em>` : ""}</b>${c.plan ? `<span class="plan">${esc(c.plan)}</span>` : ""}<span>${esc(c.detail || "")}</span></button>`).join("")}
+      <button class="choice quiet" type="button" id="gapDelegate" ${off ? "disabled" : ""}><b>交孔明与群臣议定</b><span>不亲自拍板，由孔明会同群臣按局势处置</span></button>
+    </div>
+    <div class="own">
+      <label for="gapOrder">或者亲书一道手令</label>
+      <textarea id="gapOrder">${esc(gapDraft)}</textarea>
+      <div class="row"><button class="primary" id="gapOwnBtn" type="button" ${off ? "disabled" : ""}>发出手令</button></div>
+    </div>
+  </div>`;
 }
 
 function errorCopy(e) {
@@ -884,8 +922,9 @@ function renderEnding(st) {
     <h4>历回暗线</h4><ol>${hiddenAll.map(h => `<li>${esc(h)}</li>`).join("")}</ol>
   </div>
   ${renderLineEnd(e, nx)}
-  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（单刀赴会、湘水划界、定军山、进位汉中王……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
-  <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>进入${esc(nx.label)}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
+  ${nx && game.gap ? renderGap() : ""}
+  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（单刀赴会、湘水划界、定军山、进位汉中王……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。${E.gapPoint(game) && !game.gap ? `其间会停一次，请你决断：<b>${esc(E.gapPoint(game).name)}</b>。` : ""}`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
+  <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx && !E.gapPending(game) ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>${E.gapPoint(game) && !game.gap ? "推演到其间决断" : `进入${esc(nx.label)}`}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
 }
 
 // 原著对照：每条原著事件与背景大事最后怎样了
@@ -1121,6 +1160,15 @@ function bindStory() {
   if (retry) retry.onclick = () => decide(game.pending || "");
   const nb = $("#nextBtn");
   if (nb) nb.onclick = transition;
+  document.querySelectorAll("[data-gap]").forEach(b => b.onclick = () => { const c = game.gap.choices[+b.dataset.gap]; gapDecide(c.plan ? `${c.label}：${c.plan}` : c.label); });
+  const gd = $("#gapDelegate");
+  if (gd) gd.onclick = () => gapDecide("不亲自拍板，交孔明会同群臣按局势处置");
+  const go = $("#gapOrder");
+  if (go) go.oninput = () => { gapDraft = go.value; };
+  const gb = $("#gapOwnBtn");
+  if (gb) gb.onclick = () => gapDecide(($("#gapOrder") || {}).value || "");
+  const gr = $("#gapRedo");
+  if (gr) gr.onclick = () => { game.gap.decision = null; lastError = null; save(); render(); };
   const rb = $("#reportBtn");
   if (rb) rb.onclick = () => { showReport = true; render(); window.scrollTo(0, 0); };
   const again = $("#againBtn");

@@ -98,7 +98,11 @@ for (const f of fs.readdirSync(path.join(__dirname, "fixtures"))) {
   const want = /canon-end/.test(f), got = !!E.canonTransition(g);
   if (!E.nextEra(g)) { const b = E.nextBranch(g); console.log(`  ${f}：${b ? (b.final ? `终局「${b.label}」` : `下一段「${b.label}」尚未写成`) : "没有下一时代"}`); continue; }
   if (want !== got) fail(`${f}：应当${want ? "照原著快进" : "走推演过渡"}，实际${got ? "照原著快进" : "走推演过渡"}`);
-  else console.log(`  ${f}：${got ? "照原著快进" : "推演过渡"} → ${E.nextEra(g).label}`);
+  else {
+    const gp = E.gapPoint(g);
+    if (gp) E.buildGapPrompt(g);  // 决断点提示词能生成
+    console.log(`  ${f}：${got ? "照原著快进" : "推演过渡"} → ${E.nextEra(g).label}${gp ? `（其间决断：${gp.name}）` : ""}`);
+  }
   if (got) {
     const c = JSON.parse(JSON.stringify(g));
     E.applyCanonTransition(c);

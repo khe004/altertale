@@ -836,7 +836,8 @@ ${problems.map(p => "- " + p).join("\n")}
     return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (titleAt(n, ad) || {}).faction === "刘");
   };
 
-  E.buildTransitionPrompt = function (g) {
+  // 过渡提示词的共同部分：上一时代、历代人物与兵马、下一时代背景、背景大事、人物卡
+  const transitionHead = function (g) {
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const tg = { era: nx.id, start: Object.keys(nx.starts)[0], chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
     const st = g.chapters[g.chapters.length - 1].state;
@@ -851,7 +852,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const carry = mustCarry(g, nx, ad);
     const summary = E.canonSummary(g).map(r => `${r.name}：${r.status}${r.note ? "（" + r.note + "）" : ""}`).join("；");
     const log = g.chapters.map((c, i) => `第${cn(i + 1)}回（${c.state.date}）：${c.state.chronicle || ""}`).join("\n");
-    return `你是《天命未定》的世界推演者，负责在两个时代之间快进。全部用中文书写，不得夹杂英文字母或任何外文。人物言行、才智与武艺一律按《三国演义》（毛宗岗本）与人物卡；演义没写到的，才用史书补充。
+    const text = `你是《天命未定》的世界推演者，负责在两个时代之间快进。全部用中文书写，不得夹杂英文字母或任何外文。人物言行、才智与武艺一律按《三国演义》（毛宗岗本）与人物卡；演义没写到的，才用史书补充。
 
 【上一时代：${ev.name}（${ev.ref}）】
 原著结局：${ev.baseline}
@@ -879,10 +880,67 @@ ${DRIVERS}
 ${bg.map(b => `- [${b.id}] ${b.name}（原著${b.when}）。前提：${b.pre}。结果：${b.result}`).join("\n") || "（无）"}
 
 【人物】
-${cast.map(n => cardText(n, ad)).join("\n")}
+${cast.map(n => cardText(n, ad)).join("\n")}`;
+    return { text, br, nx, tg, carry };
+  };
 
+  // 时代之间的决断点：分支的 gapChoices 里第一条前提成立的（一个空档最多停一次）；照原著快进时不停
+  E.gapPoint = function (g) {
+    const br = E.nextBranch(g);
+    if (!br || br.final || br.pending || E.canonTransition(g)) return null;
+    const st = g.chapters[g.chapters.length - 1].state;
+    return (br.gapChoices || []).find(c => !c.when || c.when(st, g)) || null;
+  };
+  // 已推到决断点、等玩家拍板（g.gap 存第一段快进的结果；decision 为空表示还没决断）
+  E.gapPending = g => !!(g.gap && !g.gap.decision);
+  const gapYears = g => (g.gap && g.gap.decision) ? [...(g.gap.years || []), { when: g.gap.date || "", what: `${era(g).player}决断（${g.gap.name}）：${g.gap.decision}`.slice(0, 120) }] : [];
+
+  E.buildGapPrompt = function (g) {
+    const { text } = transitionHead(g), gp = E.gapPoint(g), ev = era(g);
+    return `${text}
+
+快进规则（第一段）：
+1. 从上一时代末推演到这个决断点的前夕为止：【${gp.name}】（原著${gp.at}）。${gp.pre}
+原著中的样子：${gp.canon}
+2. 其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效；上一时代留下的人物与恩怨必须延续，人物从最后的下落出发。决断点的前提若在这一局里不成立，就推演出这件事在本局的样子（变形、提前或推迟），仍停在${ev.player}需要拍板的那一刻。
+3. 停在决断前，不替${ev.player}做决定，也不写决断之后的事。
+4. 给出此刻的处境判断、谋士进言与三个选项，规则同平日推演：选项具体、方向不同、各有代价、至少一项确有希望、不违背立场底线，plan 写成${ev.player}亲书的手令；演义中${ev.player}的做法若在其中，加 "canon": true。进言与选项只依据${ev.player}此刻所知。
+
+只输出一个 JSON 对象，不要任何其他文字，不加代码块标记：
+{
+  "date": "决断时刻，写明年、月，如 建安二十年五月",
+  "years": [{"when": "某年某月", "what": "其间大事，四十字以内"}],
+  "situation": "此刻的处境与要决断的事，一百五十字以内",
+  "counsel": [{"who": "谋士", "how": "当面|书信", "says": "进言，八十字以内"}],
+  "choices": [{"label": "选项，十五字以内", "detail": "利弊，五十字以内", "plan": "完整部署", "by": "谁的主张", "canon": false}]
+}
+years 写三至八条，按时间先后。`;
+  };
+  E.applyGap = function (g, raw) {
+    const o = parseJSON(raw), gp = E.gapPoint(g);
+    const choices = (Array.isArray(o.choices) ? o.choices : []).filter(c => c && c.label).filter(c => !STANCE_BREACH.test(c.label + (c.detail || ""))).slice(0, 3);
+    if (!choices.length) throw { code: "no_choices" };
+    g.gap = {
+      id: gp.id, name: gp.name, date: String(o.date || ""),
+      years: (Array.isArray(o.years) ? o.years : []).filter(y => y && y.what).map(y => ({ when: String(y.when || ""), what: String(y.what) })),
+      situation: String(o.situation || ""),
+      counsel: (Array.isArray(o.counsel) ? o.counsel : []).filter(c => c && c.who && c.says),
+      choices, decision: null
+    };
+    return g.gap;
+  };
+
+  E.buildTransitionPrompt = function (g) {
+    const { text, br, nx, tg, carry } = transitionHead(g), ev = era(g);
+    const gy = gapYears(g);
+    return `${text}
+${gy.length ? `
+【第一段快进与${ev.player}的决断】（已定，下面从决断之后接着推演）
+${gy.map(y => `- ${y.when} ${y.what}`).join("\n")}
+${g.gap.situation ? `决断时的处境：${g.gap.situation}` : ""}
+` : ""}
 快进规则：
-1. 从上一时代末推演到下一时代的冲突爆发（原著空档：${br.gap}）${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
+1. 从${gy.length ? `${ev.player}的决断（见上）` : "上一时代末"}推演到下一时代的冲突爆发（原著空档：${br.gap}）${gy.length ? `；决断按${ev.player}的命令与人物性格如实推演其成败，years 只写决断之后的事` : ""}${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
 2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。人物从他最后的下落出发（见"历代人物的最后下落"）：参考开局里的人物位置是原著的，不能照搬；开局时位置与最后下落不同的人，years 里要写明他何时、因何调动。前几个时代的人物与兵马，没有记录死亡、覆没或降散的都还在，不得凭空消失：这些人必须写进开局的 figures（死于其间的写"已故"并在 years 里交代）：${carry.join("、") || "（无）"}；刘备一方各处的兵马要合计历代记录，合并、调动、折损在 years 里交代；参考开局里刘备一方有、上面没提到的后方兵马（如成都诸军），照参考开局保留。
 3. 若快进中出现比原著更差的结局（如益州得而复失、刘备身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给刘备第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中刘备此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
@@ -906,7 +964,7 @@ ${simFormat(tg)}`;
     const br = E.nextBranch(g), nx = br && AT.eras[br.era], problems = [];
     const known = E.lastKnown(g);
     // 其间大事按条、开局说明按分句看
-    const lines = [...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
+    const lines = [...gapYears(g).map(y => y.what), ...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
     const moved = /入|召|调|迁|移|赴|往|至|抵|投|归|还|返|回|屯|镇|驻|随|出|进|伐|攻|围|征|援|救|退|奔|走/;
     const same = (a, b) => a.startsWith(b) || b.startsWith(a);
     for (const f of o.state.figures || []) {
@@ -968,7 +1026,7 @@ ${problems.map(p => "- " + p).join("\n")}
   E.applyTransition = function (g, raw) {
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const o = parseJSON(raw);
-    const years = (Array.isArray(o.years) ? o.years : []).filter(y => y && y.what);
+    const years = [...gapYears(g), ...(Array.isArray(o.years) ? o.years : []).filter(y => y && y.what)];
     const yEvents = years.map(y => ({ date: String(y.when || ""), who: "", where: "", what: String(y.what), result: "", known: true }));
     const last = g.chapters[g.chapters.length - 1];
     if (o.ending) {
@@ -983,7 +1041,8 @@ ${problems.map(p => "- " + p).join("\n")}
     s.years = years;
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
     s.orders = []; s.delivered = []; s.in_transit = [];
-    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff });
+    (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff, gap: g.gap });
+    delete g.gap;
     g.rail = false; delete g.railOff;  // 承接的开局没有原著节拍
     g.era = nx.id;
     g.start = "inherited";
@@ -998,6 +1057,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const p = (g.past || []).pop();
     if (!p) return false;
     g.era = p.era; g.start = p.start; g.chapters = p.chapters; g.policy = p.policy; g.rail = p.rail;
+    if (p.gap) g.gap = p.gap; else delete g.gap;
     if (p.inherited) g.inherited = p.inherited; else delete g.inherited;
     if (p.railOff != null) g.railOff = p.railOff; else delete g.railOff;
     if (!g.past.length) delete g.past;
