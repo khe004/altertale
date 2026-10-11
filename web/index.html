@@ -624,7 +624,8 @@ async function checkThenDecide(decision) {
   render();
 }
 
-async function decide(decision) {
+// preset：点选项时选项自带的拆令，有就不再调拆令
+async function decide(decision, preset) {
   decision = decision.trim();
   if (!decision || busy || !llm) return;
   busy = "sim"; lastError = null;
@@ -634,7 +635,8 @@ async function decide(decision) {
   const railWas = { rail: game.rail, railOff: game.railOff };
   try {
     let routes = [], verdict = null;
-    if (decision !== WAIT_ORDER) {
+    if (preset && preset.length) routes = preset;
+    else if (decision !== WAIT_ORDER) {
       // 先用快速档把命令拆成各项，驿程表算出送达日期，再交给推演
       const rp = E.buildRoutePrompt(game, decision), r0 = Date.now();
       try {
@@ -1220,7 +1222,7 @@ function rewind(i) {
 }
 
 function bindStory() {
-  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => { const c = current().state.choices[+b.dataset.choice]; decide(c.plan ? `${c.label}：${c.plan}` : c.label); });
+  document.querySelectorAll("[data-choice]").forEach(b => b.onclick = () => { const c = current().state.choices[+b.dataset.choice]; decide(c.plan ? `${c.label}：${c.plan}` : c.label, E.choiceRoutes(game, c)); });
   document.querySelectorAll("[data-redo]").forEach(b => b.onclick = () => {
     const i = +b.dataset.redo;
     rewind(i);

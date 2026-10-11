@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 67），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 68），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -82,6 +82,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。`checkSim` 另查：敌军标成已知，兵数却是暗线里的实数（同地点、数对得上、玩家所知与已知事件里没有这个数）→ 带问题重推；兵数写"不详"的不查。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
+- 选项自带拆令：推演给选项时每项附 `routes`（part、from、to、tier，必要时 after），`E.choiceRoutes` 规整（出发地不是前一项去处的 after 去掉）；点选项时 `decide(text, routes)` 直接算驿程，不再调拆令（省一次调用、约 20 秒）。亲书手令、"以此令重新推演"、原著轨补上的 ★ 选项照旧拆令。推演输出因此多约 600 字。
 - 推演失败（作者反馈"经常要重推"）：存档用量记录里，失败的推演输出只有约 2700 字（正常 3600～4500 字），是回复没写完、JSON 不完整。现在 `parseJSON` 容错：照常解析不行就修补（字符串里没转义的英文引号改成中文引号、字符串里的换行、多余逗号、截断处补齐括号）；`decide` 里推演不成（截断、缺事件、缺选项）自动再推一次，第二次还不行才报错。另修 `STANCE_BREACH` 误伤："招降吴将""劝降魏将"不再被当成降吴降魏删掉。
 - 复荆州作者存档 fujingzhou-20261010-2317（六回守峡、外交，未出兵，守峡罢兵 89 分）：孟达叛魏合乎演义（不救关羽怕治罪，被召回成都、魏延带兵进上庸，魏使屡次招诱）；地图"洛阳交战"是荆州一系开局没写洛阳归属、默认成交战，已补，`check.js` 加查各开局是否写全地图上的城；复荆州设定补"东吴的兵怎样才会被调动"（陆逊不受压不出、吴兵荆州与濡须共用、江陵城中旧部军属可为内应、五溪蛮可起事、曹丕索质子的时机），对应两路北伐的东路压力。
 - 承接开局的第一回说书（作者存档 fujingzhou-20261010-2257：第一回把白衣渡江、赵云救关羽又写了一遍）：过渡把上一时代里已写过的事也写进了开局的 events，说书照写。现在 `buildNarratePrompt` 在承接开局的第一回加【前情】（上一时代的终局与最后一回结尾，注明不得重述），并滤掉日期不晚于上一时代终局的事件与大事。

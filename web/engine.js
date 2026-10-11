@@ -334,10 +334,10 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "chronicle": "本回纪要，一句，三十字以内",
   "assessment": "${ev.player}此刻的处境与手中筹码，六十字以内",
   "counsel": [{"who":"谋士","how":"面陈","says":"进言内容，五十字以内"}],
-  "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串"}],
+  "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串","routes":[{"part":"这一项做什么，十二字以内","from":"出发地","to":"送达或抵达之地","tier":"信使|轻兵|大军"}]}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。
+说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。每项的 routes 把 plan 拆成要送出或派出的各项，供驿程推算：from 写传令的${ev.player}所在之地，或兵马此刻实际所在之地；to 写送达或抵达之地（就地行动与 from 相同）；只传令写"信使"，数百至五千上下的精兵轻骑写"轻兵"，上万人或带辎重的写"大军"；只有同一支人马要先到某地、再从那里出发的（如先回汉中领兵、再出子午道），后一项才写 "after": 前一项的序号（从 1 数），其余各项不写 after；派兵附带传令的只写兵马一项；地点只能取：${routeNodes(ev).join("、")}。
 若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
 评分（score）以原著结局为基准：比较的对象是原著到这个时代结束时的样子——${ev.baseline || "（见原著）"}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
@@ -413,17 +413,28 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
     const a = t.indexOf("["), b = t.lastIndexOf("]");
     if (a < 0 || b < a) return [];
     try {
-      const node = x => nodes.find(n => String(x || "").includes(n)) || null;
-      const list = JSON.parse(t.slice(a, b + 1)).filter(r => r && r.part);
-      return list.map((r, i) => {
-        const after = Number(r.after);
-        return {
-          part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
-          tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使",
-          ...(Number.isInteger(after) && after >= 1 && after <= i ? { after: after - 1 } : {})
-        };
-      });
+      return normRoutes(g, JSON.parse(t.slice(a, b + 1)));
     } catch (e) { return []; }
+  };
+  // 拆好的各项（拆令的回复，或选项自带的 routes）规整成驿程能算的样子
+  const normRoutes = (g, list) => {
+    const nodes = routeNodes(era(g)), node = x => nodes.find(n => String(x || "").includes(n)) || null;
+    return (Array.isArray(list) ? list : []).filter(r => r && r.part).map((r, i) => {
+      const after = Number(r.after);
+      return {
+        part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
+        tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使",
+        ...(Number.isInteger(after) && after >= 1 && after <= i ? { after: after - 1 } : {})
+      };
+    });
+  };
+  // 选项自带的拆令（推演给选项时一并拆好）：点选项就不必再调拆令；没有或拆不出就返回 null
+  E.choiceRoutes = function (g, choice) {
+    const raw = Array.isArray(choice && choice.routes) ? choice.routes : [];
+    const r = normRoutes(g, raw);
+    // after 只认"接着前一项的落脚处出发"的：出发地写的不是那一项的去处，就是各自出发，去掉 after
+    r.forEach((x, i) => { if (x.after != null && normRoutes(g, [{ part: "x", from: raw[i].from }])[0].from !== r[x.after].to) delete x.after; });
+    return r.length && r.every(x => x.to) ? r : null;
   };
 
   // 新的军令表：沿用尚未送达的旧令，加上本回新令（发出日 = 当前回末）。
