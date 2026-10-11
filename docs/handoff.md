@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 59），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 60），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -39,7 +39,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 
 ## 每回的流水线
 
-0. 亲书手令先预检（quick 档，`E.buildOrderCheckPrompt`）：无效（时代外之物、胡话、只求天意）不发；有疑（命令死人、敌人，兵多于实有，时地办不到）提示后可"仍然下达"；选项与"不另发令"不预检。推演规则里另有"军令的边界"兜底。
+0. 亲书手令预检（默认关闭，手令框下勾选"发令前请谋士审阅"才开，记在本机 localStorage `altertale-order-check`；quick 档，`E.buildOrderCheckPrompt`）：无效（时代外之物、胡话、只求天意）不发；有疑（命令死人、敌人，兵多于实有，时地办不到）提示后可"仍然下达"；选项与"不另发令"不预检。推演规则里另有"军令的边界"兜底。
 0.5 "请军师拟令"（推演档，`E.buildAdvisePrompt`）：只给玩家看得到的局势、已知事件、伏笔的表面细节、进言与三策，不给暗线、敌方 plans、伏笔真相；拟好的手令填进输入框，玩家可改后再发（照常预检）。约 $0.06 一次。
 1. 驿程/分流（quick 档 `claude-haiku-5-5`），同时判"原著：是/否"。拆令提示词带兵马表：派兵的 from 取兵马实际所在（不看"成都兵"这类名号）；轻兵为轻装精兵数百至五千上下；`after` 表示接续前一项（如先回汉中领兵再出子午道），从前一项抵达之日、抵达之地起算；就地行动（from 与 to 相同）不加集结日。
 2. 原著轨 `applyRail`：照原著下令就按原著节拍走；一旦偏离，本时代余下改为自由推演。

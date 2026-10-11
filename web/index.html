@@ -100,6 +100,7 @@ main { min-width: 0; }
 .choice:disabled { opacity: 0.55; cursor: default; }
 .own { margin-top: 0.9rem; display: grid; gap: 0.5rem; }
 .own label { font-family: var(--font-ui); font-size: 0.8rem; color: var(--muted); }
+.own label.check-opt { display: flex; gap: 0.4rem; align-items: center; margin-top: 0.4rem; }
 .own textarea { width: 100%; min-height: 4.5rem; resize: vertical; padding: 0.6rem 0.75rem; border: 1px solid var(--line); background: var(--paper); border-radius: 4px; line-height: 1.7; }
 .own .row { display: flex; gap: 0.5rem; justify-content: flex-end; }
 .primary { font-family: var(--font-ui); font-size: 0.88rem; padding: 0.45rem 1.1rem; border: none; background: var(--indigo); color: var(--paper); border-radius: 3px; }
@@ -300,7 +301,10 @@ const QUICK_MODEL = "claude-haiku-5-5";  // 只用于拆解命令驿程、改正
 let game = null;          // { start, chapters: [{title, text, state, decision}] }
 let busy = false;
 let ownDraft = "";        // 手令输入框里的草稿（重绘时保留）
-let gapDraft = "";        // 其间决断的手令草稿
+let gapDraft = "";
+// 手令预检（谋士审阅）默认关闭，省一次调用；可在手令框下勾选打开，记在本机
+const CHECK_STORE = "altertale-order-check";
+let orderCheckOn = (() => { try { return localStorage.getItem(CHECK_STORE) === "on"; } catch (e) { return false; } })();        // 其间决断的手令草稿
 let orderCheck = null;    // 下令前预检的结果 { decision, verdict, issues }
 let advice = null;        // 军师拟令 { order, reasons }
 let ctl = null;
@@ -523,6 +527,7 @@ async function checkThenDecide(decision) {
   decision = String(decision || "").trim();
   if (!decision || busy || !llm) return;
   ownDraft = decision;
+  if (!orderCheckOn) { orderCheck = null; return decide(decision); }
   if (orderCheck && orderCheck.decision === decision && orderCheck.verdict !== "无效") { orderCheck = null; return decide(decision); }
   busy = "check"; orderCheck = null; lastError = null;
   render();
@@ -860,6 +865,7 @@ function renderChoices(st) {
       ${advice && !busy ? `<div class="notice"><span>军师拟了上面这道手令（只据你此刻所知），可改后再发：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       ${orderCheck && !busy ? `<div class="notice"><span>${orderCheck.verdict === "无效" ? "这道手令行不通，没有发出：" : "这道手令有几处可能落空："}</span><ul>${orderCheck.issues.map(x => `<li>${esc(x)}</li>`).join("") || "<li>命令里没有可执行的部署</li>"}</ul>${orderCheck.verdict === "无效" ? `<span>请改写后再发。</span>` : `<div class="row"><button class="ui-btn" id="forceBtn" type="button">仍然下达</button><span class="rp-m">或修改后重新发出</span></div>`}</div>` : ""}
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off || busy ? "disabled" : ""}>发出手令</button><button class="ui-btn" id="adviseBtn" type="button" ${off || busy ? "disabled" : ""}>请军师拟令</button></div>
+      <label class="rp-m check-opt"><input type="checkbox" id="checkOpt" ${orderCheckOn ? "checked" : ""}> 发令前请谋士审阅手令（查无效、落空之处，每次多一次调用）</label>
     </div>
   </div>`;
 }
@@ -1150,6 +1156,8 @@ function bindStory() {
   if (ta) ta.oninput = () => { ownDraft = ta.value; };
   const own = $("#ownBtn");
   if (own) own.onclick = () => checkThenDecide($("#ownOrder").value);
+  const co = $("#checkOpt");
+  if (co) co.onchange = () => { orderCheckOn = co.checked; try { localStorage.setItem(CHECK_STORE, orderCheckOn ? "on" : "off"); } catch (e) {} };
   const adv = $("#adviseBtn");
   if (adv) adv.onclick = adviseOrder;
   const force = $("#forceBtn");
