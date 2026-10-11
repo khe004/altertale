@@ -613,7 +613,7 @@ ${simFormat(g)}`;
   const latinWords = v => typeof v === "string" ? (v.match(/[A-Za-z]{2,}/g) || [])
     : Array.isArray(v) ? v.flatMap(latinWords) : v && typeof v === "object" ? Object.values(v).flatMap(latinWords) : [];
   // 刘备的立场底线：不联曹、不降。违背的选项直接去掉。
-  const STANCE_BREACH = /联曹|降曹|附曹|投曹|归曹|结好曹|通好曹|与曹[操魏]?(?:议和|结盟|联手|修好|讲和)|称臣于[曹魏]|向[曹魏][^，。]{0,4}称臣|降吴|降魏/;
+  const STANCE_BREACH = /联曹|降曹|附曹|投曹|归曹|结好曹|通好曹|与曹[操魏]?(?:议和|结盟|联手|修好|讲和)|称臣于[曹魏]|向[曹魏][^，。]{0,4}称臣|(?<![招劝诱纳受迫])降[吴魏](?![将兵卒军人])/;
 
   // 把模型给出的局势补全、校验（地名、势力、数值、选项底线），prev 是上一回的局势
   function normalize(g, s, prev) {
@@ -654,11 +654,43 @@ ${simFormat(g)}`;
     return s;
   }
 
-  const parseJSON = raw => {
+  // 模型输出的 JSON 常有小毛病：字符串里夹了没转义的英文引号或换行、多余的逗号，或者回复被截断。
+  // 先照常解析，不行就逐字修补：字符串里的引号后面不是 , } ] : 就当作正文（改成中文引号），截断处补齐括号。
+  const repairJSON = t => {
+    let out = "", inStr = false, esc = false, open = true;
+    const stack = [];
+    for (let i = 0; i < t.length; i++) {
+      const c = t[i];
+      if (inStr) {
+        if (esc) { out += c; esc = false; continue; }
+        if (c === "\\") { out += c; esc = true; continue; }
+        if (c === "\n" || c === "\r") { out += c === "\n" ? "\\n" : ""; continue; }
+        if (c === '"') {
+          const rest = t.slice(i + 1).match(/^\s*(.)/);
+          if (!rest || /[,}\]:]/.test(rest[1])) { inStr = false; out += c; }
+          else { out += open ? "“" : "”"; open = !open; }
+          continue;
+        }
+        out += c; continue;
+      }
+      if (c === '"') { inStr = true; open = true; out += c; continue; }
+      if (c === "{" || c === "[") stack.push(c === "{" ? "}" : "]");
+      else if (c === "}" || c === "]") stack.pop();
+      out += c;
+    }
+    if (inStr) out += '"';
+    // 截断：去掉末尾不完整的键值，再补齐括号
+    out = out.replace(/[,:]\s*$/, "").replace(/,\s*"[^"]*"\s*$/, "").replace(/\{\s*"[^"]*"\s*$/, "{");
+    out += stack.reverse().join("");
+    return out.replace(/,\s*([}\]])/g, "$1");
+  };
+  const parseJSON = E.parseJSON = raw => {
     const t = String(raw || "").replace(/```(json)?/g, "");
     const a = t.indexOf("{"), b = t.lastIndexOf("}");
-    if (a < 0 || b < a) throw { code: "no_state" };
-    return JSON.parse(t.slice(a, b + 1));
+    if (a < 0) throw { code: "no_state" };
+    if (b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+    try { return JSON.parse(repairJSON(t.slice(a, b > a ? b + 1 : t.length))); } catch (e) {}
+    return JSON.parse(repairJSON(t.slice(a)));  // 末尾的 } 之后还有半截（截断在更深处）
   };
 
   E.parseSim = function (g, raw, orders) {

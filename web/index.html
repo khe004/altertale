@@ -647,10 +647,19 @@ async function decide(decision) {
     // 照原著下令就留在原著轨上，按节拍推演；偏离就下轨
     E.applyRail(game, decision, verdict);
     const orders = E.scheduleOrders(game, routes);
-    const prompt = E.buildSimPrompt(game, decision, orders), t0 = Date.now();
-    const res = await llm.call(prompt, () => {}, ctl.signal);
-    recordUsage("sim", game.chapters.length, prompt, res, t0);
-    let state = E.parseSim(game, res.text, orders);
+    const prompt = E.buildSimPrompt(game, decision, orders);
+    // 回复被截断或不成 JSON（缺事件、缺选项）就自动再推一次，不必玩家重下命令
+    let state = null;
+    for (let k = 0; k < 2 && !state; k++) {
+      const t0 = Date.now();
+      const res = await llm.call(prompt, () => {}, ctl.signal);
+      recordUsage("sim", game.chapters.length, prompt, res, t0);
+      try {
+        const st = E.parseSim(game, res.text, orders);
+        if (res.truncated && !st.ending && st.choices.length < 3) throw { code: "truncated" };
+        state = st;
+      } catch (e) { if (k === 1) throw (e && e.code ? e : { code: "no_state" }); }
+    }
     // 复核：人物瞬移、坐镇者未奉命离任，就带着问题重推一次
     const problems = E.checkSim(game, state, decision);
     if (problems.length) {
