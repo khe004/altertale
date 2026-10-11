@@ -131,8 +131,10 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
       if (/^章武/.test(String(st.date || ""))) up("陛下");  // 已用刘备的年号
       for (const e of st.events || []) {
         const who = String(e.who || ""), what = `${e.what || ""}${e.result || ""}`;
-        if ((/刘备|玄德|汉中王/.test(who) && CROWN.test(what) && !/劝|谏|议|请/.test(what)) || /(刘备|玄德|汉中王)[^，。；]{0,10}(称帝|即皇帝位|即帝位|登基|践祚)/.test(what)) up("陛下");
-        else if ((/刘备|玄德/.test(who) && /汉中王/.test(what)) || /(进位|自立为|称)汉中王/.test(what)) up(ev.playerTitle === "汉中王" ? "汉中王" : "大王");
+        const me = aliases(ev.player), isMe = x => me.some(a => x.includes(a));
+        const cue = new RegExp(`(${me.join("|")})[^，。；]{0,10}(称帝|即皇帝位|即帝位|登基|践祚)`);
+        if ((isMe(who) && CROWN.test(what) && !/劝|谏|议|请/.test(what)) || cue.test(what)) up("陛下");
+        else if ((isMe(who) && /汉中王/.test(what)) || /(进位|自立为|称)汉中王/.test(what)) up(ev.playerTitle === "汉中王" ? "汉中王" : "大王");
       }
       const f = (st.figures || []).find(x => x.name === ev.player);
       if (f && /皇帝|天子|称帝|登基|陛下|即位/.test(`${f.note || ""}`) && !/劝|欲|谋|未/.test(`${f.note || ""}`)) up("陛下");
@@ -685,7 +687,15 @@ ${simFormat(g)}`;
   /* ───────── 推演复核：人物不能瞬移，坐镇者不能未奉命离任 ───────── */
 
   const GENERIC = new Set(["军师", "主公", "丞相", "大王", "陛下", "君侯", "皇叔"]);
-  const aliases = name => { const c = card(name); return [name, ...(c ? c.titles.flatMap(t => String(t[2]).split("、")) : [])].filter(a => a && !GENERIC.has(a)); };
+  // 一个人的各种叫法：名、字、姓加字、别名、人物卡里的称呼（去掉"主公""军师"这类人人可用的）
+  const surname = name => /^(诸葛|司马|夏侯|欧阳|皇甫|公孙)/.test(name) ? name.slice(0, 2) : name.slice(0, 1);
+  const aliases = E.aliases = name => {
+    const c = card(name);
+    if (!c) return [name];
+    return [...new Set([name, c.zi, c.zi && surname(name) + c.zi, ...(c.alias || []), ...c.titles.flatMap(t => String(t[2]).split("、"))])].filter(a => a && !GENERIC.has(a));
+  };
+  // 文本里提到的人：返回规范名
+  E.whoIs = text => Object.keys(AT.characters).find(n => aliases(n).some(a => String(text || "").includes(a))) || null;
   // 各人最后一次出现在名单里的地点与时间（名单每回只列八至十二人，缺席者沿用旧位置）
   const lastSeen = g => {
     const nodes = routeNodes(era(g)), out = {};

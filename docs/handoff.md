@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 62），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 63），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -82,6 +82,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。`checkSim` 另查：敌军标成已知，兵数却是暗线里的实数（同地点、数对得上、玩家所知与已知事件里没有这个数）→ 带问题重推；兵数写"不详"的不查。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
+- 人名别名：人物卡末尾的 `ZI`（表字，按演义）与 `ALIAS`（别名，如刘备：刘皇叔、汉中王）；`E.aliases(name)` 合出名、字、姓加字、别名与人物卡称呼（去掉主公、军师这类通用称呼），`E.whoIs(text)` 由叫法认人。复核（坐镇奉召、过渡人物下落）和刘备称呼的判定都用它。
 - 说书称呼与水势（作者存档 fujingzhou-20261010-2133）：关羽当殿称刘备"备"；黄权进言被写成"逆流而上易，顺流而下难"（推演的进言已把"顺流进易退难"说成"逆流难进"，说书再颠倒一次）。说书规则加：部下不得直呼主公之名，关张私下称兄长、朝堂称大王；地理水势不得颠倒。复荆州、东西两线的设定写明蜀军东下顺流、进易退难（黄权原话）；东西两线原写"吴人东来是逆流"也改正。
 - 称帝的名分：刘备人物卡底线写明汉帝在位时绝不称帝，须待曹丕篡汉、汉帝被废才受劝进即位；军令预检把"汉帝在位就令自己称帝"列为有疑。没称帝的局一直称大王、用建安纪年。
 - 年号（作者存档 beifa-20261009-2204：夷陵接一路北伐，开局章武三年，之后各回写成建安二十八、二十九年）：引擎内部按建安算日，给模型的"推演到约某年某月"、军令驿程都用建安写出，模型就跟着写。现在 `fmtDate(n, reign)` 按 `E.reignOf(g)`（刘备已称帝 → 章武）写日期，日期格式说明里也点明用章武；`normalize` 把模型写出的建安二十六年以后的日期改成章武。
