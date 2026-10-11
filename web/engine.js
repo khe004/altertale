@@ -481,7 +481,8 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
 
   /* ───────── 军师拟令：只用刘备此刻所知，替玩家拟一道手令 ───────── */
 
-  E.buildAdvisePrompt = function (g) {
+  // intent：主公的打算（可选），如"目标打下江陵""挑拨魏吴"
+  E.buildAdvisePrompt = function (g, intent) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state, ad = adOf(st.date);
     // 玩家看得到的：局势面板（地图、大势、兵马、人物、在途军令、所知）与正文里已知的事；暗线、敌方谋划、伏笔的真相都不给
     const seen = { date: st.date, places: st.places, gauges: st.gauges, forces: (st.forces || []).filter(f => f.known !== false).map(({ known, ...f }) => f), figures: st.figures, in_transit: st.in_transit, intel: st.intel };
@@ -517,7 +518,11 @@ ${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") |
 ${(st.choices || []).map((c, i) => `${i + 1}. ${c.label}：${c.plan}（${c.detail}）`).join("\n")}
 
 本时代的胜负：${ev.victory ? `胜利条件：${ev.victory.desc}。` : ""}原著结局是：${ev.baseline}。败局线：${ev.lossLine}。
-
+${String(intent || "").trim() ? `
+【${ev.player}的打算】
+${String(intent).trim()}
+手令围绕这个打算来拟，不要另换方向：打算是一个目标（如"打下某城"），就以它为纲，不得只守不攻、坐等时机，要想办法达成：调动对方（逼近、佯动、另开一处战场让他分兵）、暗通内应、断其粮道援兵、配合外交，几步如何衔接；打算是一种手段（如"挑拨某两家"），就把它落实成具体部署：派谁去、去哪、带什么说辞或凭据、找对方的什么人、配合什么动作、成与不成各怎么办。打算有风险的照拟，在理由里说清代价和防备；违背立场底线或此刻确实办不到的部分，说明缘故，给出最接近的可行做法。
+` : ""}
 要求：
 1. 只能依据上面${ev.player}知道的事判断，不得假设对方未曾暴露的打算；对方的意图只能从已知的迹象推断，推断要说出依据。
 2. 手令要能执行：只调自己一方在世、可调的人马，兵力不超过实有，行程合乎驿程；对敌方、盟友只能遣使劝说。可以取三策之一，也可以合几策之长、另出新计。
