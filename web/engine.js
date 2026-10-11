@@ -1081,7 +1081,20 @@ ${problems.map(p => "- " + p).join("\n")}
     const ev = era(g), so = startOf(g);
     const s = g.chapters[i].state, prev = g.chapters[i - 1];
     const tail = prev && prev.text ? prev.text.split(/\n+/).filter(Boolean).slice(-2).join("\n") : "";
-    const material = JSON.stringify([s.events, s.autonomous, s.counsel, s.foreshadow, s.delivered]) + ((prev && prev.text) || "").slice(-300);
+    // 承接上一时代的第一回：上一时代已经写过的事不再重述，只写它终局之后的事
+    const ps = i === 0 && g.start === "inherited" && (g.past || []).length ? g.past[g.past.length - 1] : null;
+    const pLast = ps && ps.chapters[ps.chapters.length - 1];
+    const pEnd = pLast ? parseDate(pLast.state.date, yearOf(pLast.state.date)) : null;
+    const after = e => { const t = parseDate(e && (e.date || e.when), yearOf(s.date)); return pEnd == null || t == null || t > pEnd; };
+    const events = ps ? (s.events || []).filter(after) : s.events;
+    const recap = ps ? `【前情】（上一时代《${(AT.eras[ps.era] || {}).name || ps.era}》已经写过，读者都看过，不得重述）
+上一时代终于${pLast.state.date}，结局：${(pLast.state.ending || {}).title || ""}。${(pLast.state.ending || {}).summary || ""}
+上一时代最后一回的结尾：
+${pLast.text ? pLast.text.split(/\n+/).filter(Boolean).slice(-3).join("\n") : "（无）"}
+本回是新时代的第一回：开头用一两句承接前情（如"却说自……以来"），上一时代已写过的事（终局之前的战事、救援、降叛）不得重新铺陈；正文从上一时代终局之后写起${(s.years || []).filter(after).length ? `，其间数年的大事择要带过：${(s.years || []).filter(after).map(y => `${y.when}${y.what}`).join("；")}` : ""}。
+
+` : "";
+    const material = JSON.stringify([events, s.autonomous, s.counsel, s.foreshadow, s.delivered]) + ((prev && prev.text) || "").slice(-300);
     return `${narrateRules(g, adOf(s.date), material)}
 
 ${so.tone || ""}
@@ -1089,7 +1102,7 @@ ${so.tone || ""}
 【前几回已用过的回目与结尾诗句】（不得重复，也不要化用相同字句）
 ${g.chapters.slice(0, i).filter(c => c.text).map(c => `${c.title}${(c.text.split(/\n+/).filter(Boolean).filter(x => /^正是/.test(x.trim())).pop() || "") ? "　" + c.text.split(/\n+/).filter(Boolean).filter(x => /^正是/.test(x.trim())).pop().trim() : ""}`).join("\n") || "（无）"}
 
-【上一回结尾】
+${recap}【上一回结尾】
 ${tail || "（无）"}
 
 【${ev.player}上一回的命令】
@@ -1098,7 +1111,7 @@ ${(prev && prev.decision) || "（无）"}
 【本回时间】${s.date}
 
 【本回已定之事】（按时间先后）
-${JSON.stringify(s.events)}
+${JSON.stringify(events)}
 
 【前方自决】
 ${JSON.stringify(s.autonomous)}
