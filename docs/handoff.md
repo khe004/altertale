@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 71），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 72），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -82,6 +82,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。`checkSim` 另查：敌军标成已知，兵数却是暗线里的实数（同地点、数对得上、玩家所知与已知事件里没有这个数）→ 带问题重推；兵数写"不详"的不查。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
+- 人物备注漏暗线（作者存档 beifa-20261012：司马懿的 note 写着"设伏待敌"）：推演格式写明 figures 的 note 只写玩家看得到的现状，暗中图谋写进 hidden。
 - 两路北伐实测打通（样本 `tools/fixtures/beifa-two-route-end.json`，约 $2.48）：从作者的复荆州终局过渡（章武三年二月开局，张飞在世），五道令第六回克长安，100 分。路数：关羽围樊城、刘封孟达夹襄阳牵住宛洛；马超先出祁山招羌；赵云出褒斜据渭南（识破司马懿斜谷伏兵）、张飞出故道困陈仓、魏延出子午道张疑兵；马超魏延在灞水伏击洛阳新兵；主力合围郿城；曹真倾长安之兵救郿，凉州旧将开长安南门，马超夜入。另修过渡复核误报："江陵（公安）"这类括注细处的写法不再当成搬了家。
 - 荆州一系地图加地名（作者反馈：说书里的夷道地图上没有）：荆州、复荆州、东西两线共用的地图加夷道、枝江、当阳、临沮、武陵五处并补驿程（夷陵—夷道、夷道—公安、夷陵—枝江—江陵、江陵—当阳—麦城、当阳—襄阳、麦城—临沮—夷陵、公安—武陵），各开局写明归属；东西两线的长沙、武昌挪了位置免得压字。推演格式加一句：forces、figures 的 where 以地图上的地名开头，细处写在后面。
 - 复荆州实测打通（样本 `tools/fixtures/fujingzhou-win-end.json`，约 $1.03）：从作者存档的第一回起手打四道令，第五回吴军全师东归、交还江陵，江陵公安武陵零陵归汉、孙刘复盟，100 分，转两路北伐。路数：暗中集兵、单线联络糜芳、挑拨魏吴索质、约五溪蛮；趁魏使封王索质时水陆齐出，关羽据江面断援、黄忠先破枝江；内应泄露后改长围、先取公安、夺夷道通粮；最后许吴军带甲东归、湘水为界复盟。规则不必改。
