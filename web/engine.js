@@ -1025,7 +1025,8 @@ ${simFormat(tg)}`;
     // 其间大事按条、开局说明按分句看
     const lines = [...gapYears(g).map(y => y.what), ...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
     const moved = /入|召|调|迁|移|赴|往|至|抵|投|归|还|返|回|屯|镇|驻|随|出|进|伐|攻|围|征|援|救|退|奔|走/;
-    const same = (a, b) => a.startsWith(b) || b.startsWith(a);
+    // 同一处：互为前缀，或写成"江陵（公安）"这样括号里注明的细处就是原处
+    const same = (a, b) => a.startsWith(b) || b.startsWith(a) || (/（.+）/.test(b) && b.includes(a)) || (/（.+）/.test(a) && a.includes(b));
     for (const f of o.state.figures || []) {
       const p = known[f.name];
       if (!p || !p.where || !f.where || /已故|死/.test(p.where + f.where) || same(String(p.where), String(f.where))) continue;
