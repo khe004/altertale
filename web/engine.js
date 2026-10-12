@@ -311,7 +311,8 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 12. choices 建立在处境判断与谋士进言之上：三个选项方向彼此不同，各有代价，尽量各对应一位谋士的主张（choices 的 by 写这一项是哪位谋士的主张，必须就是他在 says 里说的那个做法；谋士的主张没有成为选项，就不写他；没有谋士主张的选项 by 写空字符串），至少一项是明眼人在此局面下会认真考虑、确有成功希望的路（不必点明）。谋士献的是险计、急计（如奇袭、直取）时，选项照原样保留它的锋芒，不得缩成稳妥的小动作；${ev.player}选了它，按兵力、时机、内应、人心与对方的准备如实判定成败，不预设失败。每个选项的 plan 写完整的部署，像高明的主公亲书的手令：谁去、带多少兵、去哪、做什么，几路如何呼应，派信使、轻兵还是大军；${ev.player}选了它，下达的就是 label 加 plan。三项里至少一项是一整套周全的方略（几路并进、彼此呼应），由最有见识的谋士提出。detail 写真实的利弊取舍，不要为了显得公允给好计硬塞失败的可能。谋士献计要把使它生效的铺垫一并写进 plan（例如劝降，要配以约束军纪、厚待降将、联络城中豪强、示以保全之诺）：推演判定时要看的条件，谋士献计时就该想到。谋士献计要有真实的成算：按此刻的兵力、城防、粮草、内应来看几无成功可能的计（例如数千轻兵去打城中数万精兵、无人开门的坚城），有见识的谋士不会献；献险计就要说明成算所在（如内应已约定某夜开某门），写进 plan。detail 里写的利弊就是日后判定的标准：${ev.player}照此执行、所说的条件也具备时，推演不得另找理由让它落空。只依据${ev.player}此刻所知。不得违背立场底线；对方已背盟得手时，外交选项要写清以何换何、为何对方可能接受。若演义中${ev.player}此时确有对应的做法，在该选项加 "canon": true。`;
   }
 
-  function simFormat(g) {
+  // full：过渡要写出完整开局；平日推演只写有变化的城池、兵马、人物（省输出：claude.ai 的回复长度有上限，写长了会被截断）
+  function simFormat(g, full) {
     const ev = era(g);
     const placesEx = JSON.stringify(Object.values(ev.starts)[0].state.places);
     const fk = Object.keys(factionsOf(ev)).map(k => `"${k}"`).join("");
@@ -324,7 +325,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "events": [{"date":"九月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，三十字以内","result":"结果，三十字以内","known":true}],
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
   "autonomous": [{"who":"人物","did":"未奉命令而自行做出的决定及结果，四十字以内"}],
-  "places": ${placesEx},
+  "places": ${full ? placesEx : `{"某城":"归属"}`},
   "forces": [{"name":"我方某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内","known":true},{"name":"敌方某部","where":"地点","troops":"约数（玩家所知）","grain":"不详","note":"十二字以内","known":true},{"name":"敌方伏兵","where":"地点","troops":"实数","grain":"可支约两月","note":"玩家不知","known":false}],
   "figures": [{"name":"人物","where":"地点","note":"十二字以内的现状"}],
   "gauges": ${gaugesEx},
@@ -334,10 +335,10 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "chronicle": "本回纪要，一句，三十字以内",
   "assessment": "${ev.player}此刻的处境与手中筹码，六十字以内",
   "counsel": [{"who":"谋士","how":"面陈","says":"进言内容，五十字以内"}],
-  "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串","routes":[{"part":"这一项做什么，十二字以内","from":"出发地","to":"送达或抵达之地","tier":"信使|轻兵|大军"}]}],
+  "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串","routes":["谁或哪支兵马>出发地>送达或抵达之地>信使|轻兵|大军"]}],
   "ending": null
 }
-说明：plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。places 必须包含上面全部地名，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。forces 列玩家一方各部与敌军各部，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。figures 的 note 是面板上给玩家看的，只写玩家看得到的现状（敌方人物写"闭城固守""屯兵某地"这类明面上的样子），暗中的图谋（设伏、诈降、约期偷袭）写进 hidden，不写在 note。forces 与 figures 的 where 以地图上的地名开头，细处写在后面（如"夷陵（猇亭）""江陵城北"），地图上没有的小地方写最近的地名再注明。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。每项的 routes 把 plan 拆成要送出或派出的各项，供驿程推算：from 写传令的${ev.player}所在之地，或兵马此刻实际所在之地；to 写送达或抵达之地（就地行动与 from 相同）；只传令写"信使"，数百至五千上下的精兵轻骑写"轻兵"，上万人或带辎重的写"大军"；只有同一支人马要先到某地、再从那里出发的（如先回汉中领兵、再出子午道），后一项才写 "after": 前一项的序号（从 1 数），其余各项不写 after；派兵附带传令的只写兵马一项；地点只能取：${routeNodes(ev).join("、")}。
+说明：${full ? "" : "整个 JSON 控制在三千五百字以内，写不下时先压缩 events 的 why 与 plans 的 knows。"}plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。${full ? "places 必须包含上面全部地名" : "places 只写本回归属有变化的城（没有变化写 {}），其余沿用上回"}，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。${full ? "forces 列玩家一方各部与敌军各部" : "forces 只列本回有变化（兵力、所在、粮草、状态、玩家是否得知）的部队和新出现的部队，name 沿用上回的名字，没有变化的不必重写，沿用上回；覆没、溃散、并入他部的，troops 写\"已覆没\"\"已溃散\"\"已并入某部\"，面板上就会去掉"}，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都写 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。${full ? "figures 列八至十二名关键人物" : "figures 只列本回所在或处境有变化的人物，name 照旧，没有变化的沿用上回"}，已死者 where 写"已故"。figures 的 note 是面板上给玩家看的，只写玩家看得到的现状（敌方人物写"闭城固守""屯兵某地"这类明面上的样子），暗中的图谋（设伏、诈降、约期偷袭）写进 hidden，不写在 note。forces 与 figures 的 where 以地图上的地名开头，细处写在后面（如"夷陵（猇亭）""江陵城北"），地图上没有的小地方写最近的地名再注明。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。每项的 routes 把 plan 拆成要送出或派出的各项，供驿程推算，每项一个短字符串"谁>出发地>目的地>方式"（如"赵云>汉中>郿>大军"）：出发地写传令的${ev.player}所在之地，或兵马此刻实际所在之地；目的地写送达或抵达之地（就地行动与出发地相同）；只传令写"信使"，数百至五千上下的精兵轻骑写"轻兵"，上万人或带辎重的写"大军"；派兵附带传令的只写兵马一项；地点只能取：${routeNodes(ev).join("、")}。
 若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
 评分（score）以原著结局为基准：比较的对象是原著到这个时代结束时的样子——${ev.baseline || "（见原著）"}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
@@ -393,17 +394,17 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state, beat = railBeat(g);
     return `把${ev.player}的这道命令拆成需要送出或派出的各项。全部用中文。
 地点只能从这些里选：${routeNodes(ev).join("、")}。
-每项写：
-- part：这一项做什么，二十字以内；
-- from：命令或兵马从哪里出发。只传令写${ev.player}所在之地（${seatOf(g)}）；派兵写这支兵马此刻实际所在之地（看下面的兵马表与人物位置，不看兵马的名号：名为"成都兵"而已在汉中的，from 写汉中）；
-- to：送达或抵达之地；传令给某人，就取此人此刻所在之地；就地行动（在原地攻城、立营、设伏）写与 from 相同；
-- tier：只传令写"信使"；轻装急进、少带辎重的精兵轻骑（数百至五千上下）写"轻兵"；上万人或带粮草辎重缓行的兵马写"大军"；
-- after：这一项要等前面某一项办完才开始（如先回汉中领兵，再出子午道）时，写那一项的序号（从 1 数），否则不写。
+每项写一个短字符串"做什么>出发地>目的地>方式"，需要时末尾再加">序号"：
+- 做什么：八字以内，如"赵云取郿""传令关羽"；
+- 出发地：命令或兵马从哪里出发。只传令写${ev.player}所在之地（${seatOf(g)}）；派兵写这支兵马此刻实际所在之地（看下面的兵马表与人物位置，不看兵马的名号：名为"成都兵"而已在汉中的，from 写汉中）；
+- 目的地：送达或抵达之地；传令给某人，就取此人此刻所在之地；就地行动（在原地攻城、立营、设伏）写与 from 相同；
+- 方式：只传令写"信使"；轻装急进、少带辎重的精兵轻骑（数百至五千上下）写"轻兵"；上万人或带粮草辎重缓行的兵马写"大军"；
+- 序号：只有同一支人马要等前面某一项办完才从那里出发（如先回汉中领兵，再出子午道）时，末尾加">"和那一项的序号（从 1 数），否则不加。
 派兵的同时附带传令的，只写兵马一项。
 人物此刻所在：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
 兵马此刻所在：${(st.forces || []).map(f => `${f.name}在${f.where}（${f.troops}）`).join("；")}
 命令：${decision}
-只输出一个 JSON 数组，例如 [{"part":"令某将回某地领兵","from":"${seatOf(g)}","to":"${routeNodes(ev)[0]}","tier":"轻兵"},{"part":"领兵出某道袭某城","from":"${routeNodes(ev)[0]}","to":"${routeNodes(ev)[1]}","tier":"轻兵","after":1}]${beat && !beat.wait ? `
+只输出一个 JSON 数组，例如 ["某将回某地领兵>${seatOf(g)}>${routeNodes(ev)[0]}>轻兵","某将出某道袭某城>${routeNodes(ev)[0]}>${routeNodes(ev)[1]}>轻兵>1"]${beat && !beat.wait ? `
 另外判断：演义中${ev.player}此时的做法是「${beat.label}」。这道命令与它是否本质相同（派的人、去向和意图一致即算相同，措辞和细节不同无妨；多出或少了关键的一步就算不同）？在 JSON 数组之后另起一行，只写"原著：是"或"原著：否"。` : ""}`;
   };
 
@@ -413,8 +414,14 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
     const a = t.indexOf("["), b = t.lastIndexOf("]");
     if (a < 0 || b < a) return [];
     try {
-      return normRoutes(g, JSON.parse(t.slice(a, b + 1)));
+      return normRoutes(g, JSON.parse(t.slice(a, b + 1)).map(routeItem));
     } catch (e) { return []; }
+  };
+  // 短字符串"做什么>出发地>目的地>方式[>序号]"拆成对象；旧的对象写法原样
+  const routeItem = r => {
+    if (typeof r !== "string") return r;
+    const p = r.split(/\s*[>＞→]\s*/);
+    return p.length >= 4 ? { part: p[0], from: p[1], to: p[2], tier: p[3], ...(p[4] ? { after: p[4] } : {}) } : null;
   };
   // 拆好的各项（拆令的回复，或选项自带的 routes）规整成驿程能算的样子
   const normRoutes = (g, list) => {
@@ -430,7 +437,8 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
   };
   // 选项自带的拆令（推演给选项时一并拆好）：点选项就不必再调拆令；没有或拆不出就返回 null
   E.choiceRoutes = function (g, choice) {
-    const raw = Array.isArray(choice && choice.routes) ? choice.routes : [];
+    // routes 可以是短字符串"谁>出发地>目的地>方式"，也可以是旧的对象写法
+    const raw = (Array.isArray(choice && choice.routes) ? choice.routes : []).map(routeItem).filter(Boolean);
     const r = normRoutes(g, raw);
     // after 只认"接着前一项的落脚处出发"的：出发地写的不是那一项的去处，就是各自出发，去掉 after
     r.forEach((x, i) => { if (x.after != null && normRoutes(g, [{ part: "x", from: raw[i].from }])[0].from !== r[x.after].to) delete x.after; });
@@ -627,7 +635,8 @@ ${simFormat(g)}`;
   const STANCE_BREACH = /联曹|降曹|附曹|投曹|归曹|结好曹|通好曹|与曹[操魏]?(?:议和|结盟|联手|修好|讲和)|称臣于[曹魏]|向[曹魏][^，。]{0,4}称臣|(?<![招劝诱纳受迫])降[吴魏](?![将兵卒军人])/;
 
   // 把模型给出的局势补全、校验（地名、势力、数值、选项底线），prev 是上一回的局势
-  function normalize(g, s, prev) {
+  // full：过渡写出的是完整开局，兵马人物整张替换，不与参考开局合并
+  function normalize(g, s, prev, full) {
     const ev = era(g), fk = Object.keys(factionsOf(ev));
     const places = { ...prev.places };
     for (const [k, v] of Object.entries(s.places || {})) if (k in ev.places && fk.includes(v)) places[k] = v;
@@ -638,8 +647,19 @@ ${simFormat(g)}`;
       if (Number.isFinite(v)) gauges[k] = Math.max(0, Math.min(100, Math.round(v)));
     }
     s.gauges = gauges;
-    if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
-    if (!Array.isArray(s.forces) || !s.forces.length) s.forces = prev.forces || [];
+    // 兵马与人物只写有变化的：按 name 合进上一回的名单；覆没、溃散、并入的去掉
+    const mergeBy = (old, neu, gone) => {
+      const out = (old || []).map(x => ({ ...x }));
+      for (const x of Array.isArray(neu) ? neu : []) {
+        if (!x || !x.name) continue;
+        const k = out.findIndex(o => o.name === x.name);
+        if (gone && gone(x)) { if (k >= 0) out.splice(k, 1); continue; }
+        if (k >= 0) out[k] = { ...out[k], ...x }; else out.push(x);
+      }
+      return out;
+    };
+    s.figures = full && Array.isArray(s.figures) && s.figures.length ? s.figures : mergeBy(prev.figures, s.figures);
+    s.forces = full && Array.isArray(s.forces) && s.forces.length ? s.forces : mergeBy(prev.forces, s.forces, f => /已覆没|已溃散|已并入|已散尽|已解散|全军覆没/.test(String(f.troops || "")));
     if (!Array.isArray(s.plans) || !s.plans.length) s.plans = prev.plans || [];
     for (const k of ["events", "intel", "hidden", "foreshadow", "autonomous", "counsel"]) s[k] = Array.isArray(s[k]) ? s[k] : [];
     s.date = s.date || prev.date;
@@ -1013,7 +1033,7 @@ ${g.gap.situation ? `决断时的处境：${g.gap.situation}` : ""}
   "state": 下一时代开局的局势，格式如下
 }
 years 写六至十二条，按时间先后。开局的 figures 不受"八至十二名"之限，上面点名必须写进开局的人都要列出。state 的格式：
-${simFormat(tg)}`;
+${simFormat(tg, true)}`;
   };
 
   // 复核过渡：人物从最后的下落出发，换了地方要在其间大事里交代；刘备一方的人不得凭空消失；后方兵马不得凭空没了
@@ -1094,7 +1114,7 @@ ${problems.map(p => "- " + p).join("\n")}
       return "lost";
     }
     const tg = { era: nx.id, start: "inherited", chapters: [{ state: ref.state }], policy: E.defaultPolicy(nx) };
-    const s = normalize(tg, o.state || {}, JSON.parse(JSON.stringify(ref.state)));
+    const s = normalize(tg, o.state || {}, JSON.parse(JSON.stringify(ref.state)), true);
     if (!s.choices.length) throw { code: "no_choices" };
     const posts = E.carryPosts(g, nx, s.figures, br);
     s.events = s.events.length ? s.events : yEvents;
