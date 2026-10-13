@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 79），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 80），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -82,6 +82,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 军师拟令说出了暗线里的伏兵（作者存档 yiling 第六回）：推演把玩家不知道的敌军写进了 forces，面板与军师都看得到。现 forces 每支带 `known`，玩家不知道的写 false，面板、军师、预检都只用 known 的（终局时面板全显示）。`checkSim` 另查：敌军标成已知，兵数却是暗线里的实数（同地点、数对得上、玩家所知与已知事件里没有这个数）→ 带问题重推；兵数写"不详"的不查。
 - 回目上下句字数不等：说书提示词已要求同为七字或八字，但模型仍会写错（作者存档 yiling-20261009 第四回 8/9 字）；现由代码量字数（`E.storyFormatProblems`），回目或结尾"正是"诗句不等就用快速档单独改写一次；`check.js` 重放时也会列出。
 - 谋士进言选项与说书错位：选项带 `by`（提议者）与 `plan`（部署），点选发出"选项：部署"。
+- 拆令预取（作者反馈拆令稳定约 40 秒；记录显示输入 1125 字、输出 171 字也要这么久，慢在 claude.ai 快速档本身，与长短无关）：亲书手令停笔 2.5 秒、或军师拟令填进输入框后，就在后台先拆令（`prefetchRoutes`，按"回数|手令全文"记），点"发出手令"时手令没改过就直接用（没拆完就等它），改过或失败才重拆。浏览器里用假的 sample 验证过：发令后不再重复拆令。
 - 粮草（作者反馈：哪里都缺粮，时代之间几年不屯粮吗）：推演规则补"粮道通畅时后方仓储按驿程自动转运、前方 grain 随之补足，被截才只减不增；转运有上限"；过渡规则补"一年以上无大战就屯田积粮，开局后方仓储要更足，上一时代末的缺粮休整后不延续"。两路北伐设定另写明两路粮运难易悬殊：西路栈道难；东路江陵积粮，经扬水、汉水行船或陆路三五日到襄樊，只在降卒骤增或越过宛城离开水道后才缺粮。
 - 两路北伐调整（作者反馈：东线没用，打下襄樊吴也必反，洛阳随便派四万就难了）：设定补三条——东路牵制算数（关羽主力一万以上压襄樊、逼宛，洛阳最多分一半西援）；魏兵有定数（宛樊约四万、洛阳中军约五万、关中约三万，增兵要写明从哪调来）；孙权背盟有条件（新复盟一年内，除非江陵守兵不足一万或关羽北越宛城，不背盟；魏主力西调时首选攻合肥；约攻合肥、结亲、让地可加固）。新增开局 `xiangfan`（两路北伐·襄樊在手：关羽据樊城襄阳、降卒多粮紧，曹仁退宛，曹操生前议迁都，魏中军屯宛许）；荆州、复荆州、东西两线的分支在荆州保全且据有襄樊（`AT.xiangfanHeld`）时转入它。样本 `tools/fixtures/jingzhou-xiangfan-end.json`（拼成的两回终局）；实测过渡与第一回约 $0.52：关羽压宛、孙权允攻合肥，曹丕只遣一万二千西援。
 - 死人进言（作者存档 beifa-20261012-1714：已故的法正"面陈"）：`checkSim` 查历代记录里写过已故的人，不得进言、不得在人物表里活着出现，查出带问题重推。

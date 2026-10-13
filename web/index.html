@@ -587,6 +587,21 @@ function renderUsage() {
 /* ───────── 一回的流程：先推演、存档，再说书 ───────── */
 
 // 军师拟令：用推演档，只据玩家所知拟一道手令，填进输入框，玩家可改后再发
+// 拆令预取：手令停笔片刻就先在后台拆令，点"发出手令"时多半已经拆好（拆令在 claude.ai 的快速档上常要三四十秒）
+let routeAhead = null, routeTimer = null;
+const routeKey = text => `${game ? game.chapters.length : 0}|${String(text || "").trim()}`;
+function prefetchRoutes(text) {
+  text = String(text || "").trim();
+  if (!llm || !game || busy || text.length < 8 || current().state.ending) return;
+  const key = routeKey(text);
+  if (routeAhead && routeAhead.key === key) return;
+  const rp = E.buildRoutePrompt(game, text), r0 = Date.now(), ch = game.chapters.length;
+  const promise = llm.call(rp, () => {}, undefined, { tier: "quick" })
+    .then(rr => { recordUsage("route", ch, rp, rr, r0); return rr.text; })
+    .catch(() => null);
+  routeAhead = { key, promise };
+}
+
 async function adviseOrder() {
   if (busy || !llm) return;
   busy = "advise"; advice = null; orderCheck = null; lastError = null;
@@ -596,7 +611,7 @@ async function adviseOrder() {
     const res = await llm.call(ap, () => {}, undefined, { tier: "complex" });  // 军师拟令用最强的一档（Opus）
     recordUsage("advise", game.chapters.length, ap, res, t0);
     const a = E.parseAdvice(res.text);
-    if (a) { advice = { ...a, tier: res.tier }; ownDraft = a.order; }
+    if (a) { advice = { ...a, tier: res.tier }; ownDraft = a.order; prefetchRoutes(a.order); }
   } catch (e) {}
   busy = false;
   render();
@@ -638,14 +653,19 @@ async function decide(decision, preset) {
     let routes = [], verdict = null;
     if (preset && preset.length) routes = preset;
     else if (decision !== WAIT_ORDER) {
-      // 先用快速档把命令拆成各项，驿程表算出送达日期，再交给推演
-      const rp = E.buildRoutePrompt(game, decision), r0 = Date.now();
-      try {
-        const rr = await llm.call(rp, () => {}, ctl.signal, { tier: "quick" });
-        recordUsage("route", game.chapters.length, rp, rr, r0);
-        routes = E.parseRoutes(game, rr.text);
-        verdict = E.parseCanonVerdict(rr.text);
-      } catch (e) { if (e && e.code === "cancelled") throw e; }
+      // 先用快速档把命令拆成各项，驿程表算出送达日期，再交给推演；停笔时已在后台拆过的，直接用
+      const ahead = routeAhead && routeAhead.key === routeKey(decision) ? routeAhead.promise : null;
+      routeAhead = null; clearTimeout(routeTimer);
+      let text = ahead ? await ahead : null;
+      if (text == null) {
+        const rp = E.buildRoutePrompt(game, decision), r0 = Date.now();
+        try {
+          const rr = await llm.call(rp, () => {}, ctl.signal, { tier: "quick" });
+          recordUsage("route", game.chapters.length, rp, rr, r0);
+          text = rr.text;
+        } catch (e) { if (e && e.code === "cancelled") throw e; }
+      }
+      if (text != null) { routes = E.parseRoutes(game, text); verdict = E.parseCanonVerdict(text); }
     }
     // 照原著下令就留在原著轨上，按节拍推演；偏离就下轨
     E.applyRail(game, decision, verdict);
@@ -1247,7 +1267,7 @@ function bindStory() {
   const pol = $("#policyText");
   if (pol) pol.oninput = () => { game.policy.text = pol.value; save(); };
   const ta = $("#ownOrder");
-  if (ta) ta.oninput = () => { ownDraft = ta.value; };
+  if (ta) ta.oninput = () => { ownDraft = ta.value; clearTimeout(routeTimer); routeTimer = setTimeout(() => prefetchRoutes(ta.value), 2500); };
   const own = $("#ownBtn");
   if (own) own.onclick = () => checkThenDecide($("#ownOrder").value);
   const co = $("#checkOpt");
