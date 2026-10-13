@@ -99,6 +99,7 @@
     // 世界线分支（按顺序取第一条成立的）
     next: [
       { final: true, label: "刘备驾崩", text: "刘备于两线交兵之中病逝。刘备线到此完结。", when: s => liubeiGone(s) },
+      { era: "beifa", start: "xiangfan", label: "两路北伐（襄樊在手）", gap: "孙刘复盟之后", note: "荆州复全且据有襄樊，孙刘复盟，东路从宛城打起", when: s => AT.jingzhouSafe(s) && AT.xiangfanHeld(s) },
       { era: "beifa", label: "两路北伐", gap: "孙刘复盟之后", note: "荆州复全，孙刘议和复盟，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { era: "yiling", label: "夷陵", gap: "荆州失守之后", note: "江陵失守，关羽身死，刘备欲东征复仇", when: s => lostJiangling(s) && figureGone(s, "关羽") },
       { final: true, label: "荆州再失", text: "江陵得而复失，荆州终归东吴。刘备退保益州，天下三分之势已定，刘备线到此完结。", when: (s, g) => lostJiangling(s) && fromFujingzhou(g) },

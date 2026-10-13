@@ -5,6 +5,8 @@
     const p = s.places || {}, h = (s.ending && s.ending.handoff) || {};
     return p["江陵"] === "刘" && p["公安"] === "刘" && h["孙刘"] !== "破";
   };
+  // 襄樊在手：打下了襄阳或樊城（两路北伐从宛城打起）
+  AT.xiangfanHeld = s => { const p = s.places || {}; return p["樊城"] === "刘" || p["襄阳"] === "刘"; };
   // 关羽是否已死：原著事件"关羽被擒杀"已发生，或人物表里写明已故
   const guanyuDead = s => {
     const c = (s.canon || {}).qinsha;
@@ -44,6 +46,7 @@
     // 江陵、公安俱在且孙刘未决裂 → 两路北伐；江陵在而公安失、或孙刘已决裂 → 东西两线；
     // 江陵失而关羽死 → 夷陵（原著线终章）；江陵失而关羽活 → 复荆州
     next: [
+      { era: "beifa", start: "xiangfan", label: "两路北伐（襄樊在手）", gap: "建安二十五年", note: "荆州保全且攻下襄樊，孙刘未决裂，曹操新丧，东路从宛城打起", when: s => AT.jingzhouSafe(s) && AT.xiangfanHeld(s) },
       { era: "beifa", label: "两路北伐", gap: "建安二十五年", note: "荆州保全，孙刘未决裂，曹操新丧，依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { era: "dongxi", label: "东西两线", gap: "建安二十五年", note: "江陵尚在而公安已失，或孙刘已经决裂，东拒东吴、北防曹魏", when: s => (s.places || {})["江陵"] === "刘" },
       { era: "yiling", label: "夷陵", gap: "建安二十五年至章武元年", note: "荆州尽失，关羽身死，刘备称帝后议伐东吴", when: s => guanyuDead(s), canonYears: [
