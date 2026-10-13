@@ -845,6 +845,10 @@ ${simFormat(g)}`;
     }
     // 暗线里的敌军实数（伏兵、暗中增兵、潜行的援军）不得在兵马表里当作玩家已知
     for (const f of hiddenForcesShown(g, s)) problems.push(`兵马表里的"${f.name}"（${f.where}，${f.troops}）标成了玩家已知，但暗线里写着这支兵是暗中的，玩家并不知道：known 改写 false；若玩家确有探报，只按探报写模糊的兵数（如"数目不详"），不得写出暗线里的实数`);
+    // 已故的人不能进言、不能出场（历代记录里有过"已故"就算）
+    const dead = new Set(segmentsOf(g).flatMap(seg => seg.chapters.flatMap(c => (c.state.figures || []).filter(f => /已故|死|殁/.test(String(f.where || ""))).map(f => f.name))));
+    for (const c of s.counsel || []) if (dead.has(c.who)) problems.push(`${c.who}早已故去，不能进言：counsel 去掉他，换成此刻在世、身在${ev.player}身边或能来信的谋士，choices 的 by 随之改写`);
+    for (const f of s.figures || []) if (dead.has(f.name) && !/已故|死|殁/.test(String(f.where || ""))) problems.push(`${f.name}早已故去，人物表里却写他在${f.where}：where 改写"已故"`);
     return problems;
   };
 
