@@ -42,11 +42,11 @@
     canonEvents: [],
     handoff: { "孙刘": ["盟", "和", "破"], "刘备": ["在世", "驾崩"] },
     next: [
-      { final: true, label: "刘备驾崩", text: "刘备于复荆州之役中病逝。刘备线到此完结。", when: s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || (s.figures || []).some(f => f.name === "刘备" && /已故|驾崩|病逝|身亡/.test(`${f.where}${f.note || ""}`)) },
+      { era: "nanzheng", label: "南征", retire: true, gap: "刘备驾崩之后", note: "刘备于复荆州之役中病逝，托孤孔明；孔明辅政，南中豪帅趁机作乱", when: s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || (s.figures || []).some(f => f.name === "刘备" && /已故|驾崩|病逝|身亡/.test(`${f.where}${f.note || ""}`)) },
       { era: "beifa", start: "xiangfan", label: "两路北伐（襄樊在手）", gap: "夺回荆州之后", note: "荆州复归且据有襄樊，孙刘未决裂，东路从宛城打起", when: s => AT.jingzhouSafe(s) && AT.xiangfanHeld(s) },
       { era: "beifa", label: "两路北伐", gap: "夺回荆州之后", note: "荆州复归，孙刘未决裂，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { era: "dongxi", label: "东西两线", gap: "夺回江陵之后", note: "夺回江陵而荆州未全复，或孙刘仍在交战，东拒东吴、北防曹魏", when: s => (s.places || {})["江陵"] === "刘" },
-      { final: true, label: "荆州终失", text: "江陵终究没能夺回，荆州归了东吴。刘备退保益州，天下三分之势已定，刘备线到此完结。", when: () => true }
+      { era: "nanzheng", label: "南征", retire: true, gap: "荆州终失之后", note: "江陵终究没能夺回，刘备退保益州，病逝托孤；孔明辅政，南中豪帅趁机作乱", when: () => true }
     ],
     starts: {
       sample: {

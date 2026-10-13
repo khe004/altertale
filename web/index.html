@@ -307,6 +307,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/eras/beifa.js"></script>
 <script src="data/eras/yiling.js"></script>
 <script src="data/eras/dongxi.js"></script>
+<script src="data/eras/nanzheng.js"></script>
 <script src="engine.js"></script>
 <script>
 "use strict";
@@ -316,7 +317,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa"];
+const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa", "nanzheng"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
@@ -1027,10 +1028,11 @@ function renderScore(e) {
 function renderLineEnd(e, nx) {
   if (nx || e.type === "败局") return "";
   const b = E.nextBranch(game);
-  if (e.type === "胜局") return `<div class="next-era"><p>汉军入长安，${esc(e.victory || "还于旧都")}。兴复汉室，自此有了根基——这一局，你赢了。</p></div>`;
-  if (b && b.final) return `<div class="next-era"><p>${esc(b.text || b.label)}</p></div>`;
-  if (b && b.pending) return `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。按这一局的结局，接下来的世界线是：<b>${esc(b.label)}</b>。这一段还没有写成，故事暂且到此。</p></div>`;
-  return `<div class="next-era"><p>${esc(era().name)}告一段落。刘备年事已高，未能还于旧都，天下三分之势已定，刘备线到此完结。</p></div>`;
+  const won = e.type === "胜局" ? `${esc(e.victory || "大功告成")}。兴复汉室，自此有了根基——这一局，你赢了。` : "";
+  if (b && b.final) return `<div class="next-era"><p>${won}${esc(b.text || b.label)}</p></div>`;
+  if (b && b.pending) return `<div class="next-era"><p>${won || `${esc(era().name)}告一段落，你没有输。`}按这一局的结局，接下来的世界线是：<b>${esc(b.label)}</b>。这一段还没有写成，故事暂且到此。</p></div>`;
+  if (won) return `<div class="next-era"><p>${won}</p></div>`;
+  return `<div class="next-era"><p>${esc(era().name)}告一段落，这条世界线到此完结。</p></div>`;
 }
 
 function renderEnding(st) {
@@ -1051,7 +1053,7 @@ function renderEnding(st) {
   </div>
   ${renderLineEnd(e, nx)}
   ${nx && game.gap ? renderGap() : ""}
-  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（单刀赴会、湘水划界、定军山、进位汉中王……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。${E.gapPoint(game) && !game.gap ? `其间会停一次，请你决断：<b>${esc(E.gapPoint(game).name)}</b>。` : ""}`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
+  ${nx ? `<div class="next-era"><p>${esc(era().name)}告一段落，你没有输。${E.canonTransition(game) ? `你一路照原著走完，接下来的${esc(nx.gap)}照原著进行（${esc((nx.branch.canonYears || []).slice(0, 4).map(y => y.what.replace(/（第.*?回）$/, "").split(/[，；]/)[0]).join("、"))}……），<b>${esc(nx.label)}</b>从原著的开局接着走原著轨。` : `接下来的${esc(nx.gap)}由推演快进，再按这一局的结果开启<b>${esc(nx.label)}</b>。${E.gapPoint(game) && !game.gap ? `其间会停一次，请你决断：<b>${esc(E.gapPoint(game).name)}</b>。` : ""}`}</p>${lastError && lastError.transition ? `<p class="rp-m">${esc(errorCopy(lastError))}</p>` : ""}</div>` : (e.type === "败局" ? `<p class="rp-m">比原著更差，这一局到此为止。</p>` : "")}
   <div class="own"><div class="row"><button class="ui-btn" id="reportBtn" type="button">查看战报</button>${nx && !E.gapPending(game) ? `<button class="primary" id="nextBtn" type="button" ${llm ? "" : "disabled"}>${E.gapPoint(game) && !game.gap ? "推演到其间决断" : `进入${esc(nx.label)}`}</button>` : ""}<button class="${nx ? "ui-btn" : "primary"}" id="againBtn" type="button">另开一局</button></div></div>`;
 }
 
@@ -1149,7 +1151,7 @@ function renderIntro() {
   const saved = load();
   return `<div class="intro story">
     <h1>天命未定</h1>
-    <p class="tag">改变一个选择，让故事重新演化。你是刘备。</p>
+    <p class="tag">改变一个选择，让故事重新演化。你是蜀汉的主事者：先是刘备，白帝托孤之后是孔明。</p>
     ${ERA_ORDER.map((id, n) => {
       const ev = AT.eras[id];
       return `<section class="era-pick">
@@ -1161,7 +1163,7 @@ function renderIntro() {
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去。荆州保全，就转入两路北伐，取长安即胜；荆州失守而关羽未死，转入复荆州；关羽身死，转入夷陵：伐吴，还是忍下这口气，独出秦川一路北伐。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代，直到白帝托孤。</p>
+    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去。荆州保全，就转入两路北伐，取长安即胜；荆州失守而关羽未死，转入复荆州；关羽身死，转入夷陵：伐吴，还是忍下这口气，独出秦川一路北伐。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代。刘备驾崩（白帝托孤，或北伐未得长安、荆州终失之后）则由孔明接手，转入南征；取下长安则转入中原（尚未写成）。</p>
     <details class="past-era"><summary>导入存档</summary>
       <p class="rp-m">选择导出的存档文件：<input id="importFile" type="file" accept=".json,application/json"></p>
       <p class="rp-m">选不了文件的话，用记事本打开存档文件，全选复制，粘贴到下面：</p>

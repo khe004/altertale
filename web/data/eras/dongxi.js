@@ -98,13 +98,13 @@
     canonEvents: [],
     // 世界线分支（按顺序取第一条成立的）
     next: [
-      { final: true, label: "刘备驾崩", text: "刘备于两线交兵之中病逝。刘备线到此完结。", when: s => liubeiGone(s) },
+      { era: "nanzheng", label: "南征", retire: true, gap: "刘备驾崩之后", note: "刘备于两线交兵之中病逝，托孤孔明；孔明辅政，南中豪帅趁机作乱", when: s => liubeiGone(s) },
       { era: "beifa", start: "xiangfan", label: "两路北伐（襄樊在手）", gap: "孙刘复盟之后", note: "荆州复全且据有襄樊，孙刘复盟，东路从宛城打起", when: s => AT.jingzhouSafe(s) && AT.xiangfanHeld(s) },
       { era: "beifa", label: "两路北伐", gap: "孙刘复盟之后", note: "荆州复全，孙刘议和复盟，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { era: "yiling", label: "夷陵", gap: "荆州失守之后", note: "江陵失守，关羽身死，刘备欲东征复仇", when: s => lostJiangling(s) && figureGone(s, "关羽") },
-      { final: true, label: "荆州再失", text: "江陵得而复失，荆州终归东吴。刘备退保益州，天下三分之势已定，刘备线到此完结。", when: (s, g) => lostJiangling(s) && fromFujingzhou(g) },
+      { era: "nanzheng", label: "南征", retire: true, gap: "荆州再失之后", note: "江陵得而复失，刘备退保益州，病逝托孤；孔明辅政，南中豪帅趁机作乱", when: (s, g) => lostJiangling(s) && fromFujingzhou(g) },
       { era: "fujingzhou", label: "复荆州", gap: "荆州失守之后", note: "江陵失守而关羽未死，刘备欲夺回荆州", when: s => lostJiangling(s) },
-      { final: true, label: "荆襄相持", text: "江陵与东吴、曹魏两面相持，北伐无从谈起。天下三分之势已定，刘备线到此完结。", when: () => true }
+      { era: "nanzheng", label: "南征", retire: true, gap: "荆襄相持之后", note: "江陵与东吴、曹魏两面相持，北伐未及，刘备病逝托孤；孔明辅政，南中豪帅趁机作乱", when: () => true }
     ],
     starts: {
       sample: {

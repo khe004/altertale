@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 81），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 83），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -105,3 +105,4 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 夷陵终局到一路北伐推演不出来（作者存档，样本 `tools/fixtures/yiling-yilu-end.json`）：CLI 上过渡能跑通（$0.27），网页没检查输出截断，初稿有问题时还要再整份重推一遍，任一份被截或超时就整体失败。已修：见流水线第 6 条。
 - 北伐兵少、庞统张飞不见、张飞召而不至（作者存档 beifa-20261008）：过渡只看上一时代末的名单，庞统不在北伐登场名单、张飞在荆州一章没出场，就被丢掉；益州主力在荆州一章没记录，开局就没了；整局日期只写季节，引擎解析不了，军令驿程和行军复核全部失效，日期还倒退。已修：见流水线第 3、6 条；北伐登场名单加庞统，回数 6 → 10，关中开局下调为约三万（长安、陈仓、天水分守），洛阳中军西援需一两月，设定写明奇袭得手的条件。
 - 世界线收束过强：决断点规则、回数上限 8、最后一回快进到时代结局；原著复现靠原著轨（双轨）。
+- 刘备退场与南征（孔明线第一章）：刘备线各处非败局的终局（白帝托孤、三分之局、复荆州的刘备驾崩/荆州终失、东西两线的刘备驾崩/再失/相持、北伐未得长安）都改成带 `retire: true` 的分支转入南征；过渡提示词要求交代刘备最晚章武五年前后病逝托孤、刘禅即位改元建兴、关张年老病故，下一时代玩家为孔明。北伐取长安的胜局走 `onWin` 分支（`pending`，中原尚未写成），`nextBranch` 对胜局只取 `onWin` 分支。新时代 `web/data/eras/nanzheng.js`（建兴三年春至冬，8 回，原著轨八个节拍：亲征/离间高定 → 一擒至七擒 → 泸水祭，终章接一出祁山 pending），时代可设 `reign`（建兴）、`playerTitle`（丞相）；`ERA_BASE` 加建兴（建兴元年=章武三年）。新人物卡：刘禅、马谡、张嶷、张翼、马岱、王伉、吕凯、蒋琬、王连与南中诸部（蛮=孟获一方，叛=雍闿、高定、朱褒）。注意人物卡里的"马忠"是东吴潘璋部将，南征里没用蜀将马忠（原著被祝融所擒的张嶷、马忠改成张嶷、张翼）。推演规则里写死的"主公"改为 `${ev.player}`。
