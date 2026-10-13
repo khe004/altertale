@@ -331,7 +331,10 @@ let game = null;          // { start, chapters: [{title, text, state, decision}]
 let busy = false;
 let ownDraft = "";        // 手令输入框里的草稿（重绘时保留）
 let gapDraft = "";
-let adviseIntent = "";     // 请军师拟令时附上的打算（可选）
+let adviseIntent = "";
+// 军师拟令用快档（默认档，十来秒）还是精档（最强一档，约四十秒），记在本机
+const ADVISE_STORE = "altertale-advise-fast";
+let adviseFast = (() => { try { return localStorage.getItem(ADVISE_STORE) === "on"; } catch (e) { return false; } })();     // 请军师拟令时附上的打算（可选）
 // 手令预检（谋士审阅）默认关闭，省一次调用；可在手令框下勾选打开，记在本机
 const CHECK_STORE = "altertale-order-check";
 let orderCheckOn = (() => { try { return localStorage.getItem(CHECK_STORE) === "on"; } catch (e) { return false; } })();        // 其间决断的手令草稿
@@ -608,10 +611,14 @@ async function adviseOrder() {
   render();
   try {
     const ap = E.buildAdvisePrompt(game, adviseIntent), t0 = Date.now();
-    const res = await llm.call(ap, () => {}, undefined, { tier: "complex" });  // 军师拟令用最强的一档（Opus）
+    const res = await llm.call(ap, () => {}, undefined, adviseFast ? {} : { tier: "complex" });  // 军师拟令默认用最强的一档（Opus），可改快档
     recordUsage("advise", game.chapters.length, ap, res, t0);
     const a = E.parseAdvice(res.text);
-    if (a) { advice = { ...a, tier: res.tier }; ownDraft = a.order; prefetchRoutes(a.order); }
+    if (a) {
+      advice = { ...a, tier: res.tier }; ownDraft = a.order; prefetchRoutes(a.order);
+      if (a.plan) game.advisorPlan = { era: game.era, chapter: game.chapters.length, text: a.plan };  // 全盘方略记下来，下回拟令接着走
+      save();
+    }
   } catch (e) {}
   busy = false;
   render();
@@ -975,10 +982,11 @@ function renderChoices(st) {
       <textarea id="ownOrder" placeholder="${esc(era().orderExample || "")}">${esc(ownDraft)}</textarea>
       ${busy === "check" ? `<p class="rp-m">谋士正在审阅这道手令<span class="dots"></span></p>` : ""}
       ${busy === "advise" ? `<p class="rp-m">军师正在拟令<span class="dots"></span></p>` : ""}
-      ${advice && !busy ? `<div class="notice"><span>军师拟了上面这道手令（只据你此刻所知），可改后再发${llm && llm.kind === "claude" && advice.tier && advice.tier !== "complex" ? `（你的账户用不了最强的一档，这次由${advice.tier === "quick" ? "快速" : "默认"}档拟）` : ""}：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
+      ${advice && !busy ? `<div class="notice">${advice.plan ? `<span>全盘方略：${esc(advice.plan)}</span>` : ""}<span>军师拟了上面这道手令（只据你此刻所知），可改后再发${llm && llm.kind === "claude" && advice.tier && advice.tier !== "complex" ? `（你的账户用不了最强的一档，这次由${advice.tier === "quick" ? "快速" : "默认"}档拟）` : ""}：</span><ul>${advice.reasons.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : ""}
       ${orderCheck && !busy ? `<div class="notice"><span>${orderCheck.verdict === "无效" ? "这道手令行不通，没有发出：" : "这道手令有几处可能落空："}</span><ul>${orderCheck.issues.map(x => `<li>${esc(x)}</li>`).join("") || "<li>命令里没有可执行的部署</li>"}</ul>${orderCheck.verdict === "无效" ? `<span>请改写后再发。</span>` : `<div class="row"><button class="ui-btn" id="forceBtn" type="button">仍然下达</button><span class="rp-m">或修改后重新发出</span></div>`}</div>` : ""}
       <div class="row"><button class="primary" id="ownBtn" type="button" ${off || busy ? "disabled" : ""}>发出手令</button><button class="ui-btn" id="adviseBtn" type="button" ${off || busy ? "disabled" : ""}>请军师拟令</button></div>
       <input class="advise-intent" id="adviseIntent" type="text" maxlength="200" value="${esc(adviseIntent)}" placeholder="可选：告诉军师你的打算，如“目标打下江陵”“挑拨魏吴”；不填就由军师全权拟">
+      <label class="rp-m check-opt"><input type="checkbox" id="adviseFastOpt" ${adviseFast ? "checked" : ""}> 军师拟令用快档（十来秒；不勾用最强的一档，约四十秒，谋划更深）</label>
       <label class="rp-m check-opt"><input type="checkbox" id="checkOpt" ${orderCheckOn ? "checked" : ""}> 发令前请谋士审阅手令（查无效、落空之处，每次多一次调用）</label>
     </div>
   </div>`;
@@ -1270,6 +1278,8 @@ function bindStory() {
   if (ta) ta.oninput = () => { ownDraft = ta.value; clearTimeout(routeTimer); routeTimer = setTimeout(() => prefetchRoutes(ta.value), 2500); };
   const own = $("#ownBtn");
   if (own) own.onclick = () => checkThenDecide($("#ownOrder").value);
+  const af = $("#adviseFastOpt");
+  if (af) af.onchange = () => { adviseFast = af.checked; try { localStorage.setItem(ADVISE_STORE, adviseFast ? "on" : "off"); } catch (e) {} };
   const co = $("#checkOpt");
   if (co) co.onchange = () => { orderCheckOn = co.checked; try { localStorage.setItem(CHECK_STORE, orderCheckOn ? "on" : "off"); } catch (e) {} };
   const adv = $("#adviseBtn");

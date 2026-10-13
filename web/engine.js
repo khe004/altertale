@@ -538,7 +538,12 @@ ${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") |
 ${(st.choices || []).map((c, i) => `${i + 1}. ${c.label}：${c.plan}（${c.detail}）`).join("\n")}
 
 本时代的胜负：${ev.victory ? `胜利条件：${ev.victory.desc}。` : ""}原著结局是：${ev.baseline}。败局线：${ev.lossLine}。
-${String(intent || "").trim() ? `
+回数：这是第${cn(g.chapters.length)}回，本时代最多${cn(ev.maxTurns)}回（每回约${ev.turnSpan[0]}至${ev.turnSpan[1]}日），还剩${cn(Math.max(0, ev.maxTurns - g.chapters.length + 1))}道手令；回数用尽而未达成胜利条件，就按当时局面收场。
+${g.advisorPlan && g.advisorPlan.text && g.advisorPlan.era === g.era && g.advisorPlan.chapter <= g.chapters.length ? `
+【军师先前拟定的全盘方略】（第${cn(g.advisorPlan.chapter)}回所拟）
+${g.advisorPlan.text}
+照这个方略接着走；局势已变、方略行不通时可以改，但要在理由里说明改了什么、为什么。
+` : ""}${String(intent || "").trim() ? `
 【${ev.player}的打算】
 ${String(intent).trim()}
 手令围绕这个打算来拟，不要另换方向：打算是一个目标（如"打下某城"），就以它为纲，不得只守不攻、坐等时机，要想办法达成：调动对方（逼近、佯动、另开一处战场让他分兵）、暗通内应、断其粮道援兵、配合外交，几步如何衔接；打算是一种手段（如"挑拨某两家"），就把它落实成具体部署：派谁去、去哪、带什么说辞或凭据、找对方的什么人、配合什么动作、成与不成各怎么办。打算有风险的照拟，在理由里说清代价和防备；违背立场底线或此刻确实办不到的部分，说明缘故，给出最接近的可行做法。
@@ -548,13 +553,14 @@ ${String(intent).trim()}
 2. 手令要能执行：只调自己一方在世、可调的人马，兵力不超过实有，行程合乎驿程；对敌方、盟友只能遣使劝说。可以取三策之一，也可以合几策之长、另出新计。
 3. 像高明的主公亲书的手令：谁去、带多少兵、去哪、做什么，几路如何呼应，有什么应变（若某事发生则如何），一百到二百五十字。
 4. 理由写三到五条，说清为什么这样下，以及主要的风险。
-只输出一个 JSON 对象：{"order":"手令全文","reasons":["理由一","理由二"]}`;
+5. 先想全局再拟本回：剩下的手令怎样一步步达成胜利条件（何时调动对方、何时动手、对方的援军何时会到、粮从哪来），本回这道令是其中哪一步。手令不要只顾眼前稳妥，要为后几回的决胜铺路；胜机要靠调动对方创造（引其出城、分兵、疲于奔命，暗通内应要早早布置、单线保密），不要指望对方自己露出破绽。
+只输出一个 JSON 对象：{"plan":"全盘方略，按回数分几步，一百五十字以内","order":"手令全文","reasons":["理由一","理由二"]}`;
   };
   E.parseAdvice = function (raw) {
     try {
       const o = parseJSON(raw);
       const order = String(o.order || "").trim();
-      return order ? { order, reasons: (Array.isArray(o.reasons) ? o.reasons : []).map(String).filter(Boolean).slice(0, 6) } : null;
+      return order ? { order, plan: String(o.plan || "").trim(), reasons: (Array.isArray(o.reasons) ? o.reasons : []).map(String).filter(Boolean).slice(0, 6) } : null;
     } catch (e) { return null; }
   };
 
@@ -1153,7 +1159,7 @@ ${problems.map(p => "- " + p).join("\n")}
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
     s.orders = []; s.delivered = []; s.in_transit = [];
     (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff, gap: g.gap });
-    delete g.gap;
+    delete g.gap; delete g.advisorPlan;
     g.rail = false; delete g.railOff;  // 承接的开局没有原著节拍
     g.era = nx.id;
     g.start = "inherited";
