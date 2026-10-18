@@ -33,6 +33,7 @@
     handoff: { "孙刘": ["盟", "和", "破"], "刘备": ["在世", "驾崩"] },
     // 世界线分支（按顺序取第一条成立的）
     next: [
+      { era: "qishan", start: "jingzhou", label: "一出祁山（荆州在手）", retire: true, gap: "刘备病逝之后", note: "东征复夺江陵后刘备病逝，托孤孔明；孔明辅政，以荆益两路再图北伐", when: s => liubeiGone(s) && AT.jianglingHeld(s) },
       { era: "nanzheng", label: "南征", retire: true, gap: "白帝托孤之后（章武三年四月至建兴三年春）", note: "刘备白帝托孤后驾崩，孔明辅政，安居平五路、复通东吴；南中雍闿、高定、朱褒结孟获作乱", when: s => liubeiGone(s), canonYears: [
         { when: "章武三年四月", what: "刘备于永安宫托孤孔明，驾崩，寿六十三；孔明奉梓宫还成都（第八十五回）" },
         { when: "章武三年五月", what: "太子刘禅即位，改元建兴；孔明封武乡侯，领益州牧，事无大小皆决于丞相（第八十五回）" },

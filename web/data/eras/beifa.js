@@ -28,6 +28,7 @@
     // 世界线分支：克复长安（胜局）→ 孔明虚构枝（尚未写成）；其余收场 → 刘备病逝、托孤孔明，转入南征
     next: [
       { onWin: true, pending: true, label: "中原（孔明辅政，东出潼关）", when: () => true },
+      { era: "qishan", start: "jingzhou", label: "一出祁山（荆州在手）", retire: true, gap: "北伐罢兵之后", note: "北伐未得长安，刘备病逝托孤；荆州仍在，孔明辅政，南中小乱由李恢就地平定，再以荆益两路北伐", when: s => AT.jianglingHeld(s) },
       { era: "nanzheng", label: "南征", retire: true, gap: "北伐罢兵之后", note: "北伐未得长安，刘备病逝托孤；孔明辅政，先安南中，再图北伐", when: () => true }
     ],
     mapTitle: "两路北伐",

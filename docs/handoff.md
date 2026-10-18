@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 86），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 87），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -108,3 +108,6 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 刘备退场与南征（孔明线第一章）：刘备线各处非败局的终局（白帝托孤、三分之局、复荆州的刘备驾崩/荆州终失、东西两线的刘备驾崩/再失/相持、北伐未得长安）都改成带 `retire: true` 的分支转入南征；过渡提示词要求交代刘备最晚章武五年前后病逝托孤、刘禅即位改元建兴、关张年老病故，下一时代玩家为孔明。北伐取长安的胜局走 `onWin` 分支（`pending`，中原尚未写成），`nextBranch` 对胜局只取 `onWin` 分支。新时代 `web/data/eras/nanzheng.js`（建兴三年春至冬，原著轨九个节拍：亲征/离间高定 → 一擒至七擒（盘蛇谷火烧藤甲、孟获心服单独一回）→ 泸水祭班师，9 回，终章接一出祁山 pending），时代可设 `reign`（建兴）、`playerTitle`（丞相）；`ERA_BASE` 加建兴（建兴元年=章武三年）。新人物卡：刘禅、马谡、张嶷、张翼、马岱、王伉、吕凯、蒋琬、王连与南中诸部（蛮=孟获一方，叛=雍闿、高定、朱褒）。注意人物卡里的"马忠"是东吴潘璋部将，南征里没用蜀将马忠（原著被祝融所擒的张嶷、马忠改成张嶷、张翼）。推演规则里写死的"主公"改为 `${ev.player}`。
 - 南征末回仓促（作者存档 nanzheng-20261013-1236）：原来最后一个节拍包了投乌戈国、盘蛇谷火烧藤甲、七擒心服、泸水祭、班师四个月，说书一千字写不下，第九回从"盘蛇谷一炬之后"写起。拆成两个节拍（火烧藤甲与七擒心服到十月上旬；泸水祭班师到十二月下旬），maxTurns 改为 9；说书规则加一条：一回跨数月时，决定胜负的那一仗要正面写足，不得从大战之后写起。
 - 一出祁山（孔明线原著枝第二章）：`web/data/eras/qishan.js`，建兴五年正月至六年夏，9 回，原著轨九拍（出师表/不用子午谷 → 凤鸣山 → 南安安定 → 收姜维 → 骂死王朗 → 破羌兵、孟达被擒 → 失街亭 → 空城计、箕谷 → 斩马谡）。取长安为胜局（onWin → 中原 pending），其余 → 后续北伐 pending。南征的终局改为接一出祁山，照原著走完时用 canonYears（曹丕崩、司马懿被谗罢职）快进。开局新增 `roles`：`{姓名: [官爵, 称呼, 阵营]}`，只在本开局（非承接局面）里改写人物此时的身份，用于孟达（人物卡里是蜀将，原著线此时已是魏新城太守）；`titleAt` 第三个参数可以是一局，也可以是时代配置。新人物卡：姜维、曹叡、夏侯楙、王朗、邓芝、高翔、马遵、韩德、申耽、申仪；司马懿、曹真、张郃、郭淮、魏延、王平补了后来的官爵。测试存档加了 nanzheng-canon-end（作者打完的南征原著局）。
+- 荆州在手的线不走南征（作者定）：两路北伐未得长安、东西两线刘备驾崩或相持、复荆州复夺江陵后刘备驾崩、夷陵复夺江陵后刘备驾崩，只要终局江陵归刘（`AT.jianglingHeld`），刘备退场后直接转入一出祁山的新开局 `jingzhou`（两路北伐·荆州在手；南中小乱由李恢就地平定）。一出祁山地图加了樊城、襄阳、江陵与长江，设定补了荆州在手与陇右在手两种变数。
+- 历代城池跨时代带着走：`placeLedger(g)` 按时代先后合并各时代末的 places 与 `state.beyond`；不在本时代地图上的城记在 `state.beyond`（图外城池），推演提示里说明照旧、本时代战事波及时才变，`normalize` 每回沿用。过渡提示加【历代城池】，回复多一个 `beyond`；`checkTransition` 查刘备一方的城（地图上的或图外的）在过渡后换了主人却没在 years 里交代。用途：一路北伐取了天水而转入南征，天水留在 beyond 里，到一出祁山再落回地图，守没守住由过渡按兵力判断并交代。
+- 刘备退场的纪年：建兴元年固定为章武三年（223）；刘备死得晚，过渡里照写章武四年、五年，刘禅即位后接着写建兴（章武五年即建兴三年）。
