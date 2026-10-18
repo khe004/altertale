@@ -112,7 +112,10 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     let t = c.titles[0];
     let faction = c.faction;
     for (const x of c.titles) if (x[0] <= ad) { t = x; if (x[3]) faction = x[3]; }
-    if (g && name === era(g).player) {
+    // 开局可以改写个别人物此时的身份（roles：{姓名: [官爵, 称呼, 阵营]}，如原著开局里孟达已降魏）；承接上一时代的局面不用，按承接的为准
+    const r = g && g.chapters && !g.inherited && ((startOf(g) || {}).roles || {})[name];
+    if (r) return { title: r[0], address: r[1], faction: r[2] || faction };
+    if (g && g.chapters && name === era(g).player) {
       const emperor = c.titles.find(x => x[1] === "皇帝");
       const crowned = E.playerTitle(g) === "陛下";
       if (emperor && crowned) t = emperor;
@@ -648,7 +651,7 @@ ${simFormat(g)}`;
   // 旧存档的兵马没有标 own：名字或备注里带敌方势力、敌方人物的算敌军
   const ENEMY_RE = g => {
     const ev = era(g), foes = Object.entries(ev.factionNames || {}).filter(([k]) => k !== "刘" && k !== "争");
-    const names = (ev.cast || []).filter(n => (titleAt(n, 300) || {}).faction && titleAt(n, 300).faction !== "刘");
+    const names = (ev.cast || []).filter(n => (titleAt(n, 300, ev) || {}).faction && titleAt(n, 300, ev).faction !== "刘");
     const words = [...foes.flatMap(([k, v]) => [k, v]), "魏", "吴", ...names].filter(Boolean);
     return new RegExp(words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"));
   };
@@ -866,7 +869,7 @@ ${simFormat(g)}`;
   // 我方兵马（名号或备注里有我方人物）不查；兵数写得模糊（不详、未知）的，算玩家只有探报，不查
   function hiddenForcesShown(g, s) {
     const ev = era(g), ad = adOf(s.date), nodes = routeNodes(ev);
-    const ours = ev.cast.filter(n => (titleAt(n, ad) || {}).faction === "刘");
+    const ours = ev.cast.filter(n => (titleAt(n, ad, ev) || {}).faction === "刘");
     const hidden = (s.hidden || []).map(String);
     const known = JSON.stringify([s.intel || [], (s.events || []).filter(e => e.known !== false)]);
     return (s.forces || []).filter(f => {
@@ -953,7 +956,7 @@ ${problems.map(p => "- " + p).join("\n")}
   // 下一时代该交代下落的人：登场名单里刘备一方、仍在世的人
   const mustCarry = (g, nx, ad) => {
     const known = E.lastKnown(g);
-    return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (titleAt(n, ad) || {}).faction === "刘");
+    return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (titleAt(n, ad, nx) || {}).faction === "刘");
   };
 
   // 过渡提示词的共同部分：上一时代、历代人物与兵马、下一时代背景、背景大事、人物卡
