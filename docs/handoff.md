@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 87），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 88），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -112,3 +112,5 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 历代城池跨时代带着走：`placeLedger(g)` 按时代先后合并各时代末的 places 与 `state.beyond`；不在本时代地图上的城记在 `state.beyond`（图外城池），推演提示里说明照旧、本时代战事波及时才变，`normalize` 每回沿用。过渡提示加【历代城池】，回复多一个 `beyond`；`checkTransition` 查刘备一方的城（地图上的或图外的）在过渡后换了主人却没在 years 里交代。用途：一路北伐取了天水而转入南征，天水留在 beyond 里，到一出祁山再落回地图，守没守住由过渡按兵力判断并交代。
 - 刘备退场的纪年：建兴元年固定为章武三年（223）；刘备死得晚，过渡里照写章武四年、五年，刘禅即位后接着写建兴（章武五年即建兴三年）。
 - 测试存档 `tools/fixtures/qishan-longyou-end.json`（作者 2026-10-21 打完的一出祁山，接南征原著局）：收陇右三郡、得姜维、街亭破曹真、雪中退羌兵，孟达保全于西城，陈仓、长安未下，成局 91 分，接后续北伐（待写）。可作为写后续北伐时的承接样本。
+- 再出祁山（孔明线原著枝第三章）：`web/data/eras/zaichu.js`，建兴六年十月至九年秋，9 回，每回 20～120 日。原著轨九拍：后出师表围陈仓 → 姜维诈降、斩王双 → 袭取陈仓 → 取武都阴平、贺吴帝（张苞殁、孔明病）→ 魏四十万伐蜀遇雨 → 劫营破曹真、曹真气死 → 斗阵、苟安造谣诏还 → 陇上割麦、卤城 → 李严诈奏退兵、木门道射张郃。取长安为胜局（中原 pending），其余 → 五丈原 pending。一出祁山的终局改为接再出祁山（照原著走完用 canonYears：自贬、石亭之败、郝昭守陈仓）。地图在一出祁山基础上加了上邽、卤城、木门道、武都、阴平、剑阁、赤坂，设定写了陇右在手、荆州在手、孟达归汉三种变数。新人物卡：杨仪、费祎、陈式、郝昭、王双、孙礼、费耀、苟安；曹休、曹真、张郃、张苞补了死亡与官爵。
+- 改换阵营：推演回复多一个 `sides`（本回真心归降、叛投的人；过渡里写开局时归属与人物卡不同的人），`normalize` 累计进 `state.sides`，过渡与照原著快进都带过去。`sidesOf(state)` 另从我方兵马名号推断（旧存档没有 sides：作者的一出祁山存档里"姜维""吴懿孟达军"都是我方兵马，就认姜维、孟达已归汉）。`titleAt(name, ad, g)` 以它为准改势力，官爵后注"（今已归某方）"；`mustCarry` 与过渡提示的人物卡也用它。

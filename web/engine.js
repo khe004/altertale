@@ -105,6 +105,15 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
   /* ───────── 人物池 ───────── */
 
   const card = name => AT.characters[name];
+  // 改换阵营的人：state.sides 记的为准；旧存档没有记，我方兵马的名号里带着某位敌方人物的（"姜维""吴懿孟达军"）也算已归我方
+  const sidesOf = E.sidesOf = st => {
+    const out = {};
+    for (const f of (st && st.forces) || []) {
+      if (!f || !f.own || /追|拒|围|防|御|击|破|讨|攻/.test(String(f.name || ""))) continue;
+      for (const [n, c] of Object.entries(AT.characters)) if (c.faction !== "刘" && n.length > 1 && String(f.name || "").includes(n)) out[n] = "刘";
+    }
+    return { ...out, ...((st && st.sides) || {}) };
+  };
   // 带上 g 时，刘备称帝与否看本局（局中登基才称"陛下"，没登基不因年份到了就改口；提前登基也照改）
   const titleAt = E.titleAt = function (name, ad, g) {
     const c = card(name);
@@ -114,7 +123,9 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
     for (const x of c.titles) if (x[0] <= ad) { t = x; if (x[3]) faction = x[3]; }
     // 开局可以改写个别人物此时的身份（roles：{姓名: [官爵, 称呼, 阵营]}，如原著开局里孟达已降魏）；承接上一时代的局面不用，按承接的为准
     const r = g && g.chapters && !g.inherited && ((startOf(g) || {}).roles || {})[name];
-    if (r) return { title: r[0], address: r[1], faction: r[2] || faction };
+    const sd = g && g.chapters && g.chapters.length && sidesOf(g.chapters[g.chapters.length - 1].state)[name];
+    if (r) return { title: r[0], address: r[1], faction: sd || r[2] || faction };
+    if (sd && sd !== faction) return { title: `${t[1]}（今已归${(era(g).factionNames || {})[sd] || sd}）`, address: t[2], faction: sd };
     if (g && g.chapters && name === era(g).player) {
       const emperor = c.titles.find(x => x[1] === "皇帝");
       const crowned = E.playerTitle(g) === "陛下";
@@ -331,6 +342,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "events": [{"date":"九月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，${full ? "三十" : "十五"}字以内","result":"结果，${full ? "三十" : "二十"}字以内","known":true}],
   "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
   "autonomous": [{"who":"人物","did":"未奉命令而自行做出的决定及结果，四十字以内"}],
+  "sides": {"姓名": "刘"},
   "places": ${full ? placesEx : `{"某城":"归属"}`},
   ${full ? `"forces": [{"name":"我方某部","where":"地点","troops":"约数","grain":"可支约二十日","note":"十二字以内","known":true},{"name":"敌方某部","where":"地点","troops":"约数（玩家所知）","grain":"不详","note":"十二字以内","known":true},{"name":"敌方伏兵","where":"地点","troops":"实数","grain":"可支约两月","note":"玩家不知","known":false}],` : `"forces": [["我方某部","地点","约数","约二十日","八字以内"]],
   "enemy": [["敌方某部","地点","约数（玩家所知）","不详","八字以内",true],["敌方伏兵","地点","实数","约两月","玩家不知",false]],`}
@@ -345,7 +357,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   "choices": [{"label":"决断，二十字以内","plan":"具体部署，六十字以内","detail":"利弊取舍，四十字以内","by":"主张此项的谋士，没有写空字符串","routes":["谁或哪支兵马>出发地>送达或抵达之地>信使|轻兵|大军"]}],
   "ending": null
 }
-说明：${full ? "" : "整个 JSON 控制在三千五百字以内，写不下时先压缩 events 的 why 与 plans 的 knows。"}plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。${full ? "places 必须包含上面全部地名" : "places 只写本回归属有变化的城（没有变化写 {}），其余沿用上回"}，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。${full ? "forces 列玩家一方各部与敌军各部" : "forces、enemy 每支写成数组：[名称, 所在, 兵力, 粮草, 备注]，enemy 末尾再加 known（true 或 false）；figures 每人写成 [姓名, 所在, 现状]。forces 每回列出玩家一方现有的全部人马（所在、兵力、粮草每回都在变），name 尽量沿用上回，覆没、溃散、并入他部的就不再列；enemy 每回列出敌军现有的全部人马（含玩家不知的，known 写 false），分兵、合兵后照现状重写，不要新旧两条并存；覆没、溃散、并入他部的就不再列"}，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都是 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。figures 的 note 是面板上给玩家看的，只写玩家看得到的现状（敌方人物写"闭城固守""屯兵某地"这类明面上的样子），暗中的图谋（设伏、诈降、约期偷袭）写进 hidden，不写在 note。forces 与 figures 的 where 以地图上的地名开头，细处写在后面（如"夷陵（猇亭）""江陵城北"），地图上没有的小地方写最近的地名再注明。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。choices 正好三项。每项的 routes 把 plan 拆成要送出或派出的各项，供驿程推算，每项一个短字符串"谁>出发地>目的地>方式"（如"赵云>汉中>郿>大军"）：出发地写传令的${ev.player}所在之地，或兵马此刻实际所在之地；目的地写送达或抵达之地（就地行动与出发地相同）；只传令写"信使"，数百至五千上下的精兵轻骑写"轻兵"，上万人或带辎重的写"大军"；派兵附带传令的只写兵马一项；地点只能取：${routeNodes(ev).join("、")}。
+说明：${full ? "" : "整个 JSON 控制在三千五百字以内，写不下时先压缩 events 的 why 与 plans 的 knows。"}plans 至少写每个对手势力一条。canon 逐条报告"待核对"的原著事件与背景大事，id 只能取：${ids.join("、") || "（无，写 []）"}。${full ? "places 必须包含上面全部地名" : "places 只写本回归属有变化的城（没有变化写 {}），其余沿用上回"}，值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，") || "争=正在交战或归属未定"}；争=正在交战或归属未定）。${full ? "forces 列玩家一方各部与敌军各部" : "forces、enemy 每支写成数组：[名称, 所在, 兵力, 粮草, 备注]，enemy 末尾再加 known（true 或 false）；figures 每人写成 [姓名, 所在, 现状]。forces 每回列出玩家一方现有的全部人马（所在、兵力、粮草每回都在变），name 尽量沿用上回，覆没、溃散、并入他部的就不再列；enemy 每回列出敌军现有的全部人马（含玩家不知的，known 写 false），分兵、合兵后照现状重写，不要新旧两条并存；覆没、溃散、并入他部的就不再列"}，兵力用约数，grain 写存粮可支多久。【known 必须逐支判断，面板只显示 known 为 true 的兵马】known 表示玩家是否知道这支兵马：玩家一方都是 true，敌军只有玩家确已得知（探马、细作回报、交过手、明摆在城上）才写 true，此时 where、troops 按玩家所知写，可以有误；玩家不知道的敌军（暗中增兵、伏兵、正在途中的援军）写 false，面板上不会显示。figures 列八至十二名关键人物，已死者 where 写"已故"。figures 的 note 是面板上给玩家看的，只写玩家看得到的现状（敌方人物写"闭城固守""屯兵某地"这类明面上的样子），暗中的图谋（设伏、诈降、约期偷袭）写进 hidden，不写在 note。forces 与 figures 的 where 以地图上的地名开头，细处写在后面（如"夷陵（猇亭）""江陵城北"），地图上没有的小地方写最近的地名再注明。gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。autonomous 没有则写 []。sides 只写${full ? "开局时归属与人物卡不同的人（如已归汉的魏将、降魏的蜀将；看人物卡〔〕里的势力）" : "本回改换阵营的人（真心归降、叛投他方；诈降、被俘未降的不算）"}，值只能是${fk}之一，没有写 {}。choices 正好三项。每项的 routes 把 plan 拆成要送出或派出的各项，供驿程推算，每项一个短字符串"谁>出发地>目的地>方式"（如"赵云>汉中>郿>大军"）：出发地写传令的${ev.player}所在之地，或兵马此刻实际所在之地；目的地写送达或抵达之地（就地行动与出发地相同）；只传令写"信使"，数百至五千上下的精兵轻骑写"轻兵"，上万人或带辎重的写"大军"；派兵附带传令的只写兵马一项；地点只能取：${routeNodes(ev).join("、")}。
 若本回为终章：ending 写 {"type":"成局或败局",${Object.keys(ev.handoff || {}).length ? `"handoff":{${Object.entries(ev.handoff).map(([k, o]) => `"${k}":"${o.join("|")}之一"`).join(",")}},` : ""}"title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断或自决，各三十字以内"],"score":[${E.SCORE_ITEMS.map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
 评分（score）以原著结局为基准：比较的对象是原著到这个时代结束时的样子——${ev.baseline || "（见原著）"}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由；时机看成事早晚与耗时，人物看文武将才的存亡与归附，地盘看城池州郡的得失，兵马看兵力的保全与扩充，民心看士民归附与名望，大势看与曹、孙等各方的形势与盟约。照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分（及格）；总分低于 60 就是败局（兴复汉室的大势就此断绝），type 写"败局"。评分不必严苛，大处着眼。${Object.keys(ev.handoff || {}).length ? `
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
@@ -662,6 +674,10 @@ ${simFormat(g)}`;
     for (const [k, v] of Object.entries(s.places || {})) if (k in ev.places && fk.includes(v)) places[k] = v;
     s.places = places;
     if (prev.beyond && !s.beyond) s.beyond = prev.beyond;
+    // 改换阵营的人：累计下来，人物卡里的势力以此为准（姜维归汉、孟达归汉之类）
+    const sides = s.sides && typeof s.sides === "object" && !Array.isArray(s.sides) ? Object.fromEntries(Object.entries(s.sides).filter(([k, v]) => card(k) && fk.includes(v) && v !== "争")) : {};
+    s.sides = { ...(prev.sides || {}), ...sides };
+    if (!Object.keys(s.sides).length) delete s.sides;
     const gauges = { ...prev.gauges };
     for (const k of Object.keys(ev.gauges)) {
       const v = Number((s.gauges || {})[k]);
@@ -932,6 +948,8 @@ ${problems.map(p => "- " + p).join("\n")}
     const ng = E.newGame(b.era, k);
     ng.chapters[0].state.years = b.canonYears;
     ng.chapters[0].state.beyond = beyondOf(placeLedger(g), AT.eras[b.era]);
+    const sides = sidesOf(g.past[g.past.length - 1].chapters.at(-1).state);
+    if (Object.keys(sides).length) ng.chapters[0].state.sides = { ...(ng.chapters[0].state.sides || {}), ...sides };
     g.era = ng.era; g.start = k; g.rail = ng.rail; g.policy = ng.policy; g.chapters = ng.chapters;
     delete g.inherited; delete g.railOff;
     return "next";
@@ -966,7 +984,8 @@ ${problems.map(p => "- " + p).join("\n")}
   // 下一时代该交代下落的人：登场名单里刘备一方、仍在世的人
   const mustCarry = (g, nx, ad) => {
     const known = E.lastKnown(g);
-    return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (titleAt(n, ad, nx) || {}).faction === "刘");
+    const sides = sidesOf(g.chapters[g.chapters.length - 1].state);
+    return nx.cast.filter(n => known[n] && !/已故|死/.test(known[n].where) && (sides[n] || (titleAt(n, ad, nx) || {}).faction) === "刘");
   };
 
   // 过渡提示词的共同部分：上一时代、历代人物与兵马、下一时代背景、背景大事、人物卡
@@ -1017,7 +1036,7 @@ ${DRIVERS}
 ${bg.map(b => `- [${b.id}] ${b.name}（原著${b.when}）。前提：${b.pre}。结果：${b.result}`).join("\n") || "（无）"}
 
 【人物】
-${cast.map(n => cardText(n, ad)).join("\n")}`;
+${cast.map(n => cardText(n, ad, g)).join("\n")}`;
     return { text, br, nx, tg, carry };
   };
 
@@ -1192,6 +1211,8 @@ ${problems.map(p => "- " + p).join("\n")}
     s.years = years;
     const ob = o.beyond && typeof o.beyond === "object" ? Object.fromEntries(Object.entries(o.beyond).filter(([, v]) => ["刘", "曹", "孙"].includes(v))) : {};
     s.beyond = beyondOf({ ...placeLedger(g), ...ob }, nx);
+    s.sides = { ...sidesOf(last.state), ...(s.sides || {}) };
+    if (!Object.keys(s.sides).length) delete s.sides;
     s.canon = mergeCanon({}, s.canon, allCanonIds(tg), 1);
     s.orders = []; s.delivered = []; s.in_transit = [];
     (g.past = g.past || []).push({ era: g.era, start: g.start, inherited: g.inherited, chapters: g.chapters, policy: g.policy, rail: g.rail, railOff: g.railOff, gap: g.gap });

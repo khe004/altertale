@@ -309,6 +309,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 <script src="data/eras/dongxi.js"></script>
 <script src="data/eras/nanzheng.js"></script>
 <script src="data/eras/qishan.js"></script>
+<script src="data/eras/zaichu.js"></script>
 <script src="engine.js"></script>
 <script>
 "use strict";
@@ -318,7 +319,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa", "nanzheng", "qishan"];
+const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa", "nanzheng", "qishan", "zaichu"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
