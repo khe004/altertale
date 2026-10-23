@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 88），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 95），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -117,3 +117,4 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 过渡卡住（作者存档，一出祁山 → 再出祁山，2026-10-23）：初稿完整可用，复核只挑出张嶷、马谡换了驻地没交代，网页就带着问题整份重推（又是六千多字），作者等不到结果。已改：寻常调动没交代不再算问题，`applyTransition` 自动补一句"某某自甲移驻乙"进其间大事；只有最后下落里注明被擒、被困的人换了地方，才要求重推。用作者这份过渡回复离线验证：复核无问题，直接进入再出祁山，姜维、孟达都算蜀汉的人。
 - 手机上推演（作者要求）：①推演、说书、过渡、拟令进行中（`busy`）保持屏幕常亮：先用 `navigator.wakeLock`，用不了（claude.ai 把页面嵌在框里，常不许）就循环播放一段内嵌的无声小视频（mp4，解码不了退到 webm），由 `render()` 按 busy 开关。②切到后台：artifact 页面没有服务器端的后台任务，切走或锁屏后页面会被挂起，请求可能断掉；`resilient()` 包住各家 `llm.call`：请求期间页面进过后台、请求又失败（不是玩家取消），就等切回本页自动重来一次。推演完成时页面在后台，标题前加"✓ 已推演完"并震动一下。
 - 说书夹草稿（作者存档 zaichu-20261023-1550 第五回）：模型先写了半遍，又写"【注：以下为正式正文】"和回目，再写一遍全文。已改：说书提示要求只写一遍、不加注；`splitStory` 丢掉"注/说明"行，正文里再出现回目行时只取最后一个回目之后的；读档时（`upgrade`）对旧存档里这样的回目一并清理。
+- 五丈原（孔明线原著枝最后一章）：`web/data/eras/wuzhang.js`，建兴十二年二月至冬，7 回。原著轨七拍：出斜谷屯渭南（关兴病亡）→ 郭淮先据北原 → 木牛流马、王平夺魏粮 → 上方谷遇雨 → 巾帼之辱、辛毗杖节 → 五丈原禳星、魏延踏灯 → 托付后事、孔明卒、木像退仲达、马岱斩魏延（终章"星落五丈原"）。量表"寿数"是孔明的病势：事必躬亲则日减，分权休养可缓，但不出建兴十三年；孔明病逝即终章，接着推演退兵与后事。取长安为胜局（中原 pending）；其余走 `final` 分支"三分之局"，蜀汉线完结。再出祁山的终局改为接五丈原（照原著走完用 canonYears：废李严、休兵劝农、木牛流马、约吴）。新人物卡：司马师、司马昭、辛毗、夏侯霸；关兴、魏延补了死亡，司马懿补了大将军。过渡规则里"刘备身死"改为下一时代的玩家身死。测试存档加了 zaichu-longyou-end（作者打完的再出祁山：陇右与武都阴平全得，陈仓未下，78 分）。
