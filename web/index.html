@@ -1514,6 +1514,12 @@ function upgrade(g) {
   g.policy = g.policy || E.defaultPolicy(E.era(g));
   // 原著轨之前的旧存档：已经下过令的，不再按原著节拍推演
   if (g.rail === undefined && g.chapters.length > 1) g.rail = false;
+  // 说书里夹着草稿和"以下为正式正文"的旧存档：只留最后一遍
+  for (const c of [...(g.past || []).flatMap(p => p.chapters || []), ...g.chapters]) {
+    if (!c.text || !/(^|\n)\s*(#+\s*)?第[一二三四五六七八九十百零〇\d]+回[\s　]|[【\[（(]\s*(注|说明|备注)[:：]/.test(c.text)) continue;
+    const r = E.splitStory(`${c.title || ""}\n${c.text}`);
+    c.title = r.title || c.title; c.text = r.text;
+  }
 }
 
 function boot(data) {

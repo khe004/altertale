@@ -1304,7 +1304,7 @@ ${s.assessment || s.chronicle || ""}${s.ending ? `\n本回为终章，结局：$
 【谋士进言】（写成结尾朝堂上的一幕或拆读来信）
 ${(s.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
 
-请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，上下句字数相同（同为七字或同为八字），空一行后写正文，段落之间空一行。只输出回目和正文。`;
+请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，上下句字数相同（同为七字或同为八字），空一行后写正文，段落之间空一行。只输出回目和正文，只写一遍：不要先打草稿再重写，不要"注""说明"之类的话。`;
   };
 
   // 回目与结尾"正是"诗句：上下句字数要相同（回目同为七字或八字）。模型常写错，由代码量过，不合就用快速档单独改
@@ -1339,8 +1339,13 @@ ${problems.map(p => "- " + p).join("\n")}
     return { title: t2, text: x2 };
   };
 
+  // 第一行是回目，其余是正文。模型偶尔先写一遍草稿、再写"【注：以下为正式正文】"和回目重写一遍：只取最后一个回目之后的
   E.splitStory = function (raw) {
-    const lines = String(raw).trim().split("\n");
+    let lines = String(raw).trim().split("\n").filter(l => !/^\s*[【\[（(]\s*(注|说明|备注|按)[:：]/.test(l) && !/^\s*(注|说明|备注)[:：]/.test(l));
+    const isTitle = l => /^\s*(#+\s*)?第[一二三四五六七八九十百零〇\d]+回[\s　]/.test(l);
+    let k = -1;
+    lines.forEach((l, i) => { if (i > 0 && isTitle(l)) k = i; });
+    if (k > 0) lines = lines.slice(k);
     const title = (lines.shift() || "").replace(/^#+\s*/, "").trim();
     return { title, text: lines.join("\n").trim() };
   };
