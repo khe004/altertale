@@ -400,6 +400,61 @@ async function saveFile(filename, data, btn, type) {
 
 /* ───────── 语言模型 ───────── */
 
+// 手机切到别的应用、锁屏时，页面会被挂起，正在进行的请求可能断掉。
+// 请求期间页面曾被挂起、请求又失败了：等切回本页，自动重来一次（玩家点了取消的除外）
+let hiddenSince = document.hidden ? Date.now() : 0;
+document.addEventListener("visibilitychange", () => { if (document.hidden) hiddenSince = hiddenSince || Date.now(); else { hiddenSince = 0; if (busy) syncAwake(true); } });
+const whenVisible = () => document.hidden ? new Promise(r => { const f = () => { if (!document.hidden) { document.removeEventListener("visibilitychange", f); r(); } }; document.addEventListener("visibilitychange", f); }) : Promise.resolve();
+function resilient(call) {
+  return async (prompt, onText, signal, opts) => {
+    const t0 = Date.now();
+    try { return await call(prompt, onText, signal, opts); }
+    catch (e) {
+      const wasHidden = document.hidden || (hiddenSince && hiddenSince >= t0) || lastHiddenAt >= t0;
+      if ((e && e.code === "cancelled") || (signal && signal.aborted) || !wasHidden) throw e;
+      await whenVisible();
+      if (signal && signal.aborted) throw { code: "cancelled" };
+      return await call(prompt, onText, signal, opts);
+    }
+  };
+}
+let lastHiddenAt = 0;
+document.addEventListener("visibilitychange", () => { if (document.hidden) lastHiddenAt = Date.now(); });
+// 推演完成时页面在后台：标题上标一下，回来就看得到
+const baseTitle = document.title;
+function markDone() { if (document.hidden) { document.title = "✓ 已推演完 · " + baseTitle; try { navigator.vibrate && navigator.vibrate(200); } catch (e) {} } }
+document.addEventListener("visibilitychange", () => { if (!document.hidden) document.title = baseTitle; });
+
+// 推演进行中不让屏幕熄灭：先用屏幕常亮接口，用不了（嵌在页面框里常被禁用）就循环播放一段无声的小视频
+let wakeLock = null, awakeVideo = null, awakeOn = false;
+const AWAKE_WEBM = "data:video/webm;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwEAAAAAAAeFEU2bdLpNu4tTq4QVSalmU6yBoU27i1OrhBZUrmtTrIHYTbuMU6uEElTDZ1OsggGETbuMU6uEHFO7a1Osggdv7AEAAAAAAABZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVSalmsirXsYMPQkBNgI1MYXZmNjAuMTYuMTAwV0GNTGF2ZjYwLjE2LjEwMESJiECfYAAAAAAAFlSua0CmrgEAAAAAAAA414EBc8WIWR/8d9HzBDCcgQAitZyDdW5kiIEAhoVWX1ZQOIOBASPjg4Q7msoA4ImwgRC6gRCagQKuAQAAAAAAAFzXgQJzxYg5Vhe0PIMOD5yBACK1nIN1bmSIgQCGhkFfT1BVU1aqg2MuoFa7hATEtACDgQLhkZ+BAbWIQL9AAAAAAABiZIEQY6KTT3B1c0hlYWQBATgBQB8AAAAAABJUw2dA1nNzoGPAgGfImkWjh0VOQ09ERVJEh41MYXZmNjAuMTYuMTAwc3PWY8CLY8WIWR/8d9HzBDBnyKFFo4dFTkNPREVSRIeUTGF2YzYwLjMxLjEwMiBsaWJ2cHhnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAyLjAwMDAwMDAwMABzc9djwItjxYg5Vhe0PIMOD2fIokWjh0VOQ09ERVJEh5VMYXZjNjAuMzEuMTAyIGxpYm9wdXNnyKFFo4hEVVJBVElPTkSHkzAwOjAwOjAyLjAwODAwMDAwMAAfQ7Z1RQnngQCji4IAAIAIC+Y7I6tgo6OBAACAEAIAnQEqEAAQAABHCIWFiJmEiAICAAwNYAD+/6tQgKOKggAVgAgIrLMOxqOKggApgAgIrLMOxqOKggA9gAgIrLMOxqOKggBRgAgIrLMOxqOKggBlgAgIrLMOxqOKggB5gAgIrLMOxqOKggCNgAgIrLMOxqOKggChgAgIrLMOxqOKggC1gAgIrLMOxqOKggDJgAgIrLMOxqOKggDdgAgIrLMOxqOKggDxgAgIrLMOxqOKggEFgAgIrLMOxqOKggEZgAgIrLMOxqOKggEtgAgIrLMOxqOKggFBgAgIrLMOxqOKggFVgAgIrLMOxqOKggFpgAgIrLMOxqOKggF9gAgIrLMOxqOKggGRgAgIrLMOxqOKggGlgAgIrLMOxqOKggG5gAgIrLMOxqOKggHNgAgIrLMOxqOKggHhgAgIrLMOxqOKggH1gAgIrLMOxqOKggIJgAgIrLMOxqOKggIdgAgIrLMOxqOKggIxgAgIrLMOxqOKggJFgAgIrLMOxqOKggJZgAgIrLMOxqOKggJtgAgIrLMOxqOKggKBgAgIrLMOxqOKggKVgAgIrLMOxqOKggKpgAgIrLMOxqOKggK9gAgIrLMOxqOKggLRgAgIrLMOxqOKggLlgAgIrLMOxqOKggL5gAgIrLMOxqOKggMNgAgIrLMOxqOKggMhgAgIrLMOxqOKggM1gAgIrLMOxqOKggNJgAgIrLMOxqOKggNdgAgIrLMOxqOKggNxgAgIrLMOxqOKggOFgAgIrLMOxqOKggOZgAgIrLMOxqOKggOtgAgIrLMOxqOKggPBgAgIrLMOxqOKggPVgAgIrLMOxqOKggPpgAgIrLMOxqOZgQPoALEBAAEQEAAYADA/9AwAAAD+/6tQgKOKggP9gAgIrLMOxqOKggQRgAgIrLMOxqOKggQlgAgIrLMOxqOKggQ5gAgIrLMOxqOKggRNgAgIrLMOxqOKggRhgAgIrLMOxqOKggR1gAgIrLMOxqOKggSJgAgIrLMOxqOKggSdgAgIrLMOxqOKggSxgAgIrLMOxqOKggTFgAgIrLMOxqOKggTZgAgIrLMOxqOKggTtgAgIrLMOxqOKggUBgAgIrLMOxqOKggUVgAgIrLMOxqOKggUpgAgIrLMOxqOKggU9gAgIrLMOxqOKggVRgAgIrLMOxqOKggVlgAgIrLMOxqOKggV5gAgIrLMOxqOKggWNgAgIrLMOxqOKggWhgAgIrLMOxqOKggW1gAgIrLMOxqOKggXJgAgIrLMOxqOKggXdgAgIrLMOxqOKggXxgAgIrLMOxqOKggYFgAgIrLMOxqOKggYZgAgIrLMOxqOKggYtgAgIrLMOxqOKggZBgAgIrLMOxqOKggZVgAgIrLMOxqOKggZpgAgIrLMOxqOKggZ9gAgIrLMOxqOKggaRgAgIrLMOxqOKggalgAgIrLMOxqOKgga5gAgIrLMOxqOKggbNgAgIrLMOxqOKggbhgAgIrLMOxqOKggb1gAgIrLMOxqOKggcJgAgIrLMOxqOKggcdgAgIrLMOxqOKggcxgAgIrLMOxqOKggdFgAgIrLMOxqOKggdZgAgIrLMOxqOKggdtgAgIrLMOxqOKggeBgAgIrLMOxqOKggeVgAgIrLMOxqOKggepgAgIrLMOxqOKgge9gAgIrLMOxqCToYqCB9EACAissw7GdaKEAM3+YBxTu2uRu4+zgQC3iveBAfGCAmDwgRA=";
+const AWAKE_MP4 = "data:video/mp4;base64,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YW5nZT0yNCBjaHJvbWFfbWU9MSB0cmVsbGlzPTIgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9OCBiX3B5cmFtaWQ9MiBiX2FkYXB0PTIgYl9iaWFzPTAgZGlyZWN0PTMgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NjAgcmM9Y3JmIG1idHJlZT0xIGNyZj01MS4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAADWWIgQAC3/0Y7wKTcBkBGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBwAAAAlBmggtiCv/voABGCAHARggBwEYIAcBGCAHARggBwEYIAcBGCAHARggBw==";
+async function syncAwake(on) {
+  if (on === awakeOn && !(on && !wakeLock && (!awakeVideo || awakeVideo.paused))) return;
+  awakeOn = on;
+  if (!on) {
+    try { wakeLock && await wakeLock.release(); } catch (e) {}
+    wakeLock = null;
+    if (awakeVideo) awakeVideo.pause();
+    return;
+  }
+  try {
+    if (navigator.wakeLock && !document.hidden) { wakeLock = await navigator.wakeLock.request("screen"); wakeLock.addEventListener("release", () => { wakeLock = null; }); return; }
+  } catch (e) { wakeLock = null; }
+  try {
+    if (!awakeVideo) {
+      awakeVideo = document.createElement("video");
+      awakeVideo.setAttribute("playsinline", ""); awakeVideo.setAttribute("muted", ""); awakeVideo.muted = true; awakeVideo.loop = true;
+      awakeVideo.setAttribute("aria-hidden", "true");
+      awakeVideo.style.cssText = "position:fixed;left:0;bottom:0;width:1px;height:1px;opacity:0.01;pointer-events:none;";
+      awakeVideo.src = awakeVideo.canPlayType('video/mp4; codecs="avc1.42E01E, mp4a.40.2"') ? AWAKE_MP4 : AWAKE_WEBM;
+      document.body.appendChild(awakeVideo);
+    }
+    try { await awakeVideo.play(); }
+    catch (e) { if (awakeVideo.src.startsWith("data:video/mp4")) { awakeVideo.src = AWAKE_WEBM; await awakeVideo.play(); } else throw e; }
+  } catch (e) {}
+}
+
 async function initLLM() {
   if (window.claude && typeof window.claude.use === "function") {
     try {
@@ -407,10 +462,10 @@ async function initLLM() {
       if (sample) {
         llm = {
           kind: "claude",
-          call: async (prompt, onText, signal, opts = {}) => {
+          call: resilient(async (prompt, onText, signal, opts = {}) => {
             const r = await sample(prompt, { onText: ({ text }) => onText(text), signal, cache: false, ...(opts.tier ? { modelTier: opts.tier } : {}) });
             return { text: r.text, truncated: !!r.truncated, model: "claude.ai", tier: r.modelTierApplied || "default" };
-          }
+          })
         };
         render();
         return;
@@ -426,12 +481,12 @@ const loadOAI = () => { try { return JSON.parse(localStorage.getItem(OAI_STORE) 
 function setupKeyLLM() {
   const o = loadOAI();
   if (o.on && o.base && o.model) {
-    llm = { kind: "openai", call: (p, onText, signal, opts = {}) => callOpenAI(o, p, onText, signal, opts.tier === "quick" ? (o.quick || o.model) : o.model) };
+    llm = { kind: "openai", call: resilient((p, onText, signal, opts = {}) => callOpenAI(o, p, onText, signal, opts.tier === "quick" ? (o.quick || o.model) : o.model)) };
     return;
   }
   let key = "";
   try { key = localStorage.getItem(KEY_STORE) || ""; } catch (e) {}
-  llm = key ? { kind: "key", call: (p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : opts.tier === "complex" ? COMPLEX_MODEL : API_MODEL) } : null;
+  llm = key ? { kind: "key", call: resilient((p, onText, signal, opts = {}) => callAnthropic(key, p, onText, signal, opts.tier === "quick" ? QUICK_MODEL : opts.tier === "complex" ? COMPLEX_MODEL : API_MODEL)) } : null;
 }
 // OpenAI 兼容的 /chat/completions（DeepSeek、通义、Kimi、OpenAI、本地 Ollama 等），流式
 async function callOpenAI(o, prompt, onText, signal, model) {
@@ -866,7 +921,9 @@ function errorCopy(e) {
 
 /* ───────── 渲染 ───────── */
 
+let wasBusy = false;
 function render() {
+  if (!!busy !== wasBusy) { if (wasBusy && !busy) markDone(); wasBusy = !!busy; syncAwake(!!busy); }
   const main = $("#main"), panel = $("#panel");
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
