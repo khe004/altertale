@@ -207,7 +207,7 @@ main { min-width: 0; }
 .reveal q::before { content: "「"; } .reveal q::after { content: "」"; }
 .reveal p { color: var(--muted); font-size: 0.92rem; }
 .writing { font-family: var(--font-ui); font-size: 0.88rem; color: var(--muted); display: flex; align-items: center; gap: 0.75rem; margin: 0 0 1rem; }
-.writing .dots::after { content: "……"; display: inline-block; animation: pulse 1.6s ease-in-out infinite; }
+.dots::after { content: "……"; display: inline-block; animation: pulse 1.6s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.25; } }
 .notice { font-family: var(--font-ui); font-size: 0.85rem; border: 1px solid var(--seal); color: var(--seal); border-radius: 4px; padding: 0.6rem 0.8rem; margin: 1rem 0; display: grid; gap: 0.5rem; }
 .notice .row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
@@ -276,7 +276,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 .calls pre { white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; line-height: 1.55; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); padding: 0.6rem; margin: 0.3rem 0 0.6rem; }
 @media (max-width: 560px) { .sec > summary { grid-template-columns: 1fr auto; row-gap: 0.15rem; } .sec .bar { grid-column: 1 / -1; } }
 @media (prefers-reduced-motion: reduce) {
-  .writing .dots::after { animation: none; }
+  .dots::after { animation: none; }
   .gauge .bar i { transition: none; }
 }
 </style>
