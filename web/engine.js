@@ -1117,25 +1117,33 @@ years 写六至十二条，按时间先后。开局的 figures 不受"八至十�
 ${simFormat(tg, true)}`;
   };
 
-  // 复核过渡：人物从最后的下落出发，换了地方要在其间大事里交代；刘备一方的人不得凭空消失；后方兵马不得凭空没了
-  E.checkTransition = function (g, raw) {
-    let o; try { o = parseJSON(raw); } catch (e) { return []; }
-    if (!o || o.ending || !o.state) return [];
-    const br = E.nextBranch(g), nx = br && AT.eras[br.era], problems = [];
-    const known = E.lastKnown(g);
-    // 其间大事按条、开局说明按分句看
-    const lines = [...gapYears(g).map(y => y.what), ...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
+  // 过渡里换了地方、却没在其间大事里交代的人
+  const lineOf = (g, o) => [...gapYears(g).map(y => y.what), ...(Array.isArray(o.years) ? o.years.map(y => String(y && y.what || "")) : []), ...String(o.setup || "").split(/[。；，,\n]/)];
+  const unexplainedMoves = (g, o) => {
+    const known = E.lastKnown(g), lines = lineOf(g, o), out = [];
     const moved = /入|召|调|迁|移|赴|往|至|抵|投|归|还|返|回|屯|镇|驻|随|出|进|伐|攻|围|征|援|救|退|奔|走/;
     // 同一处：互为前缀，或写成"江陵（公安）"这样括号里注明的细处就是原处
     const same = (a, b) => a.startsWith(b) || b.startsWith(a) || (/（.+）/.test(b) && b.includes(a)) || (/（.+）/.test(a) && a.includes(b));
-    for (const f of o.state.figures || []) {
+    for (const f of (o.state && o.state.figures) || []) {
       const p = known[f.name];
       if (!p || !p.where || !f.where || /已故|死/.test(p.where + f.where) || same(String(p.where), String(f.where))) continue;
       const dest = String(f.where).slice(0, 2);
       // 提到此人，且在他名字之后写了去向（目的地或调动的字眼）
       if (!lines.some(l => aliases(f.name).some(a => { const k = l.indexOf(a), rest = k < 0 ? "" : l.slice(k + a.length); return k >= 0 && (rest.includes(dest) || moved.test(rest)); })))
-        problems.push(`${f.name}最后在${p.where}（${p.era}，${p.date}），开局却在${f.where}，其间大事里没有交代他何时、因何调动`);
+        out.push({ name: f.name, from: p, to: String(f.where) });
     }
+    return out;
+  };
+  // 复核过渡：被擒、被围的人不能自己换地方；刘备一方的人不得凭空消失；城池、后方兵马不得凭空没了。
+  // 寻常的调动（数月到数年里换了驻地）没交代不算错，应用时补一句其间大事，不为此整份重推
+  E.checkTransition = function (g, raw) {
+    let o; try { o = parseJSON(raw); } catch (e) { return []; }
+    if (!o || o.ending || !o.state) return [];
+    const br = E.nextBranch(g), nx = br && AT.eras[br.era], problems = [];
+    const known = E.lastKnown(g), lines = lineOf(g, o);
+    for (const m of unexplainedMoves(g, o))
+      if (/擒|囚|押|俘|软禁|被困|被围|围困/.test(m.from.note || ""))
+        problems.push(`${m.name}最后在${m.from.where}（${m.from.era}，${m.from.date}，${m.from.note}），开局却在${m.to}：被擒、被围的人不能自己换地方，要在其间大事里写明他怎样脱身、获释或被押往何处`);
     if (!nx) return problems;
     const ref = refStartOf(br, nx).state, ad = adOf(o.state.date || ref.date);
     // 刘备一方仍在世的人，开局里要有他（列入名单、在兵马里点名，或在其间大事里写明死讯）
@@ -1197,6 +1205,8 @@ ${problems.map(p => "- " + p).join("\n")}
     const ev = era(g), br = E.nextBranch(g), nx = AT.eras[br.era], ref = refStartOf(br, nx);
     const o = parseJSON(raw);
     const years = [...gapYears(g), ...(Array.isArray(o.years) ? o.years : []).filter(y => y && y.what)];
+    // 没交代的寻常调动，补一句其间大事
+    if (!o.ending) for (const m of unexplainedMoves(g, o)) years.push({ when: "其间", what: `${m.name}自${m.from.where}移驻${m.to}` });
     const yEvents = years.map(y => ({ date: String(y.when || ""), who: "", where: "", what: String(y.what), result: "", known: true }));
     const last = g.chapters[g.chapters.length - 1];
     if (o.ending) {
