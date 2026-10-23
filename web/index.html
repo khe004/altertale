@@ -974,7 +974,7 @@ function render() {
       <section class="chapter" id="live">
         <p class="writing" id="writing"><span>驿马奔驰，各方正在行动<span class="dots"></span></span><button class="ui-btn" id="stopBtn" type="button">收回此令</button></p>
       </section>`;
-  } else if (busy === "check") {
+  } else if (busy === "check" || busy === "advise") {
     html += renderChoices(st);
   } else if (busy) {
   } else if (st.ending) {
