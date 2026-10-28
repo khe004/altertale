@@ -17,6 +17,29 @@
     const [a, b] = s.split("十");
     return (a ? CN_D[a] : 1) * 10 + (b ? CN_D[b] : 0);
   }
+  // 兵数：约二万五千、十万、三千余、数千、5000 → 数字；看不出就 null
+  const CN_DIG = { "〇": 0, "零": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9 };
+  const cnSection = t => {
+    if (/^\d+$/.test(t)) return Number(t);
+    let n = 0, d = null;
+    for (const ch of t) {
+      if (ch in CN_DIG) d = CN_DIG[ch];
+      else if (ch === "千") { n += (d ?? 1) * 1000; d = null; }
+      else if (ch === "百") { n += (d ?? 1) * 100; d = null; }
+      else if (ch === "十") { n += (d ?? 1) * 10; d = null; }
+    }
+    return n + (d ?? 0);
+  };
+  const troopsNum = E.troopsNum = str => {
+    const t = String(str || "").replace(/数万/g, "三万").replace(/数千/g, "三千").replace(/(\d+(?:\.\d+)?)万/g, (m, x) => String(Math.round(Number(x) * 10000)));
+    const m = t.match(/[0-9〇零一二两三四五六七八九十百千万]+/);
+    if (!m || !/[0-9千百万十]/.test(m[0]) && m[0].length < 2) return null;
+    const [hi, lo] = m[0].includes("万") ? m[0].split("万") : ["", m[0]];
+    // "二万五"是二万五千
+    const low = hi && /^[一二两三四五六七八九]$/.test(lo || "") ? CN_DIG[lo] * 1000 : (lo ? cnSection(lo) : 0);
+    const n = (hi ? cnSection(hi) || 1 : 0) * 10000 + low;
+    return n > 0 ? n : null;
+  };
   // 建安纪年，每月按三十日、每旬十日计；返回自建安二十四年正月初一起的日数。
   // 别的年号折成建安（黄初元年 = 建安二十五年，章武元年 = 建安二十六年）；只写季节的按季折算（春初 = 正月上旬，夏 = 五月，秋末 = 九月下旬）
   // 建兴元年 = 章武三年 = 建安二十八年（刘禅即位改元）
@@ -878,6 +901,12 @@ ${simFormat(g)}`;
     // 已故的人不能进言、不能出场（历代记录里有过"已故"就算）
     const dead = new Set(segmentsOf(g).flatMap(seg => seg.chapters.flatMap(c => (c.state.figures || []).filter(f => /已故|死|殁/.test(String(f.where || ""))).map(f => f.name))));
     for (const c of s.counsel || []) if (dead.has(c.who)) problems.push(`${c.who}早已故去，不能进言：counsel 去掉他，换成此刻在世、身在${ev.player}身边或能来信的谋士，choices 的 by 随之改写`);
+    // 敌军总数不得凭空涨：比上一回多出两成且一万以上，事件里又没写援兵、增兵、招募、降卒
+    const foes = st => [...(st.forces || []).filter(f => f.own === false || (f.own === undefined && f.known !== undefined && st.enemy)), ...(st.enemy || [])].filter(f => !/细作|探马|哨/.test(String(f.name || "")));
+    const sum = list => list.reduce((a, f) => a + (troopsNum(f.troops) || 0), 0);
+    const before = sum(foes(prev)), after = sum(foes(s));
+    if (before > 0 && after - before >= 10000 && after > before * 1.2 && !(s.events || []).some(e => /增兵|援兵|援军|调来|调兵|招募|新募|募兵|来援|西援|东援|南援|北援|降卒|收编|征发|发兵|羌兵|羌王|胡骑/.test(`${e.what || ""}${e.result || ""}`)))
+      problems.push(`敌军总数从上回约${Math.round(before / 1000) / 10}万涨到约${Math.round(after / 1000) / 10}万，事件里却没写援兵从哪里来：兵有定数，分兵后各部之和不得多于原数；确有援兵要写成事件（谁、从哪里、带多少），否则把多出的数减掉`);
     for (const f of s.figures || []) if (dead.has(f.name) && !/已故|死|殁/.test(String(f.where || ""))) problems.push(`${f.name}早已故去，人物表里却写他在${f.where}：where 改写"已故"`);
     return problems;
   };
