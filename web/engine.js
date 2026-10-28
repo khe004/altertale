@@ -653,7 +653,9 @@ ${backgroundText(g)}
 ${so.setup}
 
 ${so.tone || ""}
-
+${(g.past || []).length && Object.keys(handoffLedger({ past: g.past, chapters: [{ state: {} }] })).length ? `
+【历代交接】${Object.entries(handoffLedger({ past: g.past, chapters: [{ state: {} }] })).map(([k, v]) => `${k}=${v}`).join("；")}（前面各时代终局交下来的情形，背景里按此取舍，如南中只是暂平则可能复叛）
+` : ""}
 【事件记录】
 ${log}
 
@@ -1025,6 +1027,12 @@ ${problems.map(p => "- " + p).join("\n")}
   // 敌军兵数（只算两个时代地图上都有的地方，免得把南中蛮兵和关中魏军混算）
   const foeTotal = (forces, nodes) => (forces || []).filter(f => f && f.own !== true && !/细作|探马|哨/.test(String(f.name || "")) && nodes.some(n => String(f.where || "").startsWith(n)))
     .reduce((a, f) => a + (troopsNum(f.troops) || 0), 0);
+  // 历代交接：各时代终局的 handoff（南中心服与否、孙刘、陇右），后来的覆盖先前的
+  const handoffLedger = E.handoffLedger = g => {
+    const out = {};
+    for (const seg of segmentsOf(g)) { const e = seg.chapters[seg.chapters.length - 1].state.ending; if (e && e.handoff) Object.assign(out, e.handoff); }
+    return out;
+  };
   const beyondOf = (ledger, ev) => Object.fromEntries(Object.entries(ledger).filter(([k]) => !(k in ev.places)));
   // 下一时代该交代下落的人：登场名单里刘备一方、仍在世的人
   const mustCarry = (g, nx, ad) => {
@@ -1065,7 +1073,9 @@ ${Object.entries(known).map(([n, k]) => `${n}：${k.where}（${k.era}，${k.date
 【历代兵马】（每个时代末只记本时代战场上的兵；早先时代的兵马没再被提到，不等于没了，除非记录了覆没、降散）
 ${forceLedger(g)}
 
-【历代城池】（各时代末的归属，后来的时代覆盖先前的；刘=刘备一方即蜀汉，曹=曹魏，孙=东吴）
+${Object.keys(handoffLedger(g)).length ? `【历代交接】${Object.entries(handoffLedger(g)).map(([k, v]) => `${k}=${v}`).join("；")}（各时代终局交给后面的情形，新时代的背景按此取舍）
+
+` : ""}【历代城池】（各时代末的归属，后来的时代覆盖先前的；刘=刘备一方即蜀汉，曹=曹魏，孙=东吴）
 ${JSON.stringify(placeLedger(g))}
 下一时代地图上的城，开局归属从这里起算：其间若易手，要在 years 里写明何时、怎样易手的（守军多少、谁来攻、为何守不住），不得无故改换。
 
