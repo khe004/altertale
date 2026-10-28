@@ -977,6 +977,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const ng = E.newGame(b.era, k);
     ng.chapters[0].state.years = b.canonYears;
     ng.chapters[0].state.beyond = beyondOf(placeLedger(g), AT.eras[b.era]);
+    Object.assign(ng.chapters[0].state.gauges, carryGauges(g.past[g.past.length - 1] ? { chapters: g.past[g.past.length - 1].chapters } : g, AT.eras[b.era], ng.chapters[0].state.date));
     const sides = sidesOf(g.past[g.past.length - 1].chapters.at(-1).state);
     if (Object.keys(sides).length) ng.chapters[0].state.sides = { ...(ng.chapters[0].state.sides || {}), ...sides };
     g.era = ng.era; g.start = k; g.rail = ng.rail; g.policy = ng.policy; g.chapters = ng.chapters;
@@ -1009,6 +1010,21 @@ ${problems.map(p => "- " + p).join("\n")}
     for (const seg of segmentsOf(g)) { const st = seg.chapters[seg.chapters.length - 1].state; Object.assign(out, st.beyond || {}, st.places || {}); }
     return out;
   };
+  // 跨时代接着算的量表（时代配置里第三项为 true，如孔明的"寿数"）：取上一时代末的值，其间每年自然衰减约三点
+  const carryGauges = (g, nx, toDate) => {
+    const st = g.chapters[g.chapters.length - 1].state, out = {};
+    const from = parseDate(st.date, yearOf(st.date)), to = parseDate(toDate, yearOf(toDate));
+    const years = from != null && to != null && to > from ? (to - from) / 360 : 0;
+    for (const [k, v] of Object.entries(nx.gauges || {})) {
+      if (!v[2] || !st.gauges || !Number.isFinite(Number(st.gauges[k]))) continue;
+      out[k] = Math.max(0, Math.round(Number(st.gauges[k]) - 3 * years));
+    }
+    return out;
+  };
+  E.carryGauges = carryGauges;
+  // 敌军兵数（只算两个时代地图上都有的地方，免得把南中蛮兵和关中魏军混算）
+  const foeTotal = (forces, nodes) => (forces || []).filter(f => f && f.own !== true && !/细作|探马|哨/.test(String(f.name || "")) && nodes.some(n => String(f.where || "").startsWith(n)))
+    .reduce((a, f) => a + (troopsNum(f.troops) || 0), 0);
   const beyondOf = (ledger, ev) => Object.fromEntries(Object.entries(ledger).filter(([k]) => !(k in ev.places)));
   // 下一时代该交代下落的人：登场名单里刘备一方、仍在世的人
   const mustCarry = (g, nx, ad) => {
@@ -1128,6 +1144,9 @@ ${g.gap.situation ? `决断时的处境：${g.gap.situation}` : ""}
 1. 从${gy.length ? `${ev.player}的决断（见上）` : "上一时代末"}推演到下一时代的冲突爆发（原著空档：${br.gap}）${gy.length ? `；决断按${ev.player}的命令与人物性格如实推演其成败，years 只写决断之后的事` : ""}${br.note ? `。这一段世界线是：${br.note}` : ""}。其间各方按目标、人物卡与驱动力行动，背景大事依前提发生、提前、推迟或失效。尚未开放成可玩时代的冲突（如汉中之争），在快进中概述其经过与结果，合乎因果，不展开。
 2. 比原著好的局面不会让冲突消失：驱动力会让下一时代的冲突提前、推迟、变形或攻守互换；开局时间可以与原著不同。上一时代留下的人物与恩怨（谁活着、谁在哪、谁欠谁）必须延续。人物从他最后的下落出发（见"历代人物的最后下落"）：参考开局里的人物位置是原著的，不能照搬；开局时位置与最后下落不同的人，years 里要写明他何时、因何调动。前几个时代的人物与兵马，没有记录死亡、覆没或降散的都还在，不得凭空消失：这些人必须写进开局的 figures（死于其间的写"已故"并在 years 里交代）：${carry.join("、") || "（无）"}；刘备一方各处的兵马要合计历代记录，合并、调动、折损在 years 里交代；参考开局里刘备一方有、上面没提到的后方兵马（如成都诸军），照参考开局保留。
 粮草：其间若有一年以上没有大战，刘备一方会屯田积粮、整修粮道（孔明长于此道），开局要体现：后方要地（如汉中、江陵）的 grain 写仓储能支大军多久，闲得越久越足；在驻地的部队按驻地仓储写，不按出征的随军之粮写。上一时代末的缺粮、断粮，休整之后不再延续。
+前面打下的地方要有用处：刘备一方据有的州郡（如陇右诸郡、南中、武都阴平），其间按年屯田积粮、招募当地兵马（陇右羌胡骑兵、南中夷兵等），人心归附的出得多，新附未稳的出得少，开局的兵马与粮草要体现，在 years 里写明。
+敌军兵马从【历代兵马】里上一时代末的敌军记录起算，参考开局里的敌军数是原著的数，本局不一定如此：前面被打残、折损的，到下一时代不会自动补满。其间每年至多补充约一万五千（新募之兵不堪大战）；要多，须在 years 里写明从哪里抽调（如河北、淮南），那里随之空虚。${(() => { const c = carryGauges(g, nx, (refStartOf(br, nx) || {}).state ? refStartOf(br, nx).state.date : ""); return Object.keys(c).length ? `
+跨时代接着算的量表：${Object.entries(c).map(([k, v]) => `${k}=${v}（上一时代末${g.chapters[g.chapters.length - 1].state.gauges[k]}，按其间年数自然衰减）`).join("；")}。开局的 gauges 照写，其间若大病大劳或安心休养，可上下差几点，要在 years 里写明。` : ""; })()}
 ${br.retire ? `刘备退场：这一段要交代刘备病逝、托孤于孔明（刘备在世的，按年岁与局势推定病逝之时，最晚章武五年前后；打了胜仗、心情舒畅可以晚些，大败忧愤则早），刘禅即位、改元建兴，孔明受遗诏辅政、开府治事。纪年照本作的写法：建兴元年即章武三年（公元223年），建兴N年是公元222+N年；刘备若死在章武三年之后，死前照写章武四年、五年，刘禅即位后接着写建兴（如章武五年即建兴三年），不得把建兴元年写到章武三年之后。关羽、张飞与刘备年纪相仿，未死于战阵的，其间也按年老陆续病故。下一时代起玩家扮演${nx.player}；刘备之死是时代交替，不是败局。
 ` : ""}3. 若快进中出现比原著更差的结局（如益州得而复失、${nx.player}身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给${nx.player}第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中${nx.player}此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
@@ -1181,6 +1200,20 @@ ${simFormat(tg, true)}`;
       if (aliases(n).some(a => listed.includes(a))) continue;
       if (lines.some(l => aliases(n).some(a => l.includes(a)) && /死|卒|亡|逝|殁|遇害|阵亡/.test(l))) continue;
       problems.push(`${n}最后在${known[n].where}（${known[n].era}，${known[n].date}），开局里却没有他：没有死讯就不会消失，要写进开局的 figures`);
+    }
+    // 敌军兵数从上一时代末起算：两个时代地图上都有的地方，敌军总数不得无故涨过每年一万五千的补充
+    {
+      const last = g.chapters[g.chapters.length - 1].state, common = routeNodes(nx).filter(n => routeNodes(era(g)).includes(n));
+      // 上一时代末没列出的地方（如一直按兵不动的洛阳中军），取本时代最后一次提到的数
+      const byNode = {};
+      for (const c of g.chapters) for (const n of common) { const v = foeTotal((c.state.forces || []).filter(f => String(f.where || "").startsWith(n)), [n]); if (v) byNode[n] = v; }
+      for (const n of common) { const v = foeTotal((last.forces || []).filter(f => String(f.where || "").startsWith(n)), [n]); if (v || byNode[n] === undefined) byNode[n] = v; }
+      const before = Object.values(byNode).reduce((x, y) => x + y, 0), after = foeTotal(o.state.forces, common);
+      const t0 = parseDate(last.date, yearOf(last.date)), t1 = parseDate(o.state.date, yearOf(o.state.date));
+      const yrs = t0 != null && t1 != null && t1 > t0 ? (t1 - t0) / 360 : 1;
+      const allow = before * 1.1 + 15000 * Math.max(1, yrs) + 5000;
+      if (before > 0 && after > allow && !lines.some(l => /抽调|调来|调集|征发|募兵|新募|河北|淮南|增兵|援/.test(l)))
+        problems.push(`敌军在这几处（${common.slice(0, 8).join("、")}等）上一时代末约${Math.round(before / 1000) / 10}万，开局却有约${Math.round(after / 1000) / 10}万：前面打掉的不会自动补满，其间每年至多补充约一万五千；要多，在 years 里写明从哪里抽调，否则按上一时代末的实数起算`);
     }
     // 历代城池里刘备一方的城，到了下一时代地图上换了主人，要在其间大事里交代
     const ledger = placeLedger(g);
@@ -1248,6 +1281,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const posts = E.carryPosts(g, nx, s.figures, br);
     s.events = s.events.length ? s.events : yEvents;
     s.years = years;
+    for (const [k, v] of Object.entries(carryGauges(g, nx, s.date))) s.gauges[k] = Math.max(0, Math.min(100, Math.max(v - 8, Math.min(v + 5, Number(s.gauges[k]) || v))));
     const ob = o.beyond && typeof o.beyond === "object" ? Object.fromEntries(Object.entries(o.beyond).filter(([, v]) => ["刘", "曹", "孙"].includes(v))) : {};
     s.beyond = beyondOf({ ...placeLedger(g), ...ob }, nx);
     s.sides = { ...sidesOf(last.state), ...(s.sides || {}) };
