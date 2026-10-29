@@ -1025,7 +1025,13 @@ ${problems.map(p => "- " + p).join("\n")}
   };
   E.carryGauges = carryGauges;
   // 敌军兵数（只算两个时代地图上都有的地方，免得把南中蛮兵和关中魏军混算）
-  const foeTotal = (forces, nodes) => (forces || []).filter(f => f && f.own !== true && !/细作|探马|哨/.test(String(f.name || "")) && nodes.some(n => String(f.where || "").startsWith(n)))
+  // 过渡写出的开局兵马没有 own 标记：名号或备注里有敌方势力、敌方人物，又没有我方人物的，算敌军
+  const foeTest = (ev, sides) => {
+    const ours = (ev.cast || []).filter(n => (sides || {})[n] === "刘" || (!(sides || {})[n] && (titleAt(n, 300, ev) || {}).faction === "刘"));
+    const re = ENEMY_RE({ era: ev.id });
+    return f => f.own === false || (f.own === undefined && re.test(`${f.name || ""}${f.note || ""}`) && !ours.some(n => `${f.name || ""}${f.note || ""}`.includes(n)));
+  };
+  const foeTotal = (forces, nodes, isFoe = f => f.own === false) => (forces || []).filter(f => f && isFoe(f) && !/细作|探马|哨/.test(String(f.name || "")) && nodes.some(n => String(f.where || "").startsWith(n)))
     .reduce((a, f) => a + (troopsNum(f.troops) || 0), 0);
   // 历代交接：各时代终局的 handoff（南中心服与否、孙刘、陇右），后来的覆盖先前的
   const handoffLedger = E.handoffLedger = g => {
@@ -1216,9 +1222,10 @@ ${simFormat(tg, true)}`;
       const last = g.chapters[g.chapters.length - 1].state, common = routeNodes(nx).filter(n => routeNodes(era(g)).includes(n));
       // 上一时代末没列出的地方（如一直按兵不动的洛阳中军），取本时代最后一次提到的数
       const byNode = {};
-      for (const c of g.chapters) for (const n of common) { const v = foeTotal((c.state.forces || []).filter(f => String(f.where || "").startsWith(n)), [n]); if (v) byNode[n] = v; }
-      for (const n of common) { const v = foeTotal((last.forces || []).filter(f => String(f.where || "").startsWith(n)), [n]); if (v || byNode[n] === undefined) byNode[n] = v; }
-      const before = Object.values(byNode).reduce((x, y) => x + y, 0), after = foeTotal(o.state.forces, common);
+      const sides = { ...sidesOf(last), ...((o.state && o.state.sides) || {}) }, wasFoe = foeTest(era(g), sides), isFoe = foeTest(nx, sides);
+      for (const c of g.chapters) for (const n of common) { const v = foeTotal((c.state.forces || []).filter(f => String(f.where || "").startsWith(n)), [n], wasFoe); if (v) byNode[n] = v; }
+      for (const n of common) { const v = foeTotal((last.forces || []).filter(f => String(f.where || "").startsWith(n)), [n], wasFoe); if (v || byNode[n] === undefined) byNode[n] = v; }
+      const before = Object.values(byNode).reduce((x, y) => x + y, 0), after = foeTotal(o.state.forces, common, isFoe);
       const t0 = parseDate(last.date, yearOf(last.date)), t1 = parseDate(o.state.date, yearOf(o.state.date));
       const yrs = t0 != null && t1 != null && t1 > t0 ? (t1 - t0) / 360 : 1;
       const allow = before * 1.1 + 15000 * Math.max(1, yrs) + 5000;

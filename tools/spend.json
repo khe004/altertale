@@ -1,5 +1,5 @@
 {
- "total": 60.3288,
+ "total": 61.4809,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -186,6 +186,12 @@
    "args": "军师拟令带全盘方略实测（opus，beifa 第四回）（补记）",
    "calls": 1,
    "usd": 0.26
+  },
+  {
+   "date": "2026-10-29 16:25",
+   "args": "--era guanzhong --from tools/fixtures/zaichu-longyou-end.json --continue --turns 3 --player-model sonnet --label gz （关中之战实测：再出祁山陇右局过渡 + 三回）",
+   "calls": 11,
+   "usd": 1.1521
   }
  ]
 }

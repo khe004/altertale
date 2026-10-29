@@ -137,7 +137,7 @@ ${STRATEGIES[strategy].player}
 时间：${st.date}
 刚刚得知的事：
 ${events.join("\n") || "（无）"}
-刘备所知：${(st.intel || []).join("；")}
+${ev.player}所知：${(st.intel || []).join("；")}
 处境：${st.assessment || "（无）"}
 谋士进言：
 ${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
