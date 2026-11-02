@@ -1019,7 +1019,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const years = from != null && to != null && to > from ? (to - from) / 360 : 0;
     for (const [k, v] of Object.entries(nx.gauges || {})) {
       if (!v[2] || !st.gauges || !Number.isFinite(Number(st.gauges[k]))) continue;
-      out[k] = Math.max(0, Math.round(Number(st.gauges[k]) - 3 * years));
+      out[k] = Math.max(0, Math.round(Number(st.gauges[k]) - (v[2] === true ? 3 : Number(v[2]) || 3) * years));
     }
     return out;
   };
@@ -1163,7 +1163,7 @@ ${g.gap.situation ? `决断时的处境：${g.gap.situation}` : ""}
 前面打下的地方要有用处：刘备一方据有的州郡（如陇右诸郡、南中、武都阴平），其间按年屯田积粮、招募当地兵马（陇右羌胡骑兵、南中夷兵等），人心归附的出得多，新附未稳的出得少，开局的兵马与粮草要体现，在 years 里写明。
 敌军兵马从【历代兵马】里上一时代末的敌军记录起算，参考开局里的敌军数是原著的数，本局不一定如此：前面被打残、折损的，到下一时代不会自动补满。其间每年至多补充约一万五千（新募之兵不堪大战）；要多，须在 years 里写明从哪里抽调（如河北、淮南），那里随之空虚。${(() => { const c = carryGauges(g, nx, (refStartOf(br, nx) || {}).state ? refStartOf(br, nx).state.date : ""); return Object.keys(c).length ? `
 跨时代接着算的量表：${Object.entries(c).map(([k, v]) => `${k}=${v}（上一时代末${g.chapters[g.chapters.length - 1].state.gauges[k]}，按其间年数自然衰减）`).join("；")}。开局的 gauges 照写，其间若大病大劳或安心休养，可上下差几点，要在 years 里写明。` : ""; })()}
-${br.retire ? `刘备退场：这一段要交代刘备病逝、托孤于孔明（刘备在世的，按年岁与局势推定病逝之时，最晚章武五年前后；打了胜仗、心情舒畅可以晚些，大败忧愤则早），刘禅即位、改元建兴，孔明受遗诏辅政、开府治事。纪年照本作的写法：建兴元年即章武三年（公元223年），建兴N年是公元222+N年；刘备若死在章武三年之后，死前照写章武四年、五年，刘禅即位后接着写建兴（如章武五年即建兴三年），不得把建兴元年写到章武三年之后。关羽、张飞与刘备年纪相仿，未死于战阵的，其间也按年老陆续病故。下一时代起玩家扮演${nx.player}；刘备之死是时代交替，不是败局。
+${br.retire ? `刘备退场：这一段要交代刘备病逝、托孤于孔明（刘备在世的，按年岁与局势推定病逝之时${Number.isFinite(Number((g.chapters[g.chapters.length - 1].state.gauges || {})["天年"])) ? `，上一时代末刘备的天年是${g.chapters[g.chapters.length - 1].state.gauges["天年"]}（0 即病逝），每年衰减五六点` : ""}，最晚章武五年前后；打了胜仗、心情舒畅可以晚些，大败忧愤则早），刘禅即位、改元建兴，孔明受遗诏辅政、开府治事。纪年照本作的写法：建兴元年即章武三年（公元223年），建兴N年是公元222+N年；刘备若死在章武三年之后，死前照写章武四年、五年，刘禅即位后接着写建兴（如章武五年即建兴三年），不得把建兴元年写到章武三年之后。关羽、张飞与刘备年纪相仿，未死于战阵的，其间也按年老陆续病故。下一时代起玩家扮演${nx.player}；刘备之死是时代交替，不是败局。
 ` : ""}3. 若快进中出现比原著更差的结局（如益州得而复失、${nx.player}身死），写 ending（type 为"败局"），不进入下一时代。
 4. 写出下一时代开局的完整局势，并给${nx.player}第一回的处境判断、谋士进言与三个选项（规则同平日推演：选项具体、方向不同、至少一项确有希望、不违背立场底线；若演义中${nx.player}此时确有对应的做法，在该选项加 "canon": true）。canon 字段报告下一时代原著事件池中已在快进期间发生、变形或失效的条目。
 

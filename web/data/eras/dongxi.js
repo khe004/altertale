@@ -7,7 +7,7 @@
     const f = (s.figures || []).find(x => x.name === name);
     return !!f && /已故|遇害|身亡|战死|被杀|殉|驾崩/.test(`${f.where}${f.note || ""}`);
   };
-  const liubeiGone = s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || figureGone(s, "刘备");
+  const liubeiGone = s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || figureGone(s, "刘备") || Number((s.gauges || {})["天年"]) <= 0;
   const lostJiangling = s => (s.places || {})["江陵"] !== "刘";
   const fromFujingzhou = g => (g.past || []).some(p => p.era === "fujingzhou");
 
@@ -29,7 +29,7 @@
       { name: "吕蒙", where: "公安", note: "病重" },
       { name: "陆逊", where: "公安", note: "代吕蒙督军" }
     ],
-    gauges: { "东线": 40, "北线": 55, "孙刘": 10 },
+    gauges: { "东线": 40, "北线": 55, "孙刘": 10, "天年": 48 },
     forces: [
       { name: "江陵守军", where: "江陵", troops: "约二万", grain: "可支约三月", note: "关羽、赵云", known: true },
       { name: "益州援军", where: "秭归", troops: "约一万", grain: "需逆江转运", note: "可东出", known: true },
@@ -75,7 +75,7 @@
     lossLine: "比原著更糟：刘备身死；或秭归、白帝、上庸失守，益州门户洞开；或大军覆没",
     handoff: { "孙刘": ["盟", "和", "破"], "刘备": ["在世", "驾崩"] },
     mapTitle: "荆州东西两线",
-    gauges: { "东线": ["东吴战线", "对东吴的攻守优势"], "北线": ["襄樊防线", "北面防备曹魏的稳固程度"], "孙刘": ["孙刘之好", "孙刘两家的关系"] },
+    gauges: { "东线": ["东吴战线", "对东吴的攻守优势"], "北线": ["襄樊防线", "北面防备曹魏的稳固程度"], "孙刘": ["孙刘之好", "孙刘两家的关系"] , "天年": ["刘备年寿", "刘备的年寿与精力（100 为壮年，降到 0 即病逝）：年过五旬，每年随年岁衰减三四点，年过六旬（建安二十五年后）每年五六点；大败、丧亲（如关张之死）、忧愤则大减，大胜、称王称帝、心情舒畅可略回；跨时代接着算", 4] },
     factions: { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" },
     factionNames: { "刘": "刘备", "孙": "孙权", "曹": "曹丕", "争": "交战" },
     cast: [...base.cast.filter(n => n !== "曹操" && n !== "于禁"), "曹丕", "庞统"],

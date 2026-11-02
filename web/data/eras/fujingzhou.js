@@ -6,6 +6,7 @@
   const ref = JSON.parse(JSON.stringify(base.starts.canon.state));
   Object.assign(ref, {
     date: "建安二十五年正月",
+    gauges: { ...ref.gauges, "天年": 46 },
     places: { ...ref.places, "江陵": "孙", "公安": "孙", "麦城": "孙", "夷道": "孙", "枝江": "孙", "当阳": "孙", "临沮": "孙", "武陵": "孙" },
     events: [{ date: "建安二十四年冬", who: "吕蒙", where: "江陵", what: "白衣渡江，取江陵、公安", why: "乘关羽北伐", result: "荆州失守，关羽退走", known: true }],
     choices: [], counsel: [], canon: {}, foreshadow: [], hidden: [], intel: []
@@ -42,8 +43,8 @@
     canonEvents: [],
     handoff: { "孙刘": ["盟", "和", "破"], "刘备": ["在世", "驾崩"] },
     next: [
-      { era: "qishan", start: "jingzhou", label: "一出祁山（荆州在手）", retire: true, gap: "刘备驾崩之后", note: "江陵已复，刘备于复荆州之役中病逝，托孤孔明；孔明辅政，以荆益两路再图北伐", when: s => AT.jianglingHeld(s) && (((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || (s.figures || []).some(f => f.name === "刘备" && /已故|死/.test(f.where || ""))) },
-      { era: "nanzheng", label: "南征", retire: true, gap: "刘备驾崩之后", note: "刘备于复荆州之役中病逝，托孤孔明；孔明辅政，南中豪帅趁机作乱", when: s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || (s.figures || []).some(f => f.name === "刘备" && /已故|驾崩|病逝|身亡/.test(`${f.where}${f.note || ""}`)) },
+      { era: "qishan", start: "jingzhou", label: "一出祁山（荆州在手）", retire: true, gap: "刘备驾崩之后", note: "江陵已复，刘备于复荆州之役中病逝，托孤孔明；孔明辅政，以荆益两路再图北伐", when: s => AT.jianglingHeld(s) && (((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || Number((s.gauges || {})["天年"]) <= 0 || (s.figures || []).some(f => f.name === "刘备" && /已故|死/.test(f.where || ""))) },
+      { era: "nanzheng", label: "南征", retire: true, gap: "刘备驾崩之后", note: "刘备于复荆州之役中病逝，托孤孔明；孔明辅政，南中豪帅趁机作乱", when: s => ((s.ending && s.ending.handoff) || {})["刘备"] === "驾崩" || Number((s.gauges || {})["天年"]) <= 0 || (s.figures || []).some(f => f.name === "刘备" && /已故|驾崩|病逝|身亡/.test(`${f.where}${f.note || ""}`)) },
       { era: "beifa", start: "xiangfan", label: "两路北伐（襄樊在手）", gap: "夺回荆州之后", note: "荆州复归且据有襄樊，孙刘未决裂，东路从宛城打起", when: s => AT.jingzhouSafe(s) && AT.xiangfanHeld(s) },
       { era: "beifa", label: "两路北伐", gap: "夺回荆州之后", note: "荆州复归，孙刘未决裂，可依隆中对两路北伐", when: s => AT.jingzhouSafe(s) },
       { era: "dongxi", label: "东西两线", gap: "夺回江陵之后", note: "夺回江陵而荆州未全复，或孙刘仍在交战，东拒东吴、北防曹魏", when: s => (s.places || {})["江陵"] === "刘" },
