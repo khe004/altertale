@@ -322,7 +322,9 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 const E = AT.engine;
 const cn = E.cn, WAIT_ORDER = E.WAIT_ORDER, POWERS = E.POWERS;
 const era = () => E.era(game || { era: "jingzhou" });
-const ERA_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "beifa", "nanzheng", "qishan", "zaichu", "guanzhong", "wuzhang"];
+// 开局分两类：原著节点（照演义的局面开局，正式的入口）；幻想开局（北伐、复荆州、关中之战等本该打出来的局面，暂留作调试，正式版撤下）
+const CANON_ORDER = ["ruchuan", "hanzhong", "jingzhou", "yiling", "nanzheng", "qishan", "zaichu", "wuzhang"];
+const FANTASY_ORDER = ["jingzhou", "fujingzhou", "dongxi", "beifa", "qishan", "guanzhong"];
 const factions = () => era().factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
 const STORE_KEY = "altertale-jingzhou-v1";
 const KEY_STORE = "altertale-anthropic-key";
@@ -1214,18 +1216,23 @@ function renderIntro() {
   return `<div class="intro story">
     <h1>天命未定</h1>
     <p class="tag">改变一个选择，让故事重新演化。你是蜀汉的主事者：先是刘备，白帝托孤之后是孔明。</p>
-    ${ERA_ORDER.map((id, n) => {
+    ${CANON_ORDER.map((id, n) => {
       const ev = AT.eras[id];
       return `<section class="era-pick">
         <h2><span class="era-no">时代${cn(n + 1)}</span>${esc(ev.name)}<small>${esc(ev.ref)}</small></h2>
         <p class="tag">${esc(ev.tagline)}</p>
         <p>${esc(ev.intro)}</p>
         <div class="starts">
-          ${Object.entries(ev.starts).filter(([, o]) => !o.hidden).map(([k, o], m) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">起点${cn(m + 1)}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
+          ${Object.entries(ev.starts).filter(([, o]) => o.rails).map(([k, o]) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">原著开局</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb)}</span></button>`).join("")}
         </div>
       </section>`;
     }).join("")}
-    <p class="rp-m">各个时代可以连着打：入川、汉中、荆州一路下去。荆州保全，就转入两路北伐，取长安即胜；荆州失守而关羽未死，转入复荆州；关羽身死，转入夷陵：伐吴，还是忍下这口气，独出秦川一路北伐。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代。刘备驾崩（白帝托孤，或北伐未得长安、荆州终失之后）则由孔明接手，转入南征；取下长安则转入中原（尚未写成）。</p>
+    <details class="past-era fantasy"><summary>幻想开局（调试用，正式版会撤下：这些局面本该在原著开局里打出来）</summary>
+      <div class="starts">
+        ${FANTASY_ORDER.flatMap(id => Object.entries(AT.eras[id].starts).filter(([, o]) => !o.rails).map(([k, o]) => `<button class="start-card" type="button" data-era="${id}" data-start="${k}"><span class="k">${esc(AT.eras[id].name)}</span><strong>${esc(o.label)}</strong><span>${esc(o.blurb || AT.eras[id].tagline)}</span></button>`)).join("")}
+      </div>
+    </details>
+    <p class="rp-m">从任一原著节点开局，各个时代可以连着打下去，后面的局面都是打出来的：入川、汉中、荆州一路下去。荆州保全，就转入两路北伐，取长安即胜；荆州失守而关羽未死，转入复荆州；关羽身死，转入夷陵：伐吴，还是忍下这口气，独出秦川一路北伐。其间几年由推演快进，开局按你上一局的结果改写；若一路照原著走完，就照原著接上下一个时代。刘备驾崩（白帝托孤，或北伐未得长安、荆州终失之后）则由孔明接手，转入南征；取下长安则转入中原（尚未写成）。</p>
     <details class="past-era"><summary>导入存档</summary>
       <p class="rp-m">选择导出的存档文件：<input id="importFile" type="file" accept=".json,application/json"></p>
       <p class="rp-m">选不了文件的话，用记事本打开存档文件，全选复制，粘贴到下面：</p>
