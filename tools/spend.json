@@ -1,5 +1,5 @@
 {
- "total": 62.64,
+ "total": 62.8878,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -198,6 +198,12 @@
    "args": "--era hanzhong --from tools/fixtures/ruchuan-free-end.json --continue --turns 3 --player-model sonnet --label qianghz --gap 趁曹操尚在陇右、未及南下，抢先取汉中：法正为谋主，黄忠、魏延率兵三万出葭萌攻阳平关，严颜为后继；遣使以重金贿杨松，劝张鲁来降，许以不改五斗米之教、封侯；孔明留成都安民、督运粮草；遣使至荆州，嘱云长与孙权好言相待，必要时许以长沙。 （抢先取汉中实测：入川提前得成都的局，空档抢取汉中 + 汉中三回）",
    "calls": 11,
    "usd": 1.1591
+  },
+  {
+   "date": "2026-11-06 05:32",
+   "args": "--era qianli --starts dexin,tutushan --strategies canon,bold --player-model sonnet --parallel 4",
+   "calls": 6,
+   "usd": 0.2478
   }
  ]
 }
