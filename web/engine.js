@@ -1521,7 +1521,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const names = l => new Map((l || []).map(x => [x.name, x.note || ""]));
     for (const [k, l] of [["retinue", "随行"], ["goods", "随身"]]) {
       const a = names(prev[k]), b = names(s[k]);
-      for (const [n, v] of b) if (!a.has(n)) out.push(`${l}添了：${n}${v ? `（${v}）` : ""}`); else if (a.get(n) !== v && k === "retinue") out.push(`${n}：${v}`);
+      for (const [n, v] of b) if (!a.has(n)) out.push(`${l}添了：${n}${v ? `（${v}）` : ""}`); else if (a.get(n) !== v && k === "retinue" && /劫|失|散|亡|死|伤|病|擒|俘|囚|离|留|走|困/.test(v)) out.push(`${n}：${v}`);
       for (const n of a.keys()) if (!b.has(n)) out.push(`${l}少了：${n}`);
     }
     const bk = b => `${b.with}|${b.what}`, pb = new Set((prev.bonds || []).map(bk));
@@ -1588,7 +1588,7 @@ ${problems.map(p => "- " + p).join("\n")}
     const HOSTILE = /斩|杀|擒|俘|攻|袭|伐|叛|骂|辱|拒|围|追|截|伏击|刺|毒/;
     const namesIn = text => names.filter(n => aliases(n).some(x => x.length > 1 && String(text).includes(x)));
     for (const n of names) {
-      const c = card(n);
+      const c = cardIn(n, ev);
       if (!c) continue;
       for (const r of [c.kin, ...(c.relations || [])].filter(Boolean)) for (const m of namesIn(r)) edge(n, m, relKind(r), r, "card", "card");
     }
@@ -1640,7 +1640,7 @@ ${problems.map(p => "- " + p).join("\n")}
         seg: s, era: ev.name || seg.era, start: (so && so.label) || "", rails,
         chapters: (seg.chapters || []).map((c, i) => ({
           i, date: (c.state || {}).date || "", title: c.title || "", chronicle: (c.state || {}).chronicle || "", decision: c.decision || "",
-          who: c.decision ? E.playerTitle(as, i) : "",
+          who: !c.decision ? "" : ev.kind === "persona" ? `${ev.player}所为` : `${E.playerTitle(as, i)}之令`,
           track: !rails ? "自由" : off == null ? (seg.rail === false ? "自由" : "原著") : i + 1 < off ? "原著" : i + 1 === off ? "分岔" : "自由",
           ending: (c.state || {}).ending ? { title: c.state.ending.title, type: c.state.ending.type, total: c.state.ending.total } : null
         })),

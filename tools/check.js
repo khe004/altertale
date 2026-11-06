@@ -13,7 +13,7 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "data/eras/kongming.js", "data/eras/nanzheng.js", "data/eras/qishan.js", "data/eras/zaichu.js", "data/eras/wuzhang.js", "data/eras/guanzhong.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "data/eras/kongming.js", "data/eras/nanzheng.js", "data/eras/qishan.js", "data/eras/zaichu.js", "data/eras/wuzhang.js", "data/eras/guanzhong.js", "data/eras/qianli.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 
 let errors = 0;
@@ -26,16 +26,26 @@ for (const [id, ev] of Object.entries(AT.eras)) {
   for (const n of nodes) if (!(n in ev.places)) fail(`${id}：驿程表的 ${n} 不在地图上`);
   for (const n of ev.cast) if (!AT.characters[n]) fail(`${id}：${n} 没有人物卡`);
   for (const [k, st] of Object.entries(ev.starts)) for (const p of Object.keys(ev.places)) if (!(p in (st.state.places || {}))) fail(`${id}：开局 ${k} 没写 ${p} 归谁（地图上会显示成交战）`);
-  for (const b of ev.canonPath || []) for (const x of b.fulfills) if (!ids.has(x)) fail(`${id}：节拍里的事件 ${x} 不在事件池`);
+  const paths = [ev.canonPath, ...Object.values(ev.starts).map(s => s.canonPath)].filter(Boolean);
+  for (const path of paths) for (const b of path) for (const x of b.fulfills) if (!ids.has(x)) fail(`${id}：节拍里的事件 ${x} 不在事件池`);
   for (const c of ev.canonEvents) for (const x of c.after || []) if (!ids.has(x)) fail(`${id}：${c.id} 的前置 ${x} 不在事件池`);
-  if (ev.canonPath && ev.canonPath.length > ev.maxTurns) fail(`${id}：节拍 ${ev.canonPath.length} 个，多于回数上限 ${ev.maxTurns}`);
+  for (const path of paths) if (path.length > ev.maxTurns) fail(`${id}：节拍 ${path.length} 个，多于回数上限 ${ev.maxTurns}`);
   for (const b of !ev.next ? [] : Array.isArray(ev.next) ? ev.next : [ev.next]) if (!b.pending && !b.final && !AT.eras[b.era]) fail(`${id}：分支 ${b.label} 指向的时代 ${b.era} 不存在`);
   for (const [k, s] of Object.entries(ev.starts)) {
     for (const f of s.state.figures) if (f.where && !nodes.some(n => String(f.where).startsWith(n)) && /^[^\s]+$/.test(f.where) && !/已故/.test(f.where)) { /* 地图外的地点（如江陵、邺城）允许 */ }
-    if (s.rails && ev.canonPath && !s.state.choices.some(c => c.canon && c.label === ev.canonPath[0].label) && !ev.canonPath[0].wait)
+    const sp = s.canonPath || ev.canonPath;
+    if (s.rails && sp && !s.state.choices.some(c => c.canon && c.label === sp[0].label) && !sp[0].wait)
       fail(`${id}/${k}：开局的 ★ 选项与第一拍的原著做法不一致`);
   }
-  console.log(`  ${id}：${Object.keys(ev.places).length} 地，${ev.canonEvents.length} 条原著事件，${(ev.canonPath || []).length} 拍`);
+  // 人物剧本：开局的选项依据的事要在知情账里、主角知道；推演提示词能生成
+  if (ev.kind === "persona") for (const [k, s] of Object.entries(ev.starts)) {
+    for (const c of s.state.choices) for (const u of c.uses || []) { const f = (s.state.facts || {})[u]; if (!f || !(f.knownBy || {})[ev.player]) fail(`${id}/${k}：选项「${c.label}」依据的 ${u} 不是${ev.player}已知的事`); }
+    const g = E.newGame(id, k);
+    try { E.buildSimPrompt(g, s.state.choices[0].label, []); E.buildRoutePrompt(g, s.state.choices[0].label); E.buildOrderCheckPrompt(g, "试"); E.atlas(g); }
+    catch (e) { fail(`${id}/${k}：提示词生成出错 ${e.message || e}`); }
+    for (const p of E.checkSim(g, JSON.parse(JSON.stringify(s.state)), s.state.choices[0].label)) fail(`${id}/${k}：开局局势复核不过：${p}`);
+  }
+  console.log(`  ${id}：${Object.keys(ev.places).length} 地，${ev.canonEvents.length} 条原著事件，${paths.map(p => p.length).join("/") || 0} 拍`);
 }
 
 // 收集要重放的对局：样本、测试输出（含连打的前几个时代）、命令行指定的存档

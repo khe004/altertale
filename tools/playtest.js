@@ -22,7 +22,7 @@ const arg = (name, def) => {
 
 // 加载与网页相同的人物池、时代配置与引擎
 globalThis.AT = {};
-for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "data/eras/kongming.js", "data/eras/nanzheng.js", "data/eras/qishan.js", "data/eras/zaichu.js", "data/eras/wuzhang.js", "data/eras/guanzhong.js", "engine.js"]) require(path.join(ROOT, "web", f));
+for (const f of ["data/characters.js", "data/background.js", "data/eras/ruchuan.js", "data/eras/hanzhong.js", "data/eras/jingzhou.js", "data/eras/fujingzhou.js", "data/eras/beifa.js", "data/eras/yiling.js", "data/eras/dongxi.js", "data/eras/kongming.js", "data/eras/nanzheng.js", "data/eras/qishan.js", "data/eras/zaichu.js", "data/eras/wuzhang.js", "data/eras/guanzhong.js", "data/eras/qianli.js", "engine.js"]) require(path.join(ROOT, "web", f));
 const E = AT.engine;
 const ERA = arg("era", "jingzhou");
 
@@ -110,7 +110,9 @@ const STRATEGIES = {
   delegate: { policy: "以保荆州根本为先。樊城可围则围，不可则退。江东若有异动，云长即刻回师；留守之将可先斩后奏，不必请示。", player: null },
   greedy: { policy: "", player: "你是一个贪功的玩家，一心乘胜北伐、扩大战果，认为东吴不足为虑，很少考虑后方。" },
   // 回归测试：有标 canon 的选项就选它；没有就照演义中玩家此时的实际作为下令（演义里此时没有动作就不另发令）
-  canon: { policy: "", player: "你只按《三国演义》（毛宗岗本）行事：此刻演义中刘备实际做了什么，就下什么命令（可以不在选项里），哪怕不是最优。若演义中刘备此时没有另发命令，或他此时还不知道前方的变故，只输出 WAIT。" },
+  canon: { policy: "", player: "你只按《三国演义》（毛宗岗本）行事：此刻演义中{P}实际做了什么，就下什么命令（可以不在选项里），哪怕不是最优。若演义中{P}此时没有另发命令，或他此时还不知道前方的变故，只输出 WAIT。" },
+  // 人物剧本：重情守义的玩家，但想走一条与原著不同的路
+  bold: { policy: "", player: "你认真扮演这个人物，守他的为人，但不照原著走：想办法让结局比原著更好（更快、少结仇、多得人心），会自己出主意。" },
   single: { policy: "", player: "你是一个认真的普通玩家，目标是让结局与原著不同，但每回只能从给出的选项里选一个。" },
   random: { policy: "", player: null }
 };
@@ -132,8 +134,9 @@ async function playerMove(strategy, g) {
   const single = strategy === "single";
   const events = (st.events || []).filter(e => e.known !== false).map(e => `${e.date} ${e.who}（${e.where}）${e.what}，${e.result}`);
   const ev = E.era(g);
-  const prompt = `你在玩一个三国策略游戏，扮演${ev.player}（${ev.playerTitle}，此刻身在${E.seatOf(g)}；${ev.name}：${ev.tagline}）。
-${STRATEGIES[strategy].player}
+  const persona = E.isPersona(g);
+  const prompt = `你在玩一个三国${persona ? "故事" : "策略"}游戏，扮演${ev.player}${persona ? "本人" : ""}（${ev.playerTitle}，此刻身在${E.seatOf(g)}；${ev.name}：${ev.tagline}）。
+${STRATEGIES[strategy].player.replace(/\{P\}/g, ev.player)}
 
 时间：${st.date}
 刚刚得知的事：
@@ -145,7 +148,9 @@ ${(st.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") |
 可选决断：
 ${st.choices.map((c, i) => `${i + 1}. ${c.label}（${c.detail}）`).join("\n")}
 
-${single ? "只能从上面选一个，只输出它的序号。" : "可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。"}`;
+${persona ? `${ev.player}的处境：${JSON.stringify({ self: st.self, retinue: (st.retinue || []).map(r => r.name), goods: (st.goods || []).map(r => r.name) })}
+${ev.player}知道的事：${E.knownFacts(st, ev.player).map(f => f.what).join("；")}
+` : ""}${single ? "只能从上面选一个，只输出它的序号。" : persona ? `可以选其中一个，也可以自己写下${ev.player}要做的事（去哪里、对谁说什么、做什么）。只输出最终的行动文本，一行，不要解释。` : "可以选其中一个，也可以自己写一道具体的命令（谁去、做什么）。只输出最终的命令文本，一行，不要解释。"}`;
   const out = (await claude(prompt, "player")).trim();
   if (strategy === "canon" && /WAIT/.test(out)) return E.WAIT_ORDER;
   if (single) {
@@ -160,9 +165,13 @@ async function playEra(g, strategy, tag, result, write) {
   // --turns N：只打 N 回就停（复现某局的前几回）
   const cap = Math.min(E.era(g).maxTurns, +arg("turns", "99")) + 1;
   while (!g.chapters[g.chapters.length - 1].state.ending && g.chapters.length < cap) {
-    const decision = await playerMove(strategy, g);
-    const raw = decision === E.WAIT_ORDER ? "" : await claude(E.buildRoutePrompt(g, decision), "route");
-    const routes = raw ? E.parseRoutes(g, raw) : [];
+    let decision = await playerMove(strategy, g);
+    // 选项自带拆好的行程（网页点选项时也不再拆令）；亲手写的才调拆令
+    const picked = (g.chapters[g.chapters.length - 1].state.choices || []).find(c => c.label === decision);
+    const preset = picked && E.choiceRoutes(g, picked);
+    const raw = decision === E.WAIT_ORDER || preset ? "" : await claude(E.buildRoutePrompt(g, decision), "route");
+    const routes = preset || (raw ? E.parseRoutes(g, raw) : []);
+    if (picked && picked.plan) decision = `${picked.label}：${picked.plan}`;  // 与网页点选项时发出的一样
     const onRail = !!E.railBeat(g);
     E.applyRail(g, decision, E.parseCanonVerdict(raw));
     if (onRail && !E.railBeat(g)) console.log(`[${tag}] 第${E.cn(g.chapters.length)}回的命令偏离原著，转入自由推演`);
@@ -227,7 +236,7 @@ async function runGame(start, strategy, n) {
 }
 
 // 原著回归：照演义打下去，这些原著事件应当发生（已发生或变形发生）
-const REGRESSION = { jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "zhangren", "liuzhang"], hanzhong: ["tiandang", "dingjunshan", "kongying", "yangxiu", "hanzhongwang"], yiling: ["zhangfei", "huangzhong", "luxun", "huoshao", "tuogu"] };
+const REGRESSION = { qianli: ["guayin", "dongling", "xingyang", "gucheng", "juyi"], jingzhou: ["baiyi", "shiren", "mifang", "maicheng", "qinsha"], ruchuan: ["yanghuai", "pangtong", "kongming_in", "zhangren", "liuzhang"], hanzhong: ["tiandang", "dingjunshan", "kongying", "yangxiu", "hanzhongwang"], yiling: ["zhangfei", "huangzhong", "luxun", "huoshao", "tuogu"] };
 
 function canonReport(r) {
   // 连玩时 game.past 里是先前的时代，逐个时代列出原著对照；回归只看起始时代
