@@ -290,7 +290,11 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   }
 
   // 本回要报告状态的条目
-  const canonIds = g => [...openCanon(g).map(c => c.id), ...openBackground(g).map(b => b.id)];
+  // 原著轨上，本拍要了结的事件也要报（如"古城聚义"的前置"斩蔡阳"在同一回才发生，平常还不算临近）
+  const canonIds = g => {
+    const b = railBeat(g), cs = g.chapters[g.chapters.length - 1].state.canon || {};
+    return [...new Set([...openCanon(g).map(c => c.id), ...((b && b.fulfills) || []).filter(id => !isDone(cs[id])), ...openBackground(g).map(x => x.id)])];
+  };
   const allCanonIds = g => [...era(g).canonEvents.map(c => c.id), ...(AT.background || []).map(b => b.id)];
 
   function mergeCanon(prev, list, ids, chapter) {
