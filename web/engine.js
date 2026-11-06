@@ -82,6 +82,10 @@
   E.WAIT_ORDER = "不另发令，由前方依方略与授权自行处置";
   E.POWERS = { "便宜行事": "可自行决定进退、调兵、守城与应对使者", "遇事请示": "大事须遣使回成都请示，其间固守待命" };
   const era = E.era = g => AT.eras[(g && g.era) || "jingzhou"];
+  // 题材包：战争（默认，玩家坐镇后方下令）或人物剧本（kind: "persona"，玩家就是主角本人，亲自在场行动）
+  const isPersona = E.isPersona = g => era(g).kind === "persona";
+  // 玩家每回的决断叫什么：战争是"汉中王之令"，人物剧本是"关羽所为"
+  E.orderLabel = (g, i) => isPersona(g) ? `${era(g).player}所为` : `${E.playerTitle(g, i)}之令`;
   E.defaultPolicy = ev => ({ text: "", powers: Object.fromEntries((ev || AT.eras.jingzhou).delegates.map(d => [d, "便宜行事"])) });
   // 承接上一时代的开局没有预写，存在 g.inherited 里
   const startOf = E.startOf = g => g.start === "inherited" ? g.inherited : era(g).starts[g.start];
@@ -101,11 +105,13 @@
   /* ───────── 驿程 ───────── */
 
   const TIERS = E.TIERS = ["信使", "轻兵", "大军"];
+  // 时代可以自定行程的三档（人物剧本：信使 / 单骑 / 车仗）
+  const tiersOf = E.tiersOf = ev => (ev && ev.tiers) || TIERS;
   const MUSTER = { "大军": 10 };
   const routeNodes = E.routeNodes = ev => [...new Set(ev.routes.flatMap(r => [r[0], r[1]]))];
 
   const travelDays = E.travelDays = function (ev, from, to, tier) {
-    const t = TIERS.indexOf(tier), nodes = routeNodes(ev);
+    const t = tiersOf(ev).indexOf(tier), nodes = routeNodes(ev);
     if (t < 0 || !nodes.includes(from) || !nodes.includes(to)) return null;
     const dist = { [from]: 0 }, done = new Set();
     for (;;) {
@@ -121,7 +127,7 @@
     }
   };
 
-  const travelText = ev => `驿程表（天数依次为 信使 / 轻兵精锐 / 大军；大军出发前另需集结约十日。信使只能传令；轻兵是数百至两三千人的精骑或轻舟，少带辎重，能战而难久战；大军上万、带粮草辎重）：
+  const travelText = ev => `驿程表（${ev.tierNote || "天数依次为 信使 / 轻兵精锐 / 大军；大军出发前另需集结约十日。信使只能传令；轻兵是数百至两三千人的精骑或轻舟，少带辎重，能战而难久战；大军上万、带粮草辎重"}）：
 ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；${b}→${a}：${r.join(" / ")} 日（${note}）`).join("\n")}
 未列出的两地，按上表各段相加。`;
 
@@ -185,8 +191,10 @@ ${ev.routes.map(([a, b, f, r, note]) => `- ${a}→${b}：${f.join(" / ")} 日；
   const reignOf = E.reignOf = g => era(g).reign || (E.playerTitle(g) === "陛下" ? "章武" : "建安");
   const TIER_NAME = { 1: "第一档", 2: "第二档", 3: "第三档" };
 
+  // 时代可以改写人物此时的所求、底线、性格（如千里走单骑时关羽的所求是寻兄，不是北伐）
+  const cardIn = E.cardIn = (name, ev) => { const c = card(name); return c && ev && ev.cards && ev.cards[name] ? { ...c, ...ev.cards[name] } : c; };
   function cardText(name, ad, g) {
-    const c = card(name);
+    const c = cardIn(name, g && g.chapters ? era(g) : g);
     if (!c) return `- ${name}`;
     const t = titleAt(name, ad, g);
     const ab = c.abilities ? Object.entries(c.abilities).map(([k, v]) => k + v).join("、") : "";
@@ -238,7 +246,7 @@ ${on.map(n => cardText(n, ad, g)).join("\n")}${off.length ? `\n其他可能登�
   }
 
   const floorsText = ev => `各方立场底线（任何推演与选项都不得违背）：
-${ev.cast.filter(n => card(n) && card(n).floor).map(n => `- ${n}：${card(n).floor}`).join("\n")}`;
+${ev.cast.filter(n => cardIn(n, ev) && cardIn(n, ev).floor).map(n => `- ${n}：${cardIn(n, ev).floor}`).join("\n")}`;
 
   /* ───────── 原著事件池与背景大事 ───────── */
 
@@ -314,9 +322,10 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   }
   E.PASS = 60;
   // 整理终章的评分：分项限在 -15～15，总分由代码按 60 + 各项之和算出；有评分时，成局与败局以及格线为准
-  function scoreEnding(e) {
+  const scoreItems = E.scoreItems = ev => (ev && ev.scoreItems) || E.SCORE_ITEMS;
+  function scoreEnding(e, ev) {
     if (!e || !Array.isArray(e.score) || !e.score.length) return;
-    const items = E.SCORE_ITEMS.map(k => {
+    const items = scoreItems(ev).map(k => {
       const x = e.score.find(y => y && String(y.item || "").includes(k)) || {};
       const d = Math.max(-15, Math.min(15, Math.round(Number(x.delta) || 0)));
       return { item: k, delta: d, note: String(x.note || "") };
@@ -329,6 +338,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
   /* ───────── 规则与格式 ───────── */
 
   function simRules(g) {
+    if (isPersona(g)) return personaRules(g);
     const ev = era(g), seat = seatOf(g);
     return `你是《天命未定：${ev.name}》的世界推演者。这是以《三国演义》${ev.ref}为基线的反事实推演。${ev.player}（玩家）此刻身在${seat}，每回发出一道命令（也可以不发令）。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。全部用中文书写，不得夹杂英文字母或任何外文。
 
@@ -353,6 +363,7 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 
   // full：过渡要写出完整开局；平日推演只写有变化的城池、兵马、人物（省输出：claude.ai 的回复长度有上限，写长了会被截断）
   function simFormat(g, full) {
+    if (isPersona(g)) return personaFormat(g, full);
     const ev = era(g);
     const placesEx = JSON.stringify(Object.values(ev.starts)[0].state.places);
     const fk = Object.keys(factionsOf(ev)).map(k => `"${k}"`).join("");
@@ -386,15 +397,88 @@ ${items.map(b => `- [${b.id}] ${b.name}（原著${b.when}，${b.ref}）。前提
 handoff 写终局时交给下一段世界线的情形，每项只能取所列之一。` : ""}`;
   }
 
+  /* ───────── 人物剧本包：玩家就是主角本人 ───────── */
+
+  // 知情账里某人知道的事：{ id, what（他以为的样子）, how }
+  const knownBy = (f, who) => f && f.knownBy && f.knownBy[who];
+  E.knownFacts = (st, who) => Object.entries((st && st.facts) || {}).filter(([, f]) => knownBy(f, who)).map(([id, f]) => {
+    const k = knownBy(f, who);
+    return { id, what: (k && typeof k === "object" && k.as) || f.what || "", how: typeof k === "object" ? (k.how || "") : String(k), at: (f.at || {})[who] || f.chapter || null };
+  });
+  const FIRSTHAND = /亲历|亲见|亲眼|目击|当面|在场|亲身|亲闻|亲自/;
+
+  function personaRules(g) {
+    const ev = era(g), seat = seatOf(g), P = ev.player;
+    return `你是《天命未定：${ev.name}》的世界推演者。这是以《三国演义》${ev.ref}为基线的反事实推演。玩家扮演${P}本人，此刻身在${seat}。每回玩家替${P}做一件事：去哪里、对谁说什么、做什么，也可以暂不动作。你只负责推演事实，不写小说；另有说书人会把你定下的事写成文字。全部用中文书写，不得夹杂英文字母或任何外文。
+
+推演原则：
+0. 以《三国演义》（毛宗岗本）为准：人物性格、事件、地理与年代以演义为基线；演义没写到的，才用史书补充；两者冲突时以演义为准。人物按人物卡行事。
+1. 玩家就是${P}本人，不是坐镇后方的主公：${P}只能在自己所在之处说话、行事；不在场的事管不到，只能遣人、写信，按驿程在路上耽搁。别人不听${P}的"命令"：他们的去留、心意由自己按人物卡决定，只受${P}的言行、情义、威望与利害打动。${P}能做成什么，看他此刻的处境：身边有谁（retinue）、带着什么（goods）、伤势如何（self）、知道什么（facts）。玩家写的行动越出${P}的本事、所在或手中之物时，做不到的部分落空，写进事件。越出${P}的为人底线时（见"各方立场底线"），照做，但旁人按其所见反应，义名与人情随之变化，不得替玩家把行动改回去。
+2. 知情，这是本局最要紧的规则。每个人只能依据自己知道的事说话、行事，${P}也一样。事实记在知情账（facts）里：每条写清真相（what）、发生在哪里（where）、何时（date），以及谁知道、怎么知道的（knownBy：亲历、目击、某人面告、书信、传闻）。消息要靠人走、靠信送，不能快于驿程：某地发生的事，要等有人从那里来、或书信送到，旁人才会知道；${P}不在场的事件 known 写 false，传到了，才在那一回写一条 known 为 true 的"得知"事件，并在 facts 里给${P}添上 knownBy。传闻可以走样、可以是假的：knownBy 的值写成 {"how":"传闻","as":"他以为的样子"}。各方的谋划（plans 的 knows）、守关将领与追兵的行动，也只能依据他们所知（有没有接到某人的文书、前一处的消息到了没有）。
+3. 人物按自己的目标、性情和此刻所知行事，不迎合玩家，也不得违背立场底线。原著事件有"惯性"，两头都要守：${P}照原著行事、前提也都在时，原著事件照原著发生，过程和结果大体如原著，不得另加阻碍；前提已被改变，就不得强行发生，也不得为了拉回原路而设阻。每回在 canon 中逐条报告原著事件池的状态。
+4. 各方各有打算：每回先替各方（${ev.rivals}）谋划（写入 plans），再写事件。
+5. 前后一致：先核对事件记录与当前局势再推演。人物不能瞬移，死者不能再出场；随行的人与车仗跟着${P}走，被劫、走失、留下、加入都要写成事件，并更新 retinue。物品只在写明得失时增减（goods）。伤要养：带伤时战力打折扣，写进 self 的 wounds，痊愈也要写明。人情与誓约（bonds、vows）的变化要有来由，写进事件。
+6. 公正而不刁难：合乎情理、切中要害的做法应当见效；坏结果来自人物性格、信息不明与对手谋略，不是无端厄运。按演义笔法，${P}这样的第一档名将，单挑寻常守将几合即胜；众寡悬殊、中伏、火攻、带伤、护着车仗不能脱身时，也会吃亏，原因要写在事件里。
+7. 每回推演到下一个"决断时刻"为止，限在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间。决断时刻只有这几种：得到要紧的新消息；有人拦路、相求、相劝；恩义两难；身陷险境或计谋败露；上回所为已有分晓、局面已非当初可料。赶路、宴饮、日常起居都不是决断时刻，写进事件后继续推进。写出其间三至八个事件，按时间先后，每个写清谁、在哪、做什么、为什么（依其所知的动机）、结果，以及${P}在本回末是否已得知（known）。
+8. 为说书人定下一至三条伏笔（foreshadow）：line 是可以写进正文的一个具体细节或反常之处，不点破；truth 是它暗示的真相。
+9. 回数不设目标，最多${cnBig(ev.maxTurns)}回。原著的时间表只是参照：${P}走得快，局势就快，不得为了凑回数而拖延。一旦出现决定性结局（${ev.decisive}），本回即为终章。原著的结局是：${ev.baseline}（约在${ev.endBy}）。败局线：${ev.lossLine}；一旦触及败局线，本回即为终章，ending.type 写"败局"；其余终章写"成局"。终章都要按格式评分，原著结局为 60 分及格。
+
+身边人的话与选项：
+10. 先写 assessment：${P}此刻的处境——身在何处、身边有谁、带着什么、知道什么、前面是什么。
+11. counsel：此刻与${P}同在一处的人说的话，零至三条（随行的人、来使、旁人），各用其口吻，只依据他们自己所知；how 写"面陈"。远方来信写成"书信"，并写明何时何地所发，信在路上耽搁，所言只依据发信时所知。没有人在身边就写 []，不要硬凑。
+12. choices：三个方向不同、各有代价的做法，plan 写具体怎么做（去哪、对谁说什么、带上谁、留下什么、走哪条路），像${P}心里拿定的主意；至少一项是明眼人此刻会认真考虑、确有成算的。by 写出这个主意的人（必须就是他在 counsel 里说的），是${P}自己的念头就写空字符串。选项一律合乎${P}的为人底线，只依据${P}此刻所知；uses 列出它依据的 facts 的 id（必须是${P}已经知道的）。若演义中${P}此时确有对应的做法，在该选项加 "canon": true。`;
+  }
+
+  function personaFormat(g, full) {
+    const ev = era(g), P = ev.player;
+    const gaugesEx = JSON.stringify(Object.fromEntries(Object.keys(ev.gauges).map(k => [k, 50])));
+    const ids = canonIds(g), fk = Object.keys(factionsOf(ev)).map(k => `"${k}"`).join("");
+    const tiers = tiersOf(ev);
+    return `只输出一个 JSON 对象，不要任何其他文字，不加代码块标记。字段如下：
+{
+  "date": "本回末的时间，写明年、月、旬，如 建安五年五月中旬（不要只写季节）",
+  "plans": [{"side":"某方或某人","goal":"目标，十五字以内","plan":"当前打算，三十字以内","status":"筹备|待发|已发动|改图|搁置","knows":"他们此刻所知的${P}动向，可含误判，二十字以内"}],
+  "events": [{"date":"五月中旬","who":"人物","where":"地点","what":"做了什么，四十字以内","why":"动机，十五字以内","result":"结果，二十字以内","known":true}],
+  "canon": [{"id":"${ids[0] || "无"}","status":"已发生|变形发生|失效|未到时","note":"变形或失效的原因，三十字以内"}],
+  "places": {"某地":"归属"},
+  "figures": [["人物","地点","八字以内的现状"]],
+  "gauges": ${gaugesEx},
+  "self": {"where":"${P}所在，地图上的地名开头","wounds":"伤势，无则写无","mount":"坐骑","arms":"兵器","title":"官爵与印信","pass":"通行文凭：无，或写明谁所发"},
+  "retinue": [["随行的人或车仗","八字以内的现状"]],
+  "goods": [["随身之物","从哪来、有什么用，十五字以内"]],
+  "bonds": [{"with":"人物","what":"具体的人情或嫌隙，二十字以内","since":"何时因何而起，十字以内","kind":"亲缘|君臣|情谊|敌对"}],
+  "vows": [["誓约或允诺","守着|已了|已违"]],
+  "facts": [{"id":"四到八字的名目","what":"真相，三十字以内","where":"在哪里","date":"何时","knownBy":{"${P}":"怎么知道的，十字以内","某人":"怎么知道的"}}],
+  "intel": ["${P}此刻确知或听闻之事，三至六条"],
+  "hidden": ["${P}尚不知道的暗线，二至五条"],
+  "foreshadow": [{"line":"伏笔细节，三十字以内","truth":"真相，四十字以内"}],
+  "chronicle": "本回纪要，一句，三十字以内",
+  "assessment": "${P}此刻的处境，六十字以内",
+  "counsel": [{"who":"人物","how":"面陈","says":"说的话，五十字以内"}],
+  "choices": [{"label":"做法，二十字以内","plan":"具体怎么做，六十字以内","detail":"利弊取舍，四十字以内","by":"出这个主意的人，没有写空字符串","uses":["依据的 facts 的 id"],"routes":["谁>出发地>目的地>${tiers.join("|")}"]}],
+  "ending": null
+}
+说明：整个 JSON 控制在三千五百字以内。plans 写曹操一方与其他相关各方，各一条。canon 逐条报告"待核对"的原著事件，id 只能取：${ids.join("、") || "（无，写 []）"}。places 只写本回归属有变化的地方（没有变化写 {}），值只能是${fk}之一（${Object.entries(ev.factionNames || {}).map(([k, v]) => `${k}=${v}`).join("，")}；争=正在交战或归属未定）。
+figures 列八至十二名关键人物，where 写${P}所知的下落（不知道就写"下落不明"），note 只写${P}看得到的现状；人物真实的去向与暗中的图谋写进 hidden 与 plans，不写在 figures。已死者 where 写"已故"。地点以地图上的地名开头，细处写在后面（如"许都（相府）"）。
+self、retinue、goods、bonds、vows 每回照现状整张写出（没有变化也照抄上回），name 尽量沿用上回。
+facts 只写本回新出现的事，以及本回有人新知道了的旧事（照旧写 id，knownBy 只写新知道的人）；没有就写 []。${P}亲历、目击的写"亲历""目击"；别人告诉的写"某某面告"；书信写"某某书信"。所知与真相不同时，knownBy 的值写成 {"how":"传闻","as":"他以为的样子"}。
+gauges 为0到100的整数：${Object.entries(ev.gauges).map(([k, v]) => `${k}=${v[1]}`).join("，")}。
+choices 正好三项。每项的 routes 把 plan 拆成要走的路和要送的信，每项一个短字符串"谁>出发地>目的地>方式"：${P}本人连同随行一起走写"${P}>…>…>${tiers[2]}"，${P}撇下车仗独自疾驰写"${tiers[1]}"，遣人送信写"${tiers[0]}"；就地行动（不挪地方）目的地与出发地相同；地点只能取：${routeNodes(ev).join("、")}。
+若本回为终章：ending 写 {"type":"成局或败局","title":"四到八字的结局名","summary":"一百字以内的结局","vs_canon":"与原著相比的关键分歧，一百字以内","turning_points":["全局中改变走向的两到四个关键决断，各三十字以内"],"score":[${scoreItems(ev).map(k => `{"item":"${k}","delta":0,"note":"二十字以内"}`).join(",")}]}，counsel 与 choices 写 []。
+评分（score）以原著结局为基准：${ev.baseline}。六项逐一与它相比，好为正、差为负，每项为 -15 到 15 的整数，note 写得失的理由：${ev.scoreNote || ""}照原著走完的结局各项都是 0。总分 = 60 + 六项之和，原著正好 60 分；总分低于 60 就是败局，type 写"败局"。评分不必严苛，大处着眼。`;
+  }
+
   function narrateRules(g, ad, material) {
     const ev = era(g);
     return `你是《天命未定：${ev.name}》的说书人。推演者已经定下本回发生的事，你把它写成一回章回小说。
 
 1. 文风仿毛宗岗本《三国演义》：半文半白，章回体，回目为对仗的两句。正文要有场面、人物对白与细节，节奏紧凑，约七百到一千字。本回若跨越数月、有几件大事，决定胜负的那一仗与人物命运的转折（如大战、擒杀、降服）要正面写出场面、篇幅给足，次要的事可以略写；不得从大战之后写起，以"却说……之后"把本回的主战一笔带过。可以在结尾用"正是：……"两句诗收束，或以"未知……且看下文分解"作结。回目中的人物用姓名、字、尊称或当时的职务（如"关云长""关公""吕子明""孔明""汉中王""吕都督"，职务须合乎当年），不得截取单字（如"云""蒙""亮"）。结尾诗句与回目不得重复前几回已用过的字句。全部用中文，不得夹杂英文字母或任何外文，不得出现现代词汇或"玩家""系统""选项"等字样。
 2. 只写已定之事：不得增加改变局势的新事件，不得改动任何事件的结果、时间、地点和人物去向；可以补充场面、对白、心理与细节。
-3. known 为 false 的事件，${ev.player}一方并不知道：可以"却说……"切去写一个侧影，但不点破其谋。
+${isPersona(g) ? `3. 本作跟着${ev.player}走：正文以${ev.player}的所见所闻为主。known 为 false 的事件${ev.player}并不知道，可以"却说……"切去写一个侧影，但不点破其谋，也不得写成${ev.player}已经知道。
 4. 把每条伏笔的 line 化作正文中一个具体可辨的细节，不点破 truth。
-5. 结尾落到${ev.player}需要再作决断的时刻：把谋士进言写成朝堂上的一幕（远方来信则写拆书而读），但不替${ev.player}做决定。
+5. 结尾落到${ev.player}需要再拿主意的时刻：把身边人的话写成当场的一幕（远方来信则写拆书而读），但不替${ev.player}做决定。` : `3. known 为 false 的事件，${ev.player}一方并不知道：可以"却说……"切去写一个侧影，但不点破其谋。
+4. 把每条伏笔的 line 化作正文中一个具体可辨的细节，不点破 truth。
+5. 结尾落到${ev.player}需要再作决断的时刻：把谋士进言写成朝堂上的一幕（远方来信则写拆书而读），但不替${ev.player}做决定。`}
 6. 人物言行按演义设定。事件里有单挑的，按演义笔法写出兵器、回合与阵前气势。
 7. 称谓与官爵必须合乎${ad}年当时，遵守下面的称谓表，不得用后来的封号、官职与谥号。对白里当面称呼人，用称谓表里的称呼、表字或尊称；部下、晚辈不得直呼主公、尊长的名（如称刘备为"备"），名只用于本人自称（如"备闻……"）或敌人辱骂。关羽、张飞与刘备是结义兄弟，私下称"兄长""大哥"，朝堂上称"大王""主公"（称帝后称"陛下"）。
 8. 地理与水势照推演写，不得颠倒：长江自西向东流，自益州、峡口东下是顺流（行军快，进易退难），自江东、荆州西上是逆流；谋士进言里的利弊照原意，不得说反。
@@ -406,12 +490,14 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
   /* ───────── 原著轨：一路照原著下令时，按原著节拍推演 ───────── */
 
   // 当前这一回的原著节拍；不在原著开局、或已偏离原著，返回 null
+  // 原著节拍：开局可以有自己的一套（同一时代的两个开局起点不同，如千里走单骑的屯土山与得信）
+  const pathOf = E.pathOf = g => (startOf(g) || {}).canonPath || era(g).canonPath;
   const railBeat = E.railBeat = g => {
-    const path = era(g).canonPath, so = startOf(g);
+    const path = pathOf(g), so = startOf(g);
     if (!path || !so || !so.rails || g.rail === false) return null;
     return path[g.chapters.length - 1] || null;
   };
-  const nextBeat = g => railBeat(g) && era(g).canonPath[g.chapters.length] || null;
+  const nextBeat = g => railBeat(g) && pathOf(g)[g.chapters.length] || null;
   // 这道命令是否与原著做法相同：选了 ★ 选项；原著不另发令而玩家也不发令；或快速档判定本质相同（verdict）
   E.matchesCanon = function (g, decision, verdict) {
     const beat = railBeat(g);
@@ -434,6 +520,22 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
 
   E.buildRoutePrompt = function (g, decision) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state, beat = railBeat(g);
+    if (isPersona(g)) {
+      const t = tiersOf(ev);
+      return `把${ev.player}这一步要做的事，拆成要走的路和要送的信。全部用中文。
+地点只能从这些里选：${routeNodes(ev).join("、")}。
+每项写一个短字符串"做什么>出发地>目的地>方式"，需要时末尾再加">序号"：
+- 做什么：八字以内，如"护车仗往东岭关""遣孙乾送信"；
+- 出发地：${ev.player}此刻在${seatOf(g)}；遣别人去，写那人此刻所在之地；
+- 目的地：要去或信要送到的地方；就地行事（不挪地方，如当面说话、在此等候）写与出发地相同；
+- 方式：${ev.player}连同随行车仗一起走写"${t[2]}"，撇下车仗独自疾驰写"${t[1]}"，遣人送信写"${t[0]}"；
+- 序号：要等前面某一项办完才从那里出发时，末尾加">"和那一项的序号（从 1 数）。
+${ev.player}此刻随行：${(st.retinue || []).map(r => r.name).join("、") || "无"}
+人物此刻所在（${ev.player}所知）：${(st.figures || []).map(f => `${f.name}在${f.where}`).join("；")}
+${ev.player}要做的事：${decision}
+只输出一个 JSON 数组，例如 ["护车仗往某地>${seatOf(g)}>${routeNodes(ev)[0]}>${t[2]}"]${beat && !beat.wait ? `
+另外判断：演义中${ev.player}此时的做法是「${beat.label}」。这一步与它是否本质相同（去向、对谁、意图一致即算相同，措辞和细节不同无妨；多出或少了关键的一步就算不同）？在 JSON 数组之后另起一行，只写"原著：是"或"原著：否"。` : ""}`;
+    }
     return `把${ev.player}的这道命令拆成需要送出或派出的各项。全部用中文。
 地点只能从这些里选：${routeNodes(ev).join("、")}。
 每项写一个短字符串"做什么>出发地>目的地>方式"，需要时末尾再加">序号"：
@@ -472,7 +574,7 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
       const after = Number(r.after);
       return {
         part: String(r.part), from: node(r.from) || seatOf(g), to: node(r.to),
-        tier: TIERS.find(x => String(r.tier || "").includes(x)) || "信使",
+        tier: tiersOf(era(g)).find(x => String(r.tier || "").includes(x)) || tiersOf(era(g))[0],
         ...(Number.isInteger(after) && after >= 1 && after <= i ? { after: after - 1 } : {})
       };
     });
@@ -520,6 +622,20 @@ ${titleTable(ev, ad, n => n === ev.player || (material || "").includes(n), g)}`;
 
   E.buildOrderCheckPrompt = function (g, decision) {
     const ev = era(g), st = g.chapters[g.chapters.length - 1].state;
+    if (isPersona(g)) {
+      const c = cardIn(ev.player, ev) || {};
+      return `你在审核一个三国故事游戏里玩家写下的行动。玩家扮演${ev.player}本人，此刻是${st.date}，身在${seatOf(g)}。全部用中文，不得夹杂英文字母。
+${ev.player}的处境：${JSON.stringify({ self: st.self, retinue: st.retinue, goods: st.goods })}
+${ev.player}所知：${E.knownFacts(st, ev.player).map(f => f.what).join("；") || "（无）"}
+人物此刻所在（${ev.player}所知）：${(st.figures || []).map(f => `${f.name}：${f.where}（${f.note || ""}）`).join("；")}
+${ev.player}的为人底线：${c.floor || "（无）"}
+玩家写的行动：${decision}
+
+逐条检查，只挑下面几类问题，别的（冒险、吃亏、代价大）一概不管，那是玩家的选择：
+- 无效：出现这个时代没有的东西，或与当前局势毫不相干的胡话，或整段只是要天时、要别人自己犯错，而没有${ev.player}自己能做的事；
+- 有疑：要不在身边的人当面做事（只能写信、遣人）；用了${ev.player}手里没有的东西或没有的本事；时间、地理上显然办不到；用到了${ev.player}此刻并不知道的事（只能依据上面"所知"）；违背${ev.player}的为人底线（这一条写成"${ev.player}不会这样做：……"，玩家坚持时仍可照做，后果自负）。
+只输出一个 JSON 对象：{"verdict":"可行|有疑|无效","issues":["每条问题一句话，二十五字以内"]}。没有问题就 {"verdict":"可行","issues":[]}。`;
+    }
     return `你在审核一个三国策略游戏里玩家下的手令。玩家扮演${ev.player}，此刻是${st.date}，身在${seatOf(g)}。全部用中文，不得夹杂英文字母。
 人物此刻所在与现状：${(st.figures || []).map(f => `${f.name}：${f.where}（${f.note || ""}）`).join("；")}
 兵马此刻所在：${(st.forces || []).filter(f => f.known !== false).map(f => `${f.name}在${f.where}，${f.troops}`).join("；")}
@@ -662,7 +778,14 @@ ${log}
 【当前局势】（plans 为各方上回的谋划${st.beyond && Object.keys(st.beyond).length ? "；beyond 是不在本时代地图上的城池归属，照旧，本时代的战事波及时才变，变了写进事件" : ""}）
 ${JSON.stringify(st)}
 
-【方略与授权】
+${isPersona(g) ? `【${ev.player}所知】（知情账里${ev.player}已经知道的事；choices 的 uses 只能取这些 id，或本回新让他知道的）
+${E.knownFacts(cur, ev.player).map(f => `- [${f.id}] ${f.what}（${f.how}）`).join("\n") || "（无）"}
+
+【${ev.player}本回所为】
+${decision}
+
+【行程与书信】（由驿程表算定，必须遵守：${ev.player}本人在抵达之前不在目的地；书信送达之前，收信人不知道信里的事）
+${(orders || []).map(o => orderLine(o, reign)).join("\n") || "（无在途的行程与书信）"}` : `【方略与授权】
 方略：${g.policy.text.trim() || "（未另立方略）"}
 授权：${ev.delegates.map(d => `${d}：${g.policy.powers[d] || "便宜行事"}`).join("；")}（授权只在此人身处前方时有效；方略与授权的改动随本回信使送达后才生效）${Object.keys(postsOf(g)).length ? `\n坐镇：${Object.entries(postsOf(g)).map(([k, v]) => `${k}镇${v.join("、")}`).join("；")}（未奉${ev.player}之令不得离开）` : ""}
 
@@ -670,7 +793,7 @@ ${JSON.stringify(st)}
 ${decision}
 
 【军令驿程】（由驿程表算定，必须遵守；本回时间段内送达的，要写出接令情形）
-${(orders || []).map(o => orderLine(o, reign)).join("\n") || "（无在途军令）"}
+${(orders || []).map(o => orderLine(o, reign)).join("\n") || "（无在途军令）"}`}
 
 ${beat ? `请推演第${cn(n)}回，照原著节拍推演到${beat.to}。` : `请推演第${cn(n)}回${n >= ev.maxTurns ? "（终章）。" : `，推演到下一个需要${ev.player}决断的时刻，`}${n >= ev.maxTurns ? "" : `在${ev.turnSpan[0]}日至${ev.turnSpan[1]}日之间${span}。`}`}${budget}${last}${rail}
 
@@ -730,7 +853,8 @@ ${simFormat(g)}`;
     if (Array.isArray(s.figures)) s.figures = s.figures.map(x => Array.isArray(x) ? { name: x[0], where: x[1], note: x[2] } : x);
     if (!Array.isArray(s.figures) || !s.figures.length) s.figures = prev.figures;
     const goneF = f => /已覆没|已溃散|已并入|已散尽|已解散|全军覆没/.test(String(f.troops || ""));
-    if (!full && Array.isArray(s.enemy) && Array.isArray(s.forces) && s.forces.length) {
+    if (isPersona(g)) { s.forces = []; delete s.enemy; personaNormalize(g, s, prev, full); }
+    else if (!full && Array.isArray(s.enemy) && Array.isArray(s.forces) && s.forces.length) {
       // 我方各部整张替换（标 own），敌军按 name 合进上一回的敌军名单
       const own = s.forces.filter(f => f && f.name && !goneF(f)).map(f => ({ ...f, known: true, own: true }));
       const marked = (prev.forces || []).some(f => f.own);
@@ -747,7 +871,8 @@ ${simFormat(g)}`;
     s.date = toReign(s.date, reign);
     for (const e of s.events) if (e && e.date) e.date = toReign(e.date, reign);
     const all = Array.isArray(s.choices) ? s.choices.filter(c => c && c.label) : [];
-    const ok = all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
+    // 刘备的立场底线（不联曹）只管战争包；人物剧本的底线写在推演规则里（关羽屯土山"降汉不降曹"是原著做法）
+    const ok = isPersona(g) ? all : all.filter(c => !STANCE_BREACH.test(c.label + (c.detail || "")));
     s.choices = ok.slice(0, 3);
     s.dropped = all.length - ok.length;
     // 进言对应哪个选项，看选项的 by（谁的主张）；旧格式没有 by，就按进言自己标的序号（选项删去后重新映射）
@@ -756,13 +881,37 @@ ${simFormat(g)}`;
       ? s.choices.findIndex(o => o.by && String(o.by).includes(c.who)) + 1
       : s.choices.indexOf(all[(Number(c.choice) || 0) - 1]) + 1 }));
     if (s.ending && !s.ending.type) s.ending.type = "成局";
-    scoreEnding(s.ending);
+    scoreEnding(s.ending, ev);
     if (s.ending) {
       cleanHandoff(ev, s.ending);
       // 胜局：达成本时代的胜利条件（如取长安），且总分及格
       if (ev.victory && ev.victory.when(s, g) && s.ending.type !== "败局") { s.ending.type = "胜局"; s.ending.victory = ev.victory.label; }
     }
     return s;
+  }
+
+  // 人物剧本的局势：主角处境、随行、随身之物、人情、誓约照现状整张替换（没写就沿用上回）；知情账按 id 累计，谁新知道了记下第几回
+  function personaNormalize(g, s, prev, full) {
+    const n = full ? 1 : g.chapters.length + 1;
+    const obj = v => v && typeof v === "object" && !Array.isArray(v) ? v : null;
+    const pairs = (v, a, b) => Array.isArray(v) ? v.map(x => Array.isArray(x) ? { [a]: String(x[0] || ""), [b]: String(x[1] || "") } : x).filter(x => x && x[a]) : null;
+    s.self = { ...(prev.self || {}), ...(obj(s.self) || {}) };
+    for (const [k, a, b] of [["retinue", "name", "note"], ["goods", "name", "note"], ["vows", "what", "status"]]) {
+      const v = pairs(s[k], a, b);
+      s[k] = v && (v.length || full) ? v : (prev[k] || []);
+    }
+    s.bonds = Array.isArray(s.bonds) && s.bonds.length ? s.bonds.filter(b => b && b.with && b.what) : (prev.bonds || []);
+    const list = Array.isArray(s.facts) ? s.facts : obj(s.facts) ? Object.entries(s.facts).map(([id, f]) => ({ id, ...f })) : [];
+    const facts = JSON.parse(JSON.stringify(full ? {} : prev.facts || {}));
+    s.newFacts = [];
+    for (const x of list) {
+      if (!x || !x.id) continue;
+      const id = String(x.id), old = facts[id], kb = obj(x.knownBy) || {}, at = { ...((old && old.at) || {}) };
+      for (const who of Object.keys(kb)) if (!(old && old.knownBy && old.knownBy[who])) { at[who] = n; s.newFacts.push({ id, who }); }
+      facts[id] = { ...(old || { chapter: n }), ...Object.fromEntries(Object.entries(x).filter(([k]) => !["id", "knownBy"].includes(k))), knownBy: { ...((old && old.knownBy) || {}), ...kb }, at };
+    }
+    s.facts = facts;
+    if (!s.newFacts.length) delete s.newFacts;
   }
 
   // 模型输出的 JSON 常有小毛病：字符串里夹了没转义的英文引号或换行、多余的逗号，或者回复被截断。
@@ -910,8 +1059,42 @@ ${simFormat(g)}`;
     if (before > 0 && after - before >= 10000 && after > before * 1.2 && !(s.events || []).some(e => /增兵|援兵|援军|调来|调兵|招募|新募|募兵|来援|西援|东援|南援|北援|降卒|收编|征发|发兵|羌兵|羌王|胡骑/.test(`${e.what || ""}${e.result || ""}`)))
       problems.push(`敌军总数从上回约${Math.round(before / 1000) / 10}万涨到约${Math.round(after / 1000) / 10}万，事件里却没写援兵从哪里来：兵有定数，分兵后各部之和不得多于原数；确有援兵要写成事件（谁、从哪里、带多少），否则把多出的数减掉`);
     for (const f of s.figures || []) if (dead.has(f.name) && !/已故|死|殁/.test(String(f.where || ""))) problems.push(`${f.name}早已故去，人物表里却写他在${f.where}：where 改写"已故"`);
+    if (isPersona(g)) problems.push(...personaProblems(g, s, prev));
     return problems;
   };
+
+  // 人物剧本的复核：未卜先知（选项依据主角不知道的事）、消息快过驿程、不在身边的人当面进言
+  function personaProblems(g, s, prev) {
+    const ev = era(g), P = ev.player, out = [];
+    const nodes = routeNodes(ev), at = w => nodes.find(n => w && String(w).includes(n));
+    const y = yearOf(prev.date), t1 = parseDate(s.date, y);
+    const facts = s.facts || {};
+    for (const c of s.choices || []) for (const id of Array.isArray(c.uses) ? c.uses : []) {
+      const f = facts[id];
+      if (!f) out.push(`选项「${c.label}」依据的"${id}"不在知情账里：uses 只能写 facts 里有的 id，没有这件事就不能拿来做选项`);
+      else if (!knownBy(f, P)) out.push(`选项「${c.label}」依据的"${id}"（${f.what}）${P}并不知道：选项只能依据${P}已知的事，要么先写明他怎样得知（事件与 facts 的 knownBy），要么改掉这个选项`);
+    }
+    // 新知道的事：不是亲历目击的，消息从发生之地传到${P}身边，不得快过信使
+    const here = [at((prev.self || {}).where), at((s.self || {}).where)].filter(Boolean);
+    for (const { id, who } of s.newFacts || []) {
+      if (who !== P) continue;
+      const f = facts[id], k = knownBy(f, P), how = typeof k === "object" ? String(k.how || "") : String(k || "");
+      if (FIRSTHAND.test(how)) continue;
+      const from = at(f.where), t0 = parseDate(f.date, y);
+      if (!from || t0 == null || t1 == null || !here.length || here.includes(from)) continue;
+      const need = Math.min(...here.map(h => travelDays(ev, from, h, tiersOf(ev)[0])).filter(x => x != null));
+      if (Number.isFinite(need) && t1 - t0 < need) out.push(`${P}本回得知"${f.what}"（${how}），此事${f.date}发生在${from}，消息最快${need}日才能传到${here.join("或")}，本回末只过了${Math.max(0, t1 - t0)}日：要么推迟到消息能到的时候再让他知道，要么写明是谁、怎样更早送来的（如事先就在路上的使者）`);
+    }
+    // 当面进言的人要在${P}身边：随行之人，或人物表里与${P}同在一地
+    const me = at((s.self || {}).where) || seatOf(g);
+    const near = new Set([...(s.retinue || []).map(r => E.whoIs(r.name) || r.name)]);
+    for (const c of s.counsel || []) {
+      if (!/面/.test(String(c.how || ""))) continue;
+      const who = E.whoIs(c.who) || c.who, f = (s.figures || []).find(x => x.name === who), w = f && at(f.where);
+      if (!near.has(who) && w && me && w !== me) out.push(`${c.who}在${f.where}，${P}在${me}，不能当面进言：改成书信（写明何时何地所发，按驿程耽搁），或去掉`);
+    }
+    return out;
+  }
 
   // 兵马表里标成已知的敌军，却写出了暗线里的实数：同一地点，兵数与暗线里的数对得上，而玩家所知与已知事件里并没有这个数。
   // 我方兵马（名号或备注里有我方人物）不查；兵数写得模糊（不详、未知）的，算玩家只有探报，不查
@@ -1328,6 +1511,31 @@ ${problems.map(p => "- " + p).join("\n")}
     return true;
   };
 
+  /* ───────── 本回变化：比较前后两回的局势，列出看得见的变化（不调模型） ───────── */
+
+  E.turnDiff = function (g, prev, s) {
+    if (!prev || !s) return [];
+    const ev = era(g), P = ev.player, out = [];
+    const SELF = { where: "所在", wounds: "伤势", mount: "坐骑", arms: "兵器", title: "官爵印信", pass: "文凭" };
+    for (const [k, l] of Object.entries(SELF)) { const a = (prev.self || {})[k], b = (s.self || {})[k]; if (b && a !== b && k !== "where") out.push(`${l}：${a || "无"} → ${b}`); }
+    const names = l => new Map((l || []).map(x => [x.name, x.note || ""]));
+    for (const [k, l] of [["retinue", "随行"], ["goods", "随身"]]) {
+      const a = names(prev[k]), b = names(s[k]);
+      for (const [n, v] of b) if (!a.has(n)) out.push(`${l}添了：${n}${v ? `（${v}）` : ""}`); else if (a.get(n) !== v && k === "retinue") out.push(`${n}：${v}`);
+      for (const n of a.keys()) if (!b.has(n)) out.push(`${l}少了：${n}`);
+    }
+    const bk = b => `${b.with}|${b.what}`, pb = new Set((prev.bonds || []).map(bk));
+    for (const b of s.bonds || []) if (!pb.has(bk(b))) out.push(`人情：${b.with}，${b.what}`);
+    const pv = new Map((prev.vows || []).map(v => [v.what, v.status]));
+    for (const v of s.vows || []) if (pv.get(v.what) !== v.status) out.push(`誓约「${v.what}」：${v.status}`);
+    for (const { id, who } of s.newFacts || []) if (who === P) { const f = E.knownFacts(s, P).find(x => x.id === id); if (f) out.push(`得知：${f.what}（${f.how}）`); }
+    for (const [k, v] of Object.entries(ev.gauges || {})) { const d = Number((s.gauges || {})[k]) - Number((prev.gauges || {})[k]); if (d) out.push(`${v[0]} ${d > 0 ? "+" : ""}${d}`); }
+    for (const [w, v] of Object.entries(s.places || {})) if ((prev.places || {})[w] && prev.places[w] !== v) out.push(`${w}：${(ev.factionNames || {})[prev.places[w]] || prev.places[w]} → ${(ev.factionNames || {})[v] || v}`);
+    const wasDead = new Set((prev.figures || []).filter(f => /已故/.test(f.where || "")).map(f => f.name));
+    for (const f of s.figures || []) if (/已故/.test(f.where || "") && !wasDead.has(f.name)) out.push(`${f.name}已故`);
+    return out;
+  };
+
   /* ───────── 世界图谱：只用玩家已知的、到某一回为止的内容 ───────── */
 
   // 历代各回排成一条线：{ seg, era, i, state, decision, title }；i 是该时代里的回次（0 为开局）
@@ -1471,7 +1679,7 @@ ${g.chapters.slice(0, i).filter(c => c.text).map(c => `${c.title}${(c.text.split
 ${recap}【上一回结尾】
 ${tail || "（无）"}
 
-【${ev.player}上一回的命令】
+【${isPersona(g) ? `${ev.player}上一回所为` : `${ev.player}上一回的命令`}】
 ${(prev && prev.decision) || "（无）"}
 
 【本回时间】${s.date}
@@ -1479,11 +1687,15 @@ ${(prev && prev.decision) || "（无）"}
 【本回已定之事】（按时间先后）
 ${JSON.stringify(events)}
 
-【前方自决】
+${isPersona(g) ? `【${ev.player}此刻的处境】
+${JSON.stringify({ self: s.self, retinue: s.retinue, goods: s.goods })}
+
+【本回到达的行程与送达的书信】
+${(s.delivered || []).map(o => orderLine(o, reignOf(g))).join("\n") || "（无）"}` : `【前方自决】
 ${JSON.stringify(s.autonomous)}
 
 【本回送达的军令】
-${(s.delivered || []).map(o => orderLine(o, reignOf(g))).join("\n") || "（无）"}
+${(s.delivered || []).map(o => orderLine(o, reignOf(g))).join("\n") || "（无）"}`}
 
 【必须埋下的伏笔】
 ${JSON.stringify(s.foreshadow)}
@@ -1494,7 +1706,7 @@ ${(s.figures || []).map(f => `${f.name}：${f.where}，${f.note || ""}`).join("�
 【本回结尾${ev.player}面对的局面】
 ${s.assessment || s.chronicle || ""}${s.ending ? `\n本回为终章，结局：${s.ending.title}。${s.ending.summary}` : ""}
 
-【谋士进言】（写成结尾朝堂上的一幕或拆读来信）
+【${isPersona(g) ? "身边人的话】（写成结尾当场的一幕或拆读来信）" : "谋士进言】（写成结尾朝堂上的一幕或拆读来信）"}
 ${(s.counsel || []).map(c => `${c.who}（${c.how}）：${c.says}`).join("\n") || "（无）"}
 
 请写第${cn(i + 1)}回。第一行写回目，形如"第${cn(i + 1)}回　七字或八字上句　七字或八字下句"，上下句字数相同（同为七字或同为八字），空一行后写正文，段落之间空一行。只输出回目和正文，只写一遍：不要先打草稿再重写，不要"注""说明"之类的话。`;
