@@ -1328,6 +1328,119 @@ ${problems.map(p => "- " + p).join("\n")}
     return true;
   };
 
+  /* ───────── 世界图谱：只用玩家已知的、到某一回为止的内容 ───────── */
+
+  // 历代各回排成一条线：{ seg, era, i, state, decision, title }；i 是该时代里的回次（0 为开局）
+  E.atlasTurns = g => segmentsOf(g).flatMap((seg, s) => (seg.chapters || []).map((c, i) => ({ seg: s, era: seg.era, i, state: c.state || {}, decision: c.decision || "", title: c.title || "" })));
+
+  const REL_KIND = [
+    ["亲缘", /父|母|子|女|兄|弟|姊|妹|妻|夫人|嫂|叔|侄|甥|舅|族|姻|结义|义父|义子|亲家/],
+    ["敌对", /仇|恨|敌|杀|斩|擒|俘|不睦|嫌|疑|忌|轻视|争|攻|袭|伐|辱|叛/],
+    ["君臣", /倚重|主公|臣|部将|部下|麾下|辅佐|效力|奉|拜为|任用|器重|赏识|提拔|帐下|属/],
+    ["情谊", /友|交|恩|敬|重|服|信|义|救|援|同|共|助|和|好|亲近|厚待/]
+  ];
+  const relKind = text => (REL_KIND.find(([, re]) => re.test(text)) || ["关联"])[0];
+
+  // upto：图谱看到第几条（E.atlasTurns 的下标），省略为最新一回。done：本时代已终局，暗事也可以看
+  E.atlas = function (g, upto) {
+    const turns = E.atlasTurns(g), k = Math.max(0, Math.min(turns.length - 1, upto == null ? turns.length - 1 : upto));
+    const seen = turns.slice(0, k + 1), now = turns[k], ev = AT.eras[now.era] || era(g);
+    const done = !!now.state.ending;
+    const ad = adOf(now.state.date);
+    const players = [...new Set(seen.map(t => (AT.eras[t.era] || {}).player).filter(Boolean))];
+    // 人物：到此为止在名单里出现过的人，取最后一次的下落；阵营按人物卡与历次改换阵营
+    const people = {};
+    let sides = {};
+    for (const t of seen) {
+      sides = { ...sides, ...sidesOf(t.state) };
+      for (const f of t.state.figures || []) if (f && f.name && (card(f.name) || String(f.name).length > 1)) people[f.name] = { name: f.name, where: String(f.where || ""), note: String(f.note || ""), date: t.state.date, era: (AT.eras[t.era] || {}).name || t.era, first: people[f.name] ? people[f.name].first : t };
+    }
+    for (const p of players) if (!people[p]) people[p] = { name: p, where: "", note: "", date: now.state.date, era: ev.name, first: seen[0] };
+    const evOf = t => AT.eras[t.era] || ev;
+    for (const p of Object.values(people)) {
+      const c = card(p.name), t = c ? titleAt(p.name, ad, ev) : null;
+      p.faction = sides[p.name] || (t && t.faction) || "";
+      p.title = t ? t.title : "";
+      p.dead = /已故|死|殁/.test(p.where);
+      p.player = players.includes(p.name);
+      delete p.first;
+    }
+    const names = Object.keys(people);
+    // 关系：人物卡里的亲缘与关系（演义设定），加上本局已知事件里两人之间的事（注明第几回）
+    const edges = {};
+    // 关系的性质：人情账（人物剧本里写明的）优先，其次本局的敌对之事，再次人物卡；本局寻常往来不改性质
+    const RANK = { bond: 3, hostile: 2, card: 1, event: 0 };
+    const edge = (a, b, kind, text, src, how) => {
+      if (a === b || !people[a] || !people[b]) return;
+      const key = [a, b].sort().join("|"), e = edges[key] || (edges[key] = { a, b, kind, rank: -1, items: [] });
+      if (e.items.some(x => x.text === text)) return;
+      e.items.push({ kind, text, src });
+      if (RANK[how] >= e.rank) { e.kind = kind; e.rank = RANK[how]; }
+    };
+    const HOSTILE = /斩|杀|擒|俘|攻|袭|伐|叛|骂|辱|拒|围|追|截|伏击|刺|毒/;
+    const namesIn = text => names.filter(n => aliases(n).some(x => x.length > 1 && String(text).includes(x)));
+    for (const n of names) {
+      const c = card(n);
+      if (!c) continue;
+      for (const r of [c.kin, ...(c.relations || [])].filter(Boolean)) for (const m of namesIn(r)) edge(n, m, relKind(r), r, "card", "card");
+    }
+    for (const t of seen) {
+      const label = `${(evOf(t)).name}第${cn(t.i + 1)}回`;
+      for (const e of t.state.events || []) {
+        if (e.known === false && !done) continue;
+        const who = E.whoIs(e.who), text = `${e.what || ""}${e.result ? "，" + e.result : ""}`;
+        if (!who || !people[who]) continue;
+        // 敌对：动作落在对方身上（"斩某某""攻某某"），只是一同攻城的不算
+        const what = String(e.what || ""), hm = HOSTILE.exec(what);
+        const hostileTo = m => !!hm && aliases(m).some(x => x.length > 1 && what.indexOf(x, hm.index) > hm.index);
+        for (const m of namesIn(text)) if (m !== who) { const h = hostileTo(m); edge(who, m, h ? "敌对" : "往来", `${e.date || ""} ${e.who}${what}${e.result ? "，" + e.result : ""}`, label, h ? "hostile" : "event"); }
+      }
+      // 人物剧本：人情账（具体的事，带来路）
+      for (const b of t.state.bonds || []) {
+        const a = E.whoIs(b.of) || (evOf(t)).player, o = E.whoIs(b.with);
+        if (a && o) edge(a, o, b.kind || relKind(b.what || ""), `${b.what}${b.since ? `（${b.since}）` : ""}`, label, "bond");
+      }
+    }
+    // 势力：按阵营列人物与城池
+    const fnames = { "刘": "刘备", "孙": "孙权", "曹": "曹操", ...(ev.factionNames || {}) };
+    const factions = {};
+    for (const p of Object.values(people)) (factions[p.faction || "其他"] = factions[p.faction || "其他"] || { key: p.faction || "其他", name: fnames[p.faction] || p.faction || "其他", people: [], places: [] }).people.push(p.name);
+    for (const [w, v] of Object.entries(now.state.places || {})) if (factions[v]) factions[v].places.push(w); else if (v && v !== "争") (factions[v] = { key: v, name: fnames[v] || v, people: [], places: [w] });
+    // 时间线：本时代的原著事件（到此回的状态）与本局各回已知的事
+    const cs = now.state.canon || {};
+    const canon = (ev.canonEvents || []).map(c => ({ id: c.id, name: c.name, ref: c.ref, status: (cs[c.id] || {}).status || "未到时", note: (cs[c.id] || {}).note || "", chapter: (cs[c.id] || {}).chapter || null }));
+    const story = seen.filter(t => t.i > 0 || t.seg > 0 || (t.state.events || []).length).map(t => ({
+      era: (evOf(t)).name, i: t.i, date: t.state.date, title: t.title, chronicle: t.state.chronicle || "",
+      events: (t.state.events || []).filter(e => e.known !== false || done).map(e => ({ date: e.date || "", who: e.who || "", where: e.where || "", what: e.what || "", result: e.result || "", dark: e.known === false }))
+    }));
+    // 地图：本时代的城池归属，加上玩家走过的路
+    const nodes = routeNodes(ev);
+    const path = seen.filter(t => t.era === now.era && t.seg === now.seg).map(t => {
+      const f = (t.state.figures || []).find(x => x.name === ev.player);
+      return (f && nodes.find(n => String(f.where).includes(n))) || null;
+    }).filter((w, i, a) => w && w !== a[i - 1]);
+    return { turns, k, now, era: ev, done, people, edges: Object.values(edges).map(({ rank, ...e }) => e), factions: Object.values(factions), canon, story, path };
+  };
+
+  // 我的世界线：历代各回的命令，与原著分开的那一回；回到某回另作决断时丢下的分支（g.abandoned）也列出来
+  E.worldline = function (g) {
+    const segs = segmentsOf(g);
+    return segs.map((seg, s) => {
+      const ev = AT.eras[seg.era] || {}, as = { ...seg, past: segs.slice(0, s) }, so = seg.start === "inherited" ? seg.inherited : (ev.starts || {})[seg.start];
+      const rails = !!(so && so.rails), off = seg.railOff;
+      return {
+        seg: s, era: ev.name || seg.era, start: (so && so.label) || "", rails,
+        chapters: (seg.chapters || []).map((c, i) => ({
+          i, date: (c.state || {}).date || "", title: c.title || "", chronicle: (c.state || {}).chronicle || "", decision: c.decision || "",
+          who: c.decision ? E.playerTitle(as, i) : "",
+          track: !rails ? "自由" : off == null ? (seg.rail === false ? "自由" : "原著") : i + 1 < off ? "原著" : i + 1 === off ? "分岔" : "自由",
+          ending: (c.state || {}).ending ? { title: c.state.ending.title, type: c.state.ending.type, total: c.state.ending.total } : null
+        })),
+        abandoned: (g.abandoned || []).filter(a => a.era === seg.era && a.seg === s)
+      };
+    });
+  };
+
   /* ───────── 说书：把已定之事写成文字 ───────── */
 
   E.buildNarratePrompt = function (g, i) {

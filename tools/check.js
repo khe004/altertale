@@ -69,6 +69,17 @@ for (const file of files) {
 }
 console.log(`  共 ${turns} 回，复核命中 ${hits} 回（逐条看是真问题还是误报）`);
 
+// 世界图谱与我的世界线：每个对局的每一回都要能生成
+for (const file of files) {
+  let game; try { game = JSON.parse(fs.readFileSync(file, "utf8")).game; } catch (e) { continue; }
+  if (!game || !game.chapters) continue;
+  try {
+    const n = E.atlasTurns(game).length;
+    for (let k = 0; k < n; k++) E.atlas(game, k);
+    E.worldline(game);
+  } catch (e) { fail(`${path.basename(file)}：世界图谱生成出错：${e.message || e}`); }
+}
+
 // 回目与结尾诗句字数（只看写成了文字的回）
 for (const file of files) {
   let game; try { game = JSON.parse(fs.readFileSync(file, "utf8")).game; } catch (e) { continue; }

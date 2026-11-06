@@ -275,6 +275,63 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 .sec.reply > summary .bar i { background: var(--seal); }
 .calls pre { white-space: pre-wrap; word-break: break-word; font-size: 0.75rem; line-height: 1.55; max-height: 60vh; overflow: auto; background: var(--panel); border: 1px solid var(--line); padding: 0.6rem; margin: 0.3rem 0 0.6rem; }
 @media (max-width: 560px) { .sec > summary { grid-template-columns: 1fr auto; row-gap: 0.15rem; } .sec .bar { grid-column: 1 / -1; } }
+/* 世界图谱：人物关系、势力、时间线、地图、我的世界线；只显示到所选那一回为止玩家已知的事 */
+.atlas { position: fixed; inset: 0; z-index: 40; overflow-y: auto; background: var(--paper); color: var(--ink); font-family: var(--font-ui); padding: 1rem 16px 3rem; }
+.atlas-in { max-width: 72rem; margin: 0 auto; }
+.atlas .rp-top { margin-bottom: 0.6rem; }
+.atlas .rp-top h2 { margin-right: auto; }
+.at-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; border-bottom: 1px solid var(--line); margin-bottom: 0.8rem; }
+.at-tabs button { border: none; background: none; padding: 0.45rem 0.8rem; font-size: 0.88rem; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.at-tabs button[aria-selected="true"] { color: var(--indigo); border-bottom-color: var(--indigo); font-weight: 500; }
+.at-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; font-size: 0.82rem; color: var(--muted); margin-bottom: 0.8rem; }
+.at-bar input[type=range] { flex: 1 1 12rem; max-width: 26rem; accent-color: var(--indigo); }
+.at-bar b { color: var(--ink); font-weight: 500; }
+.at-chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.at-chips button { font-size: 0.75rem; border: 1px solid var(--line); background: none; border-radius: 999px; padding: 0.1rem 0.6rem; color: var(--muted); display: inline-flex; align-items: center; gap: 0.3rem; }
+.at-chips button[aria-pressed="true"] { color: var(--ink); border-color: var(--muted); }
+.at-chips i { width: 0.9rem; height: 2px; display: inline-block; }
+.at-graph { display: grid; grid-template-columns: minmax(0, 1fr) 19rem; gap: 1rem; align-items: start; }
+.at-graph svg { width: 100%; height: auto; background: var(--panel); border-radius: 4px; display: block; touch-action: manipulation; }
+.at-graph svg .node { cursor: pointer; }
+.at-graph svg .node:focus-visible circle { stroke: var(--indigo); stroke-width: 3; }
+.at-side { background: var(--panel); border-radius: 4px; padding: 0.8rem 0.9rem; font-size: 0.84rem; line-height: 1.65; display: grid; gap: 0.5rem; }
+.at-side h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; color: var(--indigo); }
+.at-side p { margin: 0; }
+.at-side .k { color: var(--muted); font-size: 0.75rem; }
+.at-rel { border-top: 1px solid var(--line); padding-top: 0.4rem; display: grid; gap: 0.15rem; }
+.at-rel b { font-weight: 500; }
+.at-rel small { color: var(--muted); }
+.at-rel .src { font-size: 0.7rem; color: var(--seal); margin-right: 0.35rem; }
+.at-tag { font-size: 0.7rem; border: 1px solid currentColor; border-radius: 2px; padding: 0 0.3rem; margin-left: 0.35rem; }
+.at-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.8rem; }
+.at-card { background: var(--panel); border-radius: 4px; padding: 0.8rem 0.9rem; font-size: 0.84rem; border-top: 3px solid var(--line); }
+.at-card h4 { margin: 0 0 0.4rem; font-weight: 500; font-size: 0.95rem; }
+.at-card dl { margin: 0; display: grid; gap: 0.2rem; }
+.at-card .fig { grid-template-columns: 4em minmax(0, 1fr); }
+.at-tl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 1.2rem; }
+.at-tl h4 { font-weight: 500; font-size: 0.75rem; letter-spacing: 0.14em; color: var(--muted); margin: 0 0 0.5rem; }
+.at-tl ol { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.at-tl ol > li { background: var(--panel); border-radius: 4px; padding: 0.5rem 0.7rem; font-size: 0.84rem; line-height: 1.6; }
+.at-tl ul li { margin: 0.15rem 0; }
+.at-tl li .rp-m { font-size: 0.75rem; }
+.at-tl ul { margin: 0.25rem 0 0; padding-left: 1.1em; }
+.at-tl li.dark, .at-tl ul li.dark { color: var(--muted); }
+.at-map { display: grid; grid-template-columns: minmax(0, 1fr) 17rem; gap: 1rem; align-items: start; }
+.at-map svg { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 4px; }
+.at-wl section { border-left: 3px solid var(--line); padding: 0.2rem 0 0.2rem 0.9rem; margin: 0 0 1.2rem; }
+.at-wl h4 { margin: 0 0 0.4rem; font-family: var(--font-display); font-weight: 400; font-size: 1.35rem; color: var(--indigo); }
+.at-wl h4 small { font-family: var(--font-ui); font-size: 0.75rem; color: var(--muted); margin-left: 0.5rem; }
+.at-wl ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.at-wl li { font-size: 0.84rem; display: grid; grid-template-columns: 3.2em 4.2em minmax(0, 1fr); gap: 0.5rem; align-items: baseline; }
+.at-wl .tk { font-size: 0.7rem; border-radius: 2px; padding: 0 0.3rem; text-align: center; border: 1px solid currentColor; }
+.at-wl .tk.原著 { color: var(--muted); } .at-wl .tk.分岔 { color: var(--seal); } .at-wl .tk.自由 { color: var(--shu); }
+.at-wl .dec { color: var(--indigo); }
+.at-wl .ab { margin: 0.2rem 0 0.4rem 7.9em; font-size: 0.78rem; color: var(--muted); border: 1px dashed var(--line); border-radius: 3px; padding: 0.3rem 0.5rem; }
+.at-note { font-size: 0.78rem; color: var(--muted); margin: 0.6rem 0 0; }
+@media (max-width: 900px) {
+  .at-graph, .at-map, .at-tl { grid-template-columns: minmax(0, 1fr); }
+  .at-wl .ab { margin-left: 0; }
+}
 @media (prefers-reduced-motion: reduce) {
   .dots::after { animation: none; }
   .gauge .bar i { transition: none; }
@@ -286,6 +343,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
     <div class="brand"><span id="brandTitle">天命未定</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
     <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
+    <button class="ui-btn" id="atlasBtn" type="button" hidden>世界图谱</button>
     <button class="ui-btn" id="callsBtn" type="button" hidden>提示词</button>
     <button class="ui-btn" id="exportBtn" type="button" hidden>导出</button>
     <button class="ui-btn" id="restartBtn" type="button" hidden>另开一局</button>
@@ -297,6 +355,7 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
   <aside id="panel" class="collapsed" hidden></aside>
 </div>
 <div id="calls" class="calls" hidden role="dialog" aria-label="调用记录"></div>
+<div id="atlas" class="atlas" hidden role="dialog" aria-label="世界图谱"></div>
 
 <script src="data/characters.js"></script>
 <script src="data/background.js"></script>
@@ -933,6 +992,8 @@ function render() {
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
   $("#callsBtn").hidden = !callLog.length;
+  $("#atlasBtn").hidden = !game;
+  if (atlasOpen) { if (game) openAtlas(true); else openAtlas(false); }
   if (!game) {
     $("#brandTitle").textContent = "天命未定";
     panel.hidden = true;
@@ -1191,14 +1252,15 @@ function renderPanel(st) {
     <section><h3>纪事</h3><ol class="chron">${game.chapters.map(c => `<li>${esc(c.state.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}</li>`).join("")}</ol></section>`;
 }
 
-function renderMap(places) {
-  const ev = era();
+// ev：画哪个时代的地图（世界图谱看历代时用）；path：玩家走过的地名，画成一条朱线
+function renderMap(places, ev = era(), path = []) {
+  const fac = ev.factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" };
   const peaks = ev.mountains.map(([name, pts, [lx, ly, anchor]]) => pts.map(([x, y]) =>
     `<path d="M${x - 7},${y} L${x},${y - 9} L${x + 7},${y} Z" fill="var(--mount-fill)" stroke="var(--mount)" stroke-width="1" stroke-linejoin="round"/>`).join("") +
     `<text x="${lx}" y="${ly}" font-size="8" fill="var(--muted)" text-anchor="${anchor}">${name}</text>`).join("");
   const nodes = Object.entries(ev.places).map(([name, [x, y]]) => {
     const h = places[name] || Object.values(ev.starts)[0].state.places[name] || "争";
-    const color = `var(${factions()[h] || "--war"})`;
+    const color = `var(${fac[h] || "--war"})`;
     const right = x > 360;
     return `<g><circle cx="${x}" cy="${y}" r="${name === ev.capital ? 7 : 5}" fill="${color}" stroke="var(--paper)" stroke-width="1.5"/>
       <text x="${right ? x - 9 : x + 9}" y="${y + 4}" font-size="11" fill="var(--ink)" text-anchor="${right ? "end" : "start"}">${name}</text></g>`;
@@ -1207,7 +1269,9 @@ function renderMap(places) {
     ${ev.rivers.map(r => `<path d="${r.d}" fill="none" stroke="var(--river)" stroke-width="${r.width}" stroke-linecap="round"/><text x="${r.label[1]}" y="${r.label[2]}" font-size="9" fill="var(--muted)">${r.label[0]}</text>`).join("")}
     ${(ev.roads || []).map(r => `<path d="${r.d}" fill="none" stroke="var(--road)" stroke-width="1.4" stroke-dasharray="4 3" stroke-linecap="round"/><text x="${r.label[1]}" y="${r.label[2]}" font-size="8.5" fill="var(--road)">${r.label[0]}</text>`).join("")}
     ${peaks}
+    ${path.length > 1 ? `<polyline points="${path.map(w => (ev.places[w] || []).join(",")).join(" ")}" fill="none" stroke="var(--seal)" stroke-width="2" stroke-dasharray="1 0" stroke-linejoin="round" opacity="0.85"/>` : ""}
     ${nodes}
+    ${path.length ? path.map((w, i) => ev.places[w] ? `<text x="${ev.places[w][0]}" y="${ev.places[w][1] - 8}" font-size="8" fill="var(--seal)" text-anchor="middle">${i + 1}</text>` : "").join("") : ""}
   </svg>`;
 }
 
@@ -1256,6 +1320,140 @@ function renderIntro() {
     </div>`}
   </div>`;
 }
+
+/* ───────── 世界图谱 ───────── */
+
+let atlasOpen = false, atlasTab = "rel", atlasK = null, atlasSel = null;
+const atlasKinds = new Set(["亲缘", "君臣", "情谊", "敌对", "往来", "关联"]);
+const KIND_COLOR = { "亲缘": "--war", "君臣": "--indigo", "情谊": "--shu", "敌对": "--seal", "往来": "--line", "关联": "--line" };
+const facColor = (ev, k) => `var(${(ev.factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" })[k] || "--muted"})`;
+
+// 力导向布局：按阵营排在圆上起步，几百步弹簧与斥力，固定步数，同样的数据画出同样的图
+function layoutGraph(names, edges, W, H) {
+  const n = names.length, pos = {};
+  names.forEach((m, i) => { const a = 2 * Math.PI * i / Math.max(1, n); pos[m] = { x: W / 2 + Math.cos(a) * W * 0.35, y: H / 2 + Math.sin(a) * H * 0.35, vx: 0, vy: 0 }; });
+  const L = Math.max(60, Math.min(130, Math.sqrt(W * H / Math.max(1, n)) * 0.8));
+  for (let it = 0; it < 320; it++) {
+    const t = 1 - it / 320;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const p = pos[names[i]], q = pos[names[j]];
+      let dx = p.x - q.x, dy = p.y - q.y, d2 = dx * dx + dy * dy || 0.01;
+      const f = L * L / d2 * 0.6;
+      p.vx += dx * f / Math.sqrt(d2); p.vy += dy * f / Math.sqrt(d2); q.vx -= dx * f / Math.sqrt(d2); q.vy -= dy * f / Math.sqrt(d2);
+    }
+    for (const e of edges) {
+      const p = pos[e.a], q = pos[e.b];
+      if (!p || !q) continue;
+      const dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy) || 0.1, f = (d - L) * 0.05;
+      p.vx += dx / d * f; p.vy += dy / d * f; q.vx -= dx / d * f; q.vy -= dy / d * f;
+    }
+    for (const m of names) {
+      const p = pos[m];
+      p.vx += (W / 2 - p.x) * 0.01; p.vy += (H / 2 - p.y) * 0.012;
+      const sp = Math.sqrt(p.vx * p.vx + p.vy * p.vy), cap = 12 * t + 1;
+      if (sp > cap) { p.vx *= cap / sp; p.vy *= cap / sp; }
+      p.x = Math.max(30, Math.min(W - 30, p.x + p.vx)); p.y = Math.max(24, Math.min(H - 24, p.y + p.vy));
+      p.vx *= 0.6; p.vy *= 0.6;
+    }
+  }
+  return pos;
+}
+
+function renderAtlas() {
+  const a = E.atlas(game, atlasK), ev = a.era, t = a.now;
+  const tabs = [["rel", "人物关系"], ["fac", "势力格局"], ["tl", "事件时间线"], ["map", "地图"], ["wl", "我的世界线"]];
+  const at = x => `《${esc((AT.eras[x.era] || {}).name || x.era)}》${x.i ? `第${cn(x.i + 1)}回` : "开局"}`;
+  let body = "";
+  if (atlasTab === "rel") {
+    const names = Object.keys(a.people);
+    const edges = a.edges.filter(e => atlasKinds.has(e.kind));
+    const W = 640, H = 460, pos = layoutGraph(names, edges, W, H);
+    const deg = Object.fromEntries(names.map(m => [m, a.edges.filter(e => e.a === m || e.b === m).length]));
+    const sel = atlasSel && a.people[atlasSel] ? atlasSel : null;
+    const near = sel ? new Set([sel, ...a.edges.filter(e => e.a === sel || e.b === sel).flatMap(e => [e.a, e.b])]) : null;
+    const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="人物关系图">
+      ${edges.map(e => { const p = pos[e.a], q = pos[e.b], on = !sel || e.a === sel || e.b === sel;
+        return `<line x1="${p.x.toFixed(1)}" y1="${p.y.toFixed(1)}" x2="${q.x.toFixed(1)}" y2="${q.y.toFixed(1)}" stroke="var(${KIND_COLOR[e.kind] || "--line"})" stroke-width="${e.kind === "往来" || e.kind === "关联" ? 1 : 1.8}" opacity="${on ? 0.9 : 0.15}"${e.kind === "敌对" ? ` stroke-dasharray="4 3"` : ""}/>`; }).join("")}
+      ${names.map(m => { const p = pos[m], pp = a.people[m], r = Math.min(20, 9 + deg[m] * 1.2), dim = near && !near.has(m);
+        return `<g class="node" data-person="${esc(m)}" tabindex="0" role="button" aria-label="${esc(m)}" opacity="${dim ? 0.3 : 1}">
+          <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="${r}" fill="${pp.dead ? "var(--line)" : facColor(ev, pp.faction)}" stroke="${m === sel ? "var(--ink)" : pp.player ? "var(--seal)" : "var(--paper)"}" stroke-width="${m === sel || pp.player ? 2.5 : 1.5}"/>
+          <text x="${p.x.toFixed(1)}" y="${(p.y + r + 12).toFixed(1)}" font-size="11.5" text-anchor="middle" fill="var(--ink)"${pp.dead ? ` text-decoration="line-through"` : ""}>${esc(m)}</text></g>`; }).join("")}
+    </svg>`;
+    const side = sel ? (() => {
+      const pp = a.people[sel], c = AT.characters[sel] || {};
+      const rels = a.edges.filter(e => e.a === sel || e.b === sel).sort((x, y) => (y.kind !== "往来") - (x.kind !== "往来"));
+      return `<h3>${esc(sel)}</h3>
+        <p class="k">${esc(pp.title || "")}${pp.faction ? ` · ${esc((ev.factionNames || {})[pp.faction] || pp.faction)}一方` : ""}</p>
+        <p><b>${esc(pp.where || "下落不明")}</b>${pp.note ? `　${esc(pp.note)}` : ""}<br><span class="k">最后见于${esc(pp.era)} ${esc(pp.date || "")}</span></p>
+        ${c.kin ? `<p class="k">${esc(c.kin)}</p>` : ""}
+        ${c.personality ? `<p><span class="k">性格</span>　${esc(c.personality)}</p>` : ""}
+        ${c.goals ? `<p><span class="k">所求</span>　${esc(c.goals)}</p>` : ""}
+        <div>${rels.map(e => { const o = e.a === sel ? e.b : e.a;
+          return `<div class="at-rel"><span><b>${esc(o)}</b><span class="at-tag" style="color:var(${KIND_COLOR[e.kind] === "--line" ? "--muted" : KIND_COLOR[e.kind]})">${esc(e.kind)}</span></span>
+            ${e.items.slice(-4).map(x => `<small><span class="src">${x.src === "card" ? "演义设定" : esc(x.src)}</span>${esc(x.text)}</small>`).join("")}</div>`; }).join("") || `<p class="k">暂无已知的关系。</p>`}</div>`;
+    })() : `<p class="k">点一个人看他的处境与关系。每条关系都注明出处：“演义设定”来自人物卡，“某某第几回”是本局那一回已知的事。</p>
+      <p class="k">红圈是你扮演的人；灰色是已故之人；虚线是敌对。</p>`;
+    body = `<div class="at-bar"><span>关系</span><div class="at-chips">${[...Object.keys(KIND_COLOR)].map(k => `<button type="button" data-kind="${k}" aria-pressed="${atlasKinds.has(k)}"><i style="background:var(${KIND_COLOR[k]})"></i>${k}</button>`).join("")}</div></div>
+      <div class="at-graph">${svg}<div class="at-side">${side}</div></div>`;
+  } else if (atlasTab === "fac") {
+    body = `<div class="at-cards">${a.factions.map(f => `<div class="at-card" style="border-top-color:${facColor(ev, f.key)}">
+      <h4>${esc(f.name)}<span class="rp-m">　已知 ${f.people.length} 人${f.places.length ? `，${f.places.length} 城` : ""}</span></h4>
+      <dl class="figures">${f.people.map(m => { const p = a.people[m]; return `<div class="fig ${p.dead ? "dead" : ""}"><dt>${esc(m)}</dt><dd><b>${esc(p.where)}</b>　${esc(p.note)}</dd></div>`; }).join("")}</dl>
+      ${f.places.length ? `<p class="at-note">城池：${esc(f.places.join("、"))}</p>` : ""}</div>`).join("")}</div>
+      <p class="at-note">人物按人物卡的阵营与本局改换阵营的记录归类；只列此时已经在局势里出现过的人。</p>`;
+  } else if (atlasTab === "tl") {
+    const cls = { "已发生": "same", "变形发生": "bent", "失效": "gone", "未到时": "none" };
+    body = `<div class="at-tl">
+      <div><h4>原著事件 ·《${esc(ev.name)}》</h4><ol>${a.canon.map(c => `<li><b>${esc(c.name)}</b> <span class="rp-m">${esc(c.ref)}</span>
+        <div><span class="canon"><span class="st ${cls[c.status] || "none"}">${esc(c.status)}</span></span>${c.chapter ? `<span class="rp-m">　第${cn(c.chapter)}回</span>` : ""}${c.note ? `<span class="rp-m">　${esc(c.note)}</span>` : ""}</div></li>`).join("") || `<li class="rp-m">这一段没有原著事件。</li>`}</ol></div>
+      <div><h4>本局</h4><ol>${a.story.slice().reverse().map(s => `<li><b>${esc(s.era)}${s.i ? `第${cn(s.i + 1)}回` : "开局"}</b> <span class="rp-m">${esc(s.date)}</span>${s.chronicle ? `<div>${esc(s.chronicle)}</div>` : ""}
+        ${s.events.length ? `<ul>${s.events.map(e => `<li class="${e.dark ? "dark" : ""}"><span class="rp-m">${esc(e.date)}</span> ${esc(e.who)}${e.where ? `（${esc(e.where)}）` : ""}${esc(e.what)}${e.result ? `，${esc(e.result)}` : ""}${e.dark ? " <em>暗</em>" : ""}</li>`).join("")}</ul>` : ""}</li>`).join("")}</ol></div></div>
+      <p class="at-note">本局只列当时已经知道的事${a.done ? "；本时代已终局，暗中的事也一并列出" : ""}。</p>`;
+  } else if (atlasTab === "map") {
+    body = `<div class="at-map"><div class="map">${renderMap(t.state.places || {}, ev, a.path)}
+        <div class="legend">${Object.entries(ev.factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" }).map(([k, v]) => `<span><i style="background:var(${v})"></i>${esc((ev.factionNames || {})[k] || k)}</span>`).join("")}<span><i style="background:var(--seal);border-radius:0;height:2px"></i>${esc(ev.player)}走过的路</span></div></div>
+      <div class="at-side"><h3>${esc(ev.mapTitle || ev.name)}</h3>
+        <p class="k">${esc(t.state.date || "")}</p>
+        ${a.path.length ? `<p>${esc(ev.player)}的行踪：${a.path.map((w, i) => `${i + 1}.${esc(w)}`).join(" → ")}</p>` : ""}
+        ${(t.state.forces || []).filter(f => a.done || f.known !== false).slice(0, 14).map(f => `<p><b>${esc(f.name)}</b>　${esc(f.where)}　<span class="k">${esc(f.troops || "")}</span></p>`).join("")}
+      </div></div>`;
+  } else {
+    const wl = E.worldline(game);
+    body = `<div class="at-wl">${wl.map(s => `<section>
+      <h4>${esc(s.era)}<small>起于「${esc(s.start)}」${s.rails ? "，原著开局" : ""}</small></h4>
+      <ol>${s.chapters.map(c => `<li><span class="rp-m">${c.i ? `第${cn(c.i + 1)}回` : "开局"}</span>${c.decision ? `<span class="tk ${c.track}">${c.track === "原著" ? "照原著" : c.track === "分岔" ? "由此改写" : "自由推演"}</span>` : "<span></span>"}
+        <span>${esc(c.chronicle || c.title.replace(/^第[^回]*回\s*/, ""))}${c.decision ? `<br><span class="dec">${esc(c.who)}之令：${esc(c.decision.length > 90 ? c.decision.slice(0, 90) + "……" : c.decision)}</span>` : ""}${c.ending ? `<br><b>终章「${esc(c.ending.title)}」</b><span class="rp-m">　${esc(c.ending.type || "")}${c.ending.total != null ? ` ${c.ending.total}分` : ""}</span>` : ""}</span></li>
+        ${s.abandoned.filter(x => x.at === c.i).map(x => `<div class="ab">另一条路（已放弃）：${esc(x.decision.slice(0, 60))}${x.decision.length > 60 ? "……" : ""} → ${esc(x.reached)}</div>`).join("")}`).join("")}</ol></section>`).join("")}</div>
+      <p class="at-note">"由此改写"是本时代第一道与原著不同的命令；之后的回合都是自由推演。回到某回另作决断时，丢下的那条路也记在这里。</p>`;
+  }
+  return `<div class="atlas-in">
+    <div class="rp-top"><h2>世界图谱</h2><button class="ui-btn" id="atlasClose" type="button">回到故事</button></div>
+    <div class="at-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${atlasTab === k}">${l}</button>`).join("")}</div>
+    ${atlasTab === "wl" ? "" : `<div class="at-bar"><label for="atlasK">看到</label><input id="atlasK" type="range" min="0" max="${a.turns.length - 1}" value="${a.k}"><b>${at(t)}</b><span>${esc(t.state.date || "")}</span>${a.k < a.turns.length - 1 ? `<button class="redo-link" id="atlasNow" type="button">回到此刻</button>` : ""}</div>`}
+    ${body}
+  </div>`;
+}
+
+function openAtlas(on) {
+  atlasOpen = on;
+  const box = $("#atlas");
+  box.hidden = !on;
+  document.body.style.overflow = on ? "hidden" : "";
+  if (!on) return;
+  box.innerHTML = renderAtlas();
+  $("#atlasClose").onclick = () => openAtlas(false);
+  box.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { atlasTab = b.dataset.tab; openAtlas(true); });
+  box.querySelectorAll("[data-kind]").forEach(b => b.onclick = () => { const k = b.dataset.kind; atlasKinds.has(k) ? atlasKinds.delete(k) : atlasKinds.add(k); openAtlas(true); });
+  box.querySelectorAll("[data-person]").forEach(g => {
+    const pick = () => { atlasSel = atlasSel === g.dataset.person ? null : g.dataset.person; openAtlas(true); };
+    g.onclick = pick; g.onkeydown = e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } };
+  });
+  const r = $("#atlasK");
+  if (r) { r.oninput = () => { atlasK = +r.value; openAtlas(true); $("#atlasK") && $("#atlasK").focus(); }; }
+  const nw = $("#atlasNow");
+  if (nw) nw.onclick = () => { atlasK = null; openAtlas(true); };
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && atlasOpen) openAtlas(false); });
 
 /* ───────── 交互 ───────── */
 
@@ -1312,6 +1510,13 @@ function bindIntro() {
 // 退回到第 i 回下令之前：截去此后各回，方略与原著轨的状态一并退回；返回当时的命令
 function rewind(i) {
   const c = game.chapters[i], decision = c.decision;
+  // 丢下的这条路记进"我的世界线"：从哪一回分开、下了什么令、走到了哪里（只记摘要，不存整段）
+  if (decision && game.chapters.length > i + 1) {
+    const last = game.chapters[game.chapters.length - 1].state;
+    const reached = last.ending ? `终章「${last.ending.title}」${last.ending.total != null ? `（${last.ending.total}分）` : ""}` : `第${cn(game.chapters.length)}回：${last.chronicle || last.date || ""}`;
+    (game.abandoned = game.abandoned || []).push({ era: game.era, seg: (game.past || []).length, at: i, decision, reached });
+    if (game.abandoned.length > 30) game.abandoned.splice(0, game.abandoned.length - 30);
+  }
   game.chapters = game.chapters.slice(0, i + 1);
   if (c.policy) game.policy = c.policy;
   delete c.decision;
@@ -1508,6 +1713,7 @@ callsBox.addEventListener("click", async e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && callsOpen) openCalls(false); });
 $("#callsBtn").onclick = () => openCalls(!callsOpen);
+$("#atlasBtn").onclick = () => { atlasK = null; openAtlas(!atlasOpen); };
 
 $("#restartBtn").onclick = restart;
 $("#exportBtn").onclick = () => exportGame(game, $("#exportBtn"));
