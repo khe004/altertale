@@ -1083,7 +1083,8 @@ ${simFormat(g)}`;
       const from = at(f.where), t0 = parseDate(f.date, y);
       if (!from || t0 == null || t1 == null || !here.length || here.includes(from)) continue;
       const need = Math.min(...here.map(h => travelDays(ev, from, h, tiersOf(ev)[0])).filter(x => x != null));
-      if (Number.isFinite(need) && t1 - t0 < need) out.push(`${P}本回得知"${f.what}"（${how}），此事${f.date}发生在${from}，消息最快${need}日才能传到${here.join("或")}，本回末只过了${Math.max(0, t1 - t0)}日：要么推迟到消息能到的时候再让他知道，要么写明是谁、怎样更早送来的（如事先就在路上的使者）`);
+      // 日期只记到旬（上中下旬各十日），同一旬里的先后看不出来：留一旬的余地
+      if (Number.isFinite(need) && t1 - t0 + 9 < need) out.push(`${P}本回得知"${f.what}"（${how}），此事${f.date}发生在${from}，消息最快${need}日才能传到${here.join("或")}，本回末只过了${Math.max(0, t1 - t0)}日：要么推迟到消息能到的时候再让他知道，要么写明是谁、怎样更早送来的（如事先就在路上的使者）`);
     }
     // 当面进言的人要在${P}身边：随行之人，或人物表里与${P}同在一地
     const me = at((s.self || {}).where) || seatOf(g);

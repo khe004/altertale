@@ -1,5 +1,5 @@
 {
- "total": 62.8878,
+ "total": 63.2569,
  "runs": [
   {
    "date": "2026-10-07 ~ 2026-10-09",
@@ -202,8 +202,8 @@
   {
    "date": "2026-11-06 05:32",
    "args": "--era qianli --starts dexin,tutushan --strategies canon,bold --player-model sonnet --parallel 4",
-   "calls": 6,
-   "usd": 0.2478
+   "calls": 9,
+   "usd": 0.6169
   }
  ]
 }
