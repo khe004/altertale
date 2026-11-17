@@ -56,10 +56,9 @@ button { cursor: pointer; }
 .top .date { font-family: var(--font-ui); font-size: 0.85rem; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
 .ui-btn { font-family: var(--font-ui); font-size: 0.8rem; padding: 0.3rem 0.7rem; border: 1px solid var(--line); background: transparent; border-radius: 3px; color: var(--muted); }
 .ui-btn:hover { color: var(--ink); border-color: var(--muted); }
-#panelToggle { display: none; }
 
-.wrap { max-width: 72rem; margin: 0 auto; padding-inline: 1rem; padding-block: 1.5rem 4rem; display: grid; grid-template-columns: minmax(0, 1fr) 20rem; gap: 2.5rem; align-items: start; }
-main { min-width: 0; }
+.wrap { max-width: 72rem; margin: 0 auto; padding-inline: 1rem; padding-block: 1.5rem 4rem; }
+main { min-width: 0; max-width: 46rem; margin: 0 auto; }
 .story { max-width: 38em; }
 
 /* start screen */
@@ -219,9 +218,10 @@ main { min-width: 0; }
 .ending p { margin: 0; }
 .ending ol { margin: 0; padding-left: 1.4em; font-size: 0.92rem; }
 
-/* sidebar */
-aside { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 4rem); font-family: var(--font-ui); font-size: 0.85rem; line-height: 1.6; display: grid; gap: 1.1rem; max-height: calc(100vh - 5rem); overflow-y: auto; padding-right: 0.25rem; }
-aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted); margin: 0 0 0.4rem; }
+/* 局势：世界图谱的第一页，按栏排开 */
+.situ { font-size: 0.85rem; line-height: 1.6; columns: 3 19rem; column-gap: 2rem; }
+.situ > section { break-inside: avoid; margin: 0 0 1.1rem; }
+.situ h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: var(--muted); margin: 0 0 0.4rem; }
 .map svg { width: 100%; height: auto; display: block; background: var(--panel); border-radius: 4px; }
 .legend { display: flex; gap: 0.75rem; flex-wrap: wrap; font-size: 0.75rem; color: var(--muted); margin-top: 0.35rem; }
 .legend i { display: inline-block; width: 0.6rem; height: 0.6rem; border-radius: 50%; margin-right: 0.25rem; vertical-align: 0; }
@@ -244,11 +244,6 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 .chron { margin: 0; padding-left: 1.4em; display: grid; gap: 0.2rem; color: var(--muted); font-size: 0.8rem; }
 
 @media (max-width: 900px) {
-  .wrap { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
-  #panelToggle { display: inline-block; }
-  aside { position: static; max-height: none; order: -1; border: 1px solid var(--line); border-radius: 4px; padding: 0.9rem; background: var(--panel); }
-  aside.collapsed { display: none; }
-  .map svg { background: var(--paper); }
 }
 /* 调用记录：每次发给模型的完整提示词，按【】段落拆开看大小 */
 .calls { position: fixed; inset: 0; z-index: 50; overflow-y: auto; background: var(--paper); color: var(--ink); font-family: var(--font-ui); padding: 1rem 16px 3rem; }
@@ -342,7 +337,6 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
   <div class="top-inner">
     <div class="brand"><span id="brandTitle">天命未定</span><small>改变一个选择，让故事重新演化</small></div>
     <span class="date" id="date"></span>
-    <button class="ui-btn" id="panelToggle" type="button" aria-expanded="false">局势</button>
     <button class="ui-btn" id="atlasBtn" type="button" hidden>世界图谱</button>
     <button class="ui-btn" id="callsBtn" type="button" hidden>提示词</button>
     <button class="ui-btn" id="exportBtn" type="button" hidden>导出</button>
@@ -352,7 +346,6 @@ aside h3 { font-weight: 500; font-size: 0.72rem; letter-spacing: 0.16em; color: 
 
 <div class="wrap">
   <main id="main"></main>
-  <aside id="panel" class="collapsed" hidden></aside>
 </div>
 <div id="calls" class="calls" hidden role="dialog" aria-label="调用记录"></div>
 <div id="atlas" class="atlas" hidden role="dialog" aria-label="世界图谱"></div>
@@ -990,7 +983,7 @@ function errorCopy(e) {
 let wasBusy = false;
 function render() {
   if (!!busy !== wasBusy) { if (wasBusy && !busy) markDone(); wasBusy = !!busy; syncAwake(!!busy); }
-  const main = $("#main"), panel = $("#panel");
+  const main = $("#main");
   $("#restartBtn").hidden = !game;
   $("#exportBtn").hidden = !game;
   $("#callsBtn").hidden = !callLog.length;
@@ -998,7 +991,6 @@ function render() {
   if (atlasOpen) { if (game) openAtlas(true); else openAtlas(false); }
   if (!game) {
     $("#brandTitle").textContent = "天命未定";
-    panel.hidden = true;
     $("#date").textContent = "";
     main.innerHTML = renderIntro();
     bindIntro();
@@ -1007,8 +999,6 @@ function render() {
   const st = current().state;
   $("#brandTitle").textContent = era().title;
   $("#date").textContent = st.date || "";
-  panel.hidden = false;
-  panel.innerHTML = renderPanel(st);
 
   const done = !!st.ending;
   if (showReport && done) {
@@ -1396,7 +1386,7 @@ function renderIntro() {
 
 /* ───────── 世界图谱 ───────── */
 
-let atlasOpen = false, atlasTab = "rel", atlasK = null, atlasSel = null;
+let atlasOpen = false, atlasTab = "now", atlasK = null, atlasSel = null;
 const atlasKinds = new Set(["亲缘", "君臣", "情谊", "敌对", "往来", "关联"]);
 const KIND_COLOR = { "亲缘": "--war", "君臣": "--indigo", "情谊": "--shu", "敌对": "--seal", "往来": "--line", "关联": "--line" };
 const facColor = (ev, k) => `var(${(ev.factions || { "刘": "--shu", "孙": "--wu", "曹": "--wei", "争": "--war" })[k] || "--muted"})`;
@@ -1434,10 +1424,12 @@ function layoutGraph(names, edges, W, H) {
 
 function renderAtlas() {
   const a = E.atlas(game, atlasK), ev = a.era, t = a.now;
-  const tabs = [["rel", "人物关系"], ["fac", "势力格局"], ["tl", "事件时间线"], ["map", "地图"], ["wl", "我的世界线"]];
+  const tabs = [["now", "局势"], ["rel", "人物关系"], ["fac", "势力格局"], ["tl", "事件时间线"], ["map", "地图"], ["wl", "我的世界线"]];
   const at = x => `《${esc((AT.eras[x.era] || {}).name || x.era)}》${x.i ? `第${cn(x.i + 1)}回` : "开局"}`;
   let body = "";
-  if (atlasTab === "rel") {
+  if (atlasTab === "now") {
+    body = `<div class="situ">${renderPanel(current().state)}</div>`;
+  } else if (atlasTab === "rel") {
     const names = Object.keys(a.people);
     const edges = a.edges.filter(e => atlasKinds.has(e.kind));
     const W = 640, H = 460, pos = layoutGraph(names, edges, W, H);
@@ -1502,7 +1494,7 @@ function renderAtlas() {
   return `<div class="atlas-in">
     <div class="rp-top"><h2>世界图谱</h2><button class="ui-btn" id="atlasClose" type="button">回到故事</button></div>
     <div class="at-tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}" aria-selected="${atlasTab === k}">${l}</button>`).join("")}</div>
-    ${atlasTab === "wl" ? "" : `<div class="at-bar"><label for="atlasK">看到</label><input id="atlasK" type="range" min="0" max="${a.turns.length - 1}" value="${a.k}"><b>${at(t)}</b><span>${esc(t.state.date || "")}</span>${a.k < a.turns.length - 1 ? `<button class="redo-link" id="atlasNow" type="button">回到此刻</button>` : ""}</div>`}
+    ${atlasTab === "wl" || atlasTab === "now" ? "" : `<div class="at-bar"><label for="atlasK">看到</label><input id="atlasK" type="range" min="0" max="${a.turns.length - 1}" value="${a.k}"><b>${at(t)}</b><span>${esc(t.state.date || "")}</span>${a.k < a.turns.length - 1 ? `<button class="redo-link" id="atlasNow" type="button">回到此刻</button>` : ""}</div>`}
     ${body}
   </div>`;
 }
@@ -1525,6 +1517,8 @@ function openAtlas(on) {
   if (r) { r.oninput = () => { atlasK = +r.value; openAtlas(true); $("#atlasK") && $("#atlasK").focus(); }; }
   const nw = $("#atlasNow");
   if (nw) nw.onclick = () => { atlasK = null; openAtlas(true); };
+  const pk = $("#peekBtn");
+  if (pk) pk.onclick = () => { peek = true; render(); };
 }
 document.addEventListener("keydown", e => { if (e.key === "Escape" && atlasOpen) openAtlas(false); });
 
@@ -1790,11 +1784,6 @@ $("#atlasBtn").onclick = () => { atlasK = null; openAtlas(!atlasOpen); };
 
 $("#restartBtn").onclick = restart;
 $("#exportBtn").onclick = () => exportGame(game, $("#exportBtn"));
-$("#panelToggle").onclick = () => {
-  const p = $("#panel");
-  p.classList.toggle("collapsed");
-  $("#panelToggle").setAttribute("aria-expanded", String(!p.classList.contains("collapsed")));
-};
 
 // 旧存档：补上时代与默认方略
 function upgrade(g) {

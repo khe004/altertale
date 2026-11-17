@@ -21,7 +21,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Claude-Session: <当前会话链接>
   ```
-- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 103），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
+- 网页是单页 Artifact：https://claude.ai/artifact/7JHSKrEPrL8BpSvMWpN56A （当前 Version 104），capabilities 为 `sample`、`downloads`（重发时省略即沿用）。
 - 发布：`file_path` = `web/index.html`，`url` 填上面的链接，`files` 映射：
   `data/characters.js`、`data/background.js`、`data/eras/ruchuan.js`、`data/eras/hanzhong.js`、`data/eras/jingzhou.js`、`data/eras/fujingzhou.js`、`data/eras/beifa.js`、`data/eras/yiling.js`、`data/eras/dongxi.js`、`data/eras/kongming.js`、`data/eras/nanzheng.js`、`data/eras/qishan.js`、`data/eras/zaichu.js`、`data/eras/wuzhang.js`、`data/eras/guanzhong.js`、`data/eras/qianli.js`、`engine.js` → 对应的 `web/...` 文件。
   新对话第一次发布会被拒（"没读过已发布内容"）：先用 Artifact `read` + `path` 读回被点名的文件，确认与上一个提交一致后再发。
@@ -43,7 +43,7 @@ AlterTale · 天命未定（原名异章）：以《三国演义》（毛宗岗�
 - 时代配置 `kind: "persona"` 是人物剧本（玩家就是主角本人），否则是战争包。人物剧本走另一套推演规则与格式（`personaRules`、`personaFormat`）：状态有 `self`（处境）、`retinue`（随行）、`goods`（随身之物）、`bonds`（人情）、`vows`（誓约）、`facts`（知情账，按 id 累计，`knownBy` 记谁怎么知道，`at` 记第几回知道），没有兵马、方略与授权。复核另加三条（`personaProblems`）：选项的 `uses` 引用主角不知道的事、非亲历的消息快过信使、不在身边的人"面陈"。亲手写的行动一律走预检（含为人底线，可"仍然这样做"）。战争包的提示词与解析结果用全部样本比对过，逐字不变。
 - 通用的新配置：时代 `tiers`/`tierNote`（行程三档）、`cards`（改写人物此时的所求、底线、关系）、`scoreItems`/`scoreNote`/`failText`；开局 `canonPath`（同一时代的两个开局各有一套原著节拍）。`E.orderLabel` 给出"汉中王之令"或"关羽所为"。
 - 千里走单骑：`web/data/eras/qianli.js`，开局"屯土山"（七拍）与"得信"（五拍），开局页单列一节"人物剧本 · 试点"（`PERSONA_ORDER`）。发布时 `files` 要加 `data/eras/qianli.js`。
-- 世界图谱（顶栏"世界图谱"）：`E.atlas(g, k)` 只取到第 k 回为止玩家已知的（人物、关系、势力、原著事件与本局事件、行踪），`E.worldline(g)` 给出历代各回的命令与轨道（照原著、由此改写、自由推演）；"回到此处另作决断"时丢下的路记在 `g.abandoned`。关系的出处：人物卡写"演义设定"，本局写"某时代第几回"。面板另有"本回变化"（`E.turnDiff`，代码比对，不调模型）。`check.js` 对全部样本逐回生成图谱。
+- 世界图谱（顶栏"世界图谱"）：`E.atlas(g, k)` 只取到第 k 回为止玩家已知的（人物、关系、势力、原著事件与本局事件、行踪），`E.worldline(g)` 给出历代各回的命令与轨道（照原著、由此改写、自由推演）；"回到此处另作决断"时丢下的路记在 `g.abandoned`。关系的出处：人物卡写"演义设定"，本局写"某时代第几回"。面板另有"本回变化"（`E.turnDiff`，代码比对，不调模型）。Version 104 起原先的局势侧栏（窄屏时在页面最上方）并入世界图谱，作为第一个标签"局势"（`renderPanel` 渲染当前一回，不跟滑块走），主页只剩故事一栏。`check.js` 对全部样本逐回生成图谱。
 
 ## 每回的流水线
 
